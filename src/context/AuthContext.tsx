@@ -11,18 +11,21 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  isSyncing: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
   loading: true,
+  isSyncing: false,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -30,37 +33,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
+    let unsubscribeProfile: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       
       if (!firebaseUser) {
         setUserProfile(null);
         setLoading(false);
+        setIsSyncing(false);
+        if (unsubscribeProfile) unsubscribeProfile();
         return;
       }
 
-      // Start listening to the user profile
+      setIsSyncing(true);
       const userDocRef = doc(db, "users", firebaseUser.uid);
-      const unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
+      
+      // Real-time listener that survives refreshes and session changes
+      unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
-          setUserProfile(snapshot.data() as UserProfile);
+          const data = snapshot.data() as UserProfile;
+          setUserProfile(data);
         } else {
-          setUserProfile(null);
+          // Keep current profile if it's just a momentary sync gap
+          console.warn("User document not found yet during sync.");
         }
         setLoading(false);
+        setIsSyncing(false);
       }, (error) => {
         console.error("Profile Sync Error:", error);
+        // Don't kill the session, just stop the loading spinner
         setLoading(false);
+        setIsSyncing(false);
       });
-
-      return () => unsubscribeProfile();
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, isSyncing }}>
       {children}
     </AuthContext.Provider>
   );
