@@ -42,7 +42,7 @@
         },
         "shopAddress": {
           "type": "string",
-          "description": "The physical address of the shop."
+          "description": "The full professional address of the shop."
         },
         "shopCategory": {
           "type": "string",

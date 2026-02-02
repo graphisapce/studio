@@ -27,7 +27,6 @@ export function BusinessGrid() {
 
   // Location state
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
-  const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
 
   useEffect(() => {
@@ -48,8 +47,8 @@ export function BusinessGrid() {
             whatsappLink: data.shopContact ? `https://wa.me/${data.shopContact}` : '',
             imageUrl: (data.shopImageUrls && data.shopImageUrls.length > 0) ? data.shopImageUrls[0] : 'https://picsum.photos/seed/shop/600/400',
             imageHint: 'shop',
-            latitude: 0, // Placeholder
-            longitude: 0 // Placeholder
+            latitude: 0,
+            longitude: 0
           });
         }
       });
@@ -65,14 +64,8 @@ export function BusinessGrid() {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           });
-          setIsLocationLoading(false);
-        },
-        () => {
-          setIsLocationLoading(false);
         }
       );
-    } else {
-      setIsLocationLoading(false);
     }
 
     return () => unsubscribe();

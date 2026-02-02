@@ -30,7 +30,7 @@ export function MobileHeader() {
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">
       <Logo />
       <div className="flex items-center gap-2">
-        {isSyncing && user && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+        {(isSyncing || loading) && user && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">

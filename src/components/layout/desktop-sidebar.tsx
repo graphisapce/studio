@@ -1,3 +1,4 @@
+
 "use client";
 import Link from "next/link";
 import { Home, LayoutDashboard, LogIn, LogOut, Loader2 } from "lucide-react";
@@ -24,7 +25,7 @@ export function DesktopSidebar() {
           <Link href="/"><Home className="h-5 w-5" /><span>Home</span></Link>
         </Button>
         
-        {isSyncing && user && (
+        {(isSyncing || loading) && user && (
           <div className="px-4 py-2 flex items-center gap-2 text-muted-foreground opacity-60">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <span className="text-xs">Syncing profile...</span>

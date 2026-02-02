@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
@@ -54,7 +55,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const data = snapshot.data() as UserProfile;
           setUserProfile(data);
         } else {
-          console.warn("User profile document doesn't exist yet.");
           setUserProfile(null);
         }
         setLoading(false);

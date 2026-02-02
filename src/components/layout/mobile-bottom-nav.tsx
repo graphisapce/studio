@@ -22,7 +22,7 @@ export function MobileBottomNav() {
           <span className={cn("text-xs font-medium", pathname === "/" ? "text-primary" : "text-muted-foreground")}>Home</span>
         </Link>
         
-        {isSyncing && user && (
+        {(isSyncing || loading) && user && (
            <div className="flex flex-col items-center gap-1 opacity-50">
              <Loader2 className="h-6 w-6 animate-spin text-primary" />
              <span className="text-[10px] text-muted-foreground">Syncing...</span>
