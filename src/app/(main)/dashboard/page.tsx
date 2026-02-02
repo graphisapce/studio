@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2, Package, Store, Save, Image as ImageIcon, MapPin } from "lucide-react";
+import { PlusCircle, Loader2, Trash2, Package, Store, Save, Image as ImageIcon, Upload, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -71,9 +71,9 @@ export default function DashboardPage() {
 
   // Form states for Shop Profile
   const [shopProfile, setShopProfile] = useState({
-    shopName: userProfile?.shopName || "",
-    shopAddress: userProfile?.shopAddress || "",
-    shopImageUrls: userProfile?.shopImageUrls || [""]
+    shopName: "",
+    shopAddress: "",
+    shopImageUrls: [] as string[]
   });
 
   useEffect(() => {
@@ -81,9 +81,7 @@ export default function DashboardPage() {
       setShopProfile({
         shopName: userProfile.shopName || "",
         shopAddress: userProfile.shopAddress || "",
-        shopImageUrls: userProfile.shopImageUrls && userProfile.shopImageUrls.length > 0 
-          ? userProfile.shopImageUrls 
-          : [""]
+        shopImageUrls: userProfile.shopImageUrls || []
       });
     }
   }, [userProfile]);
@@ -92,7 +90,7 @@ export default function DashboardPage() {
     if (!authLoading) {
       if (!user) {
         router.push("/login");
-      } else if (userProfile?.role !== "business") {
+      } else if (userProfile && userProfile.role !== "business") {
         router.push("/");
       }
     }
@@ -121,31 +119,45 @@ export default function DashboardPage() {
     return () => unsubscribe();
   }, [user]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 800000) { // Limit to ~800KB for Firestore Base64
+        toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 800KB." });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        callback(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    if (!newProduct.title || !newProduct.price) {
-      toast({ variant: "destructive", title: "Missing Fields", description: "Please enter at least a name and price." });
+    if (!newProduct.title || !newProduct.price || !newProduct.imageUrl) {
+      toast({ variant: "destructive", title: "Missing Fields", description: "Please provide a name, price, and product image." });
       return;
     }
 
     setIsSubmittingProduct(true);
     try {
-      const finalImageUrl = newProduct.imageUrl || `https://picsum.photos/seed/${Math.random()}/600/400`;
       await addDoc(collection(db, "products"), {
         businessId: user.uid,
         title: newProduct.title,
         price: parseFloat(newProduct.price),
         description: newProduct.description,
-        imageUrl: finalImageUrl,
+        imageUrl: newProduct.imageUrl,
         createdAt: serverTimestamp()
       });
       toast({ title: "Success", description: "Product added successfully!" });
       setNewProduct({ title: "", price: "", description: "", imageUrl: "" });
       setIsProductDialogOpen(false);
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to add product." });
+      toast({ variant: "destructive", title: "Error", description: "Failed to add product." });
     } finally {
       setIsSubmittingProduct(false);
     }
@@ -167,13 +179,10 @@ export default function DashboardPage() {
 
     setIsUpdatingProfile(true);
     try {
-      // Filter out empty URLs
-      const validImageUrls = shopProfile.shopImageUrls.filter(url => url.trim() !== "");
-      
       await updateDoc(doc(db, "users", user.uid), {
         shopName: shopProfile.shopName,
         shopAddress: shopProfile.shopAddress,
-        shopImageUrls: validImageUrls,
+        shopImageUrls: shopProfile.shopImageUrls,
         updatedAt: serverTimestamp()
       });
       toast({ title: "Profile Updated", description: "Your shop details have been saved." });
@@ -184,26 +193,18 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAddImageUrl = () => {
-    setShopProfile({
-      ...shopProfile,
-      shopImageUrls: [...shopProfile.shopImageUrls, ""]
-    });
+  const handleAddShopPhoto = (base64: string) => {
+    setShopProfile(prev => ({
+      ...prev,
+      shopImageUrls: [...prev.shopImageUrls, base64]
+    }));
   };
 
-  const handleImageUrlChange = (index: number, value: string) => {
-    const newUrls = [...shopProfile.shopImageUrls];
-    newUrls[index] = value;
-    setShopProfile({ ...shopProfile, shopImageUrls: newUrls });
-  };
-
-  const handleRemoveImageUrl = (index: number) => {
-    if (shopProfile.shopImageUrls.length === 1) {
-       handleImageUrlChange(0, "");
-       return;
-    }
-    const newUrls = shopProfile.shopImageUrls.filter((_, i) => i !== index);
-    setShopProfile({ ...shopProfile, shopImageUrls: newUrls });
+  const handleRemoveShopPhoto = (index: number) => {
+    setShopProfile(prev => ({
+      ...prev,
+      shopImageUrls: prev.shopImageUrls.filter((_, i) => i !== index)
+    }));
   };
 
   if (authLoading || (loadingProducts && user)) {
@@ -254,8 +255,37 @@ export default function DashboardPage() {
                     <Textarea id="description" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="imageUrl">Image Link (URL)</Label>
-                    <Input id="imageUrl" placeholder="https://..." value={newProduct.imageUrl} onChange={(e) => setNewProduct({ ...newProduct, imageUrl: e.target.value })} />
+                    <Label>Product Image</Label>
+                    <div className="flex flex-col gap-4">
+                      {newProduct.imageUrl && (
+                        <div className="relative aspect-video w-full rounded-md overflow-hidden border">
+                          <Image src={newProduct.imageUrl} alt="Preview" fill className="object-cover" />
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="icon" 
+                            className="absolute top-1 right-1 h-6 w-6" 
+                            onClick={() => setNewProduct({ ...newProduct, imageUrl: "" })}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Click to upload from device</p>
+                          </div>
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*" 
+                            onChange={(e) => handleFileChange(e, (base64) => setNewProduct({ ...newProduct, imageUrl: base64 }))} 
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -321,11 +351,11 @@ export default function DashboardPage() {
                   <CardTitle className="text-lg flex items-center gap-2"><ImageIcon className="h-5 w-5" /> Shop Photos</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2">
-                  {userProfile?.shopImageUrls?.map((url, i) => (
+                  {shopProfile.shopImageUrls.length > 0 ? shopProfile.shopImageUrls.map((url, i) => (
                     <div key={i} className="relative aspect-square rounded-md overflow-hidden border">
                       <Image src={url} alt="Shop" fill className="object-cover" />
                     </div>
-                  )) || <p className="col-span-2 text-xs text-muted-foreground italic text-center py-4">No shop photos added yet.</p>}
+                  )) : <p className="col-span-2 text-xs text-muted-foreground italic text-center py-4">No shop photos added yet.</p>}
                 </CardContent>
               </Card>
 
@@ -367,24 +397,35 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Shop Photos (URLs)</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddImageUrl}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Add Photo
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">Add URLs of photos showing your shop's original board, interior, and products.</p>
-                  
-                  {shopProfile.shopImageUrls.map((url, index) => (
-                    <div key={index} className="flex gap-2">
-                      <div className="flex-1">
-                        <Input placeholder="https://..." value={url} onChange={(e) => handleImageUrlChange(index, e.target.value)} />
+                  <Label>Shop Photos (Upload from Device)</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {shopProfile.shopImageUrls.map((url, index) => (
+                      <div key={index} className="relative aspect-square rounded-md overflow-hidden border">
+                        <Image src={url} alt={`Shop ${index}`} fill className="object-cover" />
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="icon" 
+                          className="absolute top-1 right-1 h-6 w-6 rounded-full" 
+                          onClick={() => handleRemoveShopPhoto(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveImageUrl(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    ))}
+                    <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
+                      <div className="flex flex-col items-center justify-center p-2 text-center">
+                        <Upload className="w-6 h-6 mb-1 text-muted-foreground" />
+                        <p className="text-[10px] text-muted-foreground">Add Photo</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileChange(e, (base64) => handleAddShopPhoto(base64))} 
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isUpdatingProfile}>

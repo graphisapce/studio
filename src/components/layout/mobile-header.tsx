@@ -56,7 +56,7 @@ export function MobileHeader() {
              
             {loading && user && (
                <div className="flex items-center gap-2 p-4 text-muted-foreground">
-                 <Loader2 className="h-5 w-5 animate-spin" />
+                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
                  <span>Syncing role...</span>
                </div>
             )}

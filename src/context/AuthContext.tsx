@@ -39,9 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setLoading(true);
+      // Start listening to the user profile
       const userDocRef = doc(db, "users", firebaseUser.uid);
-      
       const unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
           setUserProfile(snapshot.data() as UserProfile);

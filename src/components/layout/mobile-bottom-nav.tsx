@@ -23,7 +23,7 @@ export function MobileBottomNav() {
         
         {loading && user && (
            <div className="flex flex-col items-center gap-1">
-             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+             <Loader2 className="h-6 w-6 animate-spin text-primary" />
              <span className="text-[10px] text-muted-foreground">Syncing...</span>
            </div>
         )}
@@ -35,10 +35,10 @@ export function MobileBottomNav() {
           </Link>
         )}
 
-        <Link href={user ? (isBusiness ? "/dashboard" : "/") : "/login"} className="flex flex-col items-center gap-1">
-          <UserCircle className={cn("h-6 w-6", (pathname === "/login" || (pathname === "/dashboard" && !isBusiness)) ? "text-primary" : "text-muted-foreground")} />
+        <Link href={user ? (isBusiness ? "/dashboard" : "/login") : "/login"} className="flex flex-col items-center gap-1">
+          <UserCircle className={cn("h-6 w-6", (pathname === "/login" || (pathname === "/dashboard" && isBusiness)) ? "text-primary" : "text-muted-foreground")} />
           <span className={cn("text-xs font-medium", (pathname === "/login") ? "text-primary" : "text-muted-foreground")}>
-            {user ? "Profile" : "Login"}
+            {user ? (isBusiness ? "Dashboard" : "Profile") : "Login"}
           </span>
         </Link>
       </div>
