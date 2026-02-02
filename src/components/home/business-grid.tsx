@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { mockBusinesses } from "@/lib/data";
 import type { Business, BusinessCategory } from "@/lib/types";
+import { getDistanceFromLatLonInKm } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, MapPinOff, LocateFixed } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const categories: BusinessCategory[] = ['Food', 'Services', 'Retail', 'Repairs'];
 
@@ -15,24 +17,73 @@ export function BusinessGrid() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
 
+  // Location state
+  const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+  const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(true);
+
+  // Initial loading simulation state
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  useEffect(() => {
+    // Simulate initial content load
+    const timer = setTimeout(() => setIsInitialLoading(false), 1000);
+
+    // Fetch geolocation
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setIsLocationLoading(false);
+          setLocationError(null);
+        },
+        (error) => {
+          setLocationError("Location permission denied. Showing all businesses.");
+          setIsLocationLoading(false);
+          setIsDistanceFilterActive(false);
+        }
+      );
+    } else {
+      setLocationError("Geolocation is not supported. Showing all businesses.");
+      setIsLocationLoading(false);
+      setIsDistanceFilterActive(false);
+    }
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const filteredBusinesses = useMemo(() => {
-    return mockBusinesses.filter((business) => {
+    let businesses = mockBusinesses;
+
+    if (userLocation && isDistanceFilterActive) {
+      businesses = businesses.filter((business) => {
+        if (!business.latitude || !business.longitude) return false;
+        const distance = getDistanceFromLatLonInKm(
+          userLocation.latitude,
+          userLocation.longitude,
+          business.latitude,
+          business.longitude
+        );
+        return distance <= 1; // 1 km radius
+      });
+    }
+
+    return businesses.filter((business) => {
       const matchesCategory = !selectedCategory || business.category === selectedCategory;
       const matchesSearch = business.shopName.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, userLocation, isDistanceFilterActive]);
 
   const toggleCategory = (category: BusinessCategory) => {
     setSelectedCategory(prev => (prev === category ? null : category));
   };
-  
-  // To simulate loading state
-  const [isLoading, setIsLoading] = useState(true);
-  useState(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  });
+
+  const isLoading = isInitialLoading || isLocationLoading;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -53,6 +104,16 @@ export function BusinessGrid() {
           />
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2">
+          {userLocation && (
+            <Button
+                variant={isDistanceFilterActive ? "secondary" : "outline"}
+                onClick={() => setIsDistanceFilterActive(prev => !prev)}
+                className="rounded-full"
+              >
+                {isDistanceFilterActive ? <MapPinOff className="mr-2 h-4 w-4"/> : <LocateFixed className="mr-2 h-4 w-4"/>}
+                {isDistanceFilterActive ? 'Show All' : 'Nearby (1km)'}
+            </Button>
+           )}
           {categories.map((category) => (
             <Button
               key={category}
@@ -65,6 +126,13 @@ export function BusinessGrid() {
           ))}
         </div>
       </div>
+
+      {locationError && !isLocationLoading && (
+        <Alert variant="destructive" className="mb-6 max-w-2xl mx-auto">
+          <AlertTitle>Location Error</AlertTitle>
+          <AlertDescription>{locationError}</AlertDescription>
+        </Alert>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -85,7 +153,12 @@ export function BusinessGrid() {
       ) : (
         <div className="text-center py-16">
           <h2 className="text-2xl font-semibold mb-2">No businesses found</h2>
-          <p className="text-muted-foreground">Try adjusting your search or filters.</p>
+          <p className="text-muted-foreground">
+            {isDistanceFilterActive && userLocation 
+              ? "No businesses found within 1km. Try showing all businesses." 
+              : "Try adjusting your search or filters."
+            }
+          </p>
         </div>
       )}
     </div>

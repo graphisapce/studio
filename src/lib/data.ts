@@ -20,6 +20,8 @@ export const mockBusinesses: Business[] = [
     whatsappLink: 'https://wa.me/919876543210',
     imageUrl: getImage('shop-food-1').url,
     imageHint: getImage('shop-food-1').hint,
+    latitude: 28.7260,
+    longitude: 77.1640,
   },
   {
     id: '2',
@@ -31,6 +33,8 @@ export const mockBusinesses: Business[] = [
     whatsappLink: 'https://wa.me/919123456789',
     imageUrl: getImage('shop-services-1').url,
     imageHint: getImage('shop-services-1').hint,
+    latitude: 28.7250,
+    longitude: 77.1620,
   },
   {
     id: '3',
@@ -42,6 +46,8 @@ export const mockBusinesses: Business[] = [
     whatsappLink: 'https://wa.me/918765432109',
     imageUrl: getImage('shop-retail-1').url,
     imageHint: getImage('shop-retail-1').hint,
+    latitude: 28.7245,
+    longitude: 77.1650,
   },
   {
     id: '4',
@@ -53,6 +59,8 @@ export const mockBusinesses: Business[] = [
     whatsappLink: 'https://wa.me/917890123456',
     imageUrl: getImage('shop-repairs-1').url,
     imageHint: getImage('shop-repairs-1').hint,
+    latitude: 28.7270,
+    longitude: 77.1610,
   },
     {
     id: '5',
@@ -64,6 +72,8 @@ export const mockBusinesses: Business[] = [
     whatsappLink: 'https://wa.me/919988776655',
     imageUrl: getImage('shop-food-2').url,
     imageHint: getImage('shop-food-2').hint,
+    latitude: 28.7258,
+    longitude: 77.1630,
   },
   {
     id: '6',
@@ -75,6 +85,8 @@ export const mockBusinesses: Business[] = [
     whatsappLink: 'https://wa.me/918877665544',
     imageUrl: getImage('shop-retail-2').url,
     imageHint: getImage('shop-retail-2').hint,
+    latitude: 28.7252,
+    longitude: 77.1635,
   },
 ];
 

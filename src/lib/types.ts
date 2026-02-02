@@ -10,6 +10,8 @@ export interface Business {
   whatsappLink: string;
   imageUrl: string;
   imageHint: string;
+  latitude: number;
+  longitude: number;
 }
 
 export interface Product {
