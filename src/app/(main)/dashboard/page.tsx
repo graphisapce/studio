@@ -24,7 +24,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2, Package, Store, Save, Image as ImageIcon, Upload, X } from "lucide-react";
+import { 
+  PlusCircle, 
+  Loader2, 
+  Trash2, 
+  Package, 
+  Store, 
+  Save, 
+  Image as ImageIcon, 
+  Upload, 
+  X,
+  Phone,
+  Info,
+  Tag
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,9 +50,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BusinessCategory } from "@/lib/types";
 
 interface DashboardProduct {
   id: string;
@@ -73,6 +94,9 @@ export default function DashboardPage() {
   const [shopProfile, setShopProfile] = useState({
     shopName: "",
     shopAddress: "",
+    shopCategory: "" as BusinessCategory | "",
+    shopDescription: "",
+    shopContact: "",
     shopImageUrls: [] as string[]
   });
 
@@ -81,6 +105,9 @@ export default function DashboardPage() {
       setShopProfile({
         shopName: userProfile.shopName || "",
         shopAddress: userProfile.shopAddress || "",
+        shopCategory: userProfile.shopCategory || "",
+        shopDescription: userProfile.shopDescription || "",
+        shopContact: userProfile.shopContact || "",
         shopImageUrls: userProfile.shopImageUrls || []
       });
     }
@@ -122,7 +149,7 @@ export default function DashboardPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 800000) { // Limit to ~800KB for Firestore Base64
+      if (file.size > 800000) {
         toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 800KB." });
         return;
       }
@@ -182,6 +209,9 @@ export default function DashboardPage() {
       await updateDoc(doc(db, "users", user.uid), {
         shopName: shopProfile.shopName,
         shopAddress: shopProfile.shopAddress,
+        shopCategory: shopProfile.shopCategory,
+        shopDescription: shopProfile.shopDescription,
+        shopContact: shopProfile.shopContact,
         shopImageUrls: shopProfile.shopImageUrls,
         updatedAt: serverTimestamp()
       });
@@ -211,7 +241,7 @@ export default function DashboardPage() {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Loading Dashboard...</p>
+        <p className="text-muted-foreground animate-pulse">Syncing Dashboard...</p>
       </div>
     );
   }
@@ -222,81 +252,77 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl md:text-4xl font-bold font-headline text-navy dark:text-white flex items-center gap-2">
             <Store className="h-8 w-8 text-primary" />
-            {userProfile?.shopName || "Shop Dashboard"}
+            {userProfile?.shopName || "My Business"}
           </h1>
-          <p className="text-muted-foreground mt-1">Manage your digital storefront and listings</p>
+          <p className="text-muted-foreground mt-1">Manage your digital storefront and catalog</p>
         </div>
 
-        <div className="flex gap-2">
-           <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="shadow-lg hover:shadow-xl transition-all">
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Add Item
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <form onSubmit={handleAddProduct}>
-                <DialogHeader>
-                  <DialogTitle>New Product/Service</DialogTitle>
-                  <DialogDescription>Add items for customers to see.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Item Name</Label>
-                    <Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input id="price" type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Product Image</Label>
-                    <div className="flex flex-col gap-4">
-                      {newProduct.imageUrl && (
-                        <div className="relative aspect-video w-full rounded-md overflow-hidden border">
-                          <Image src={newProduct.imageUrl} alt="Preview" fill className="object-cover" />
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            size="icon" 
-                            className="absolute top-1 right-1 h-6 w-6" 
-                            onClick={() => setNewProduct({ ...newProduct, imageUrl: "" })}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-center w-full">
-                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">Click to upload from device</p>
-                          </div>
-                          <input 
-                            type="file" 
-                            className="hidden" 
-                            accept="image/*" 
-                            onChange={(e) => handleFileChange(e, (base64) => setNewProduct({ ...newProduct, imageUrl: base64 }))} 
-                          />
-                        </label>
+        <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="lg" className="shadow-lg hover:shadow-xl transition-all">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Add New Item
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <form onSubmit={handleAddProduct}>
+              <DialogHeader>
+                <DialogTitle>New Product/Service</DialogTitle>
+                <DialogDescription>Fill in the details for your new listing.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Item Name</Label>
+                  <Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="price">Price (₹)</Label>
+                  <Input id="price" type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" placeholder="Short details about the item..." value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Product Image (From Device)</Label>
+                  <div className="flex flex-col gap-4">
+                    {newProduct.imageUrl && (
+                      <div className="relative aspect-video w-full rounded-md overflow-hidden border">
+                        <Image src={newProduct.imageUrl} alt="Preview" fill className="object-cover" />
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="icon" 
+                          className="absolute top-1 right-1 h-6 w-6" 
+                          onClick={() => setNewProduct({ ...newProduct, imageUrl: "" })}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
-                    </div>
+                    )}
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Select from Gallery</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileChange(e, (base64) => setNewProduct({ ...newProduct, imageUrl: base64 }))} 
+                      />
+                    </label>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isSubmittingProduct} className="w-full">
-                    {isSubmittingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Publish Item"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmittingProduct} className="w-full">
+                  {isSubmittingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Publish Listing"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="listings" className="w-full">
@@ -310,28 +336,30 @@ export default function DashboardPage() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Catalog</CardTitle>
-                  <CardDescription>Items visible in your shop.</CardDescription>
+                  <CardTitle>Inventory</CardTitle>
+                  <CardDescription>Live items visible to customers.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {products.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl">
                       <Package className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                      <h3 className="text-lg font-semibold">No products yet</h3>
+                      <h3 className="text-lg font-semibold">No items found</h3>
                       <Button variant="outline" className="mt-4" onClick={() => setIsProductDialogOpen(true)}>Add your first item</Button>
                     </div>
                   ) : (
                     <div className="grid gap-6 sm:grid-cols-2">
                       {products.map((product) => (
-                        <Card key={product.id} className="overflow-hidden group relative">
+                        <Card key={product.id} className="overflow-hidden group relative transition-all hover:shadow-md">
                           <div className="relative aspect-video">
                             <Image src={product.imageUrl} alt={product.title} fill className="object-cover" />
-                            <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full" onClick={() => handleDeleteProduct(product.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </Button>
+                            </div>
                           </div>
                           <CardHeader className="p-4">
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-start">
                               <CardTitle className="text-lg">{product.title}</CardTitle>
                               <span className="font-bold text-primary">₹{product.price}</span>
                             </div>
@@ -348,20 +376,20 @@ export default function DashboardPage() {
             <div className="space-y-6">
               <Card className="bg-primary/5">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2"><ImageIcon className="h-5 w-5" /> Shop Photos</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Shop Gallery</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-2">
                   {shopProfile.shopImageUrls.length > 0 ? shopProfile.shopImageUrls.map((url, i) => (
                     <div key={i} className="relative aspect-square rounded-md overflow-hidden border">
                       <Image src={url} alt="Shop" fill className="object-cover" />
                     </div>
-                  )) : <p className="col-span-2 text-xs text-muted-foreground italic text-center py-4">No shop photos added yet.</p>}
+                  )) : <p className="col-span-2 text-xs text-muted-foreground italic text-center py-4">No original photos added.</p>}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Quick View</CardTitle>
+                  <CardTitle className="text-lg">Shop Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between border-b pb-2">
@@ -369,8 +397,8 @@ export default function DashboardPage() {
                     <span className="font-bold">{products.length}</span>
                   </div>
                   <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground text-sm">Shop Name</span>
-                    <span className="font-medium truncate max-w-[120px]">{userProfile?.shopName || "N/A"}</span>
+                    <span className="text-muted-foreground text-sm">Category</span>
+                    <span className="font-medium text-primary">{shopProfile.shopCategory || "Not Set"}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -379,43 +407,70 @@ export default function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="profile">
-          <Card className="max-w-2xl mx-auto">
+          <Card className="max-w-3xl mx-auto">
             <CardHeader>
-              <CardTitle>Original Shop Details</CardTitle>
-              <CardDescription>Provide original details and photos to build trust with customers.</CardDescription>
+              <CardTitle>Original Shop Profile</CardTitle>
+              <CardDescription>Fill in these details to build trust with original photos and clear info.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleUpdateShopProfile} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="shopName">Shop Name</Label>
-                  <Input id="shopName" placeholder="e.g. Sharma Kirana Store" value={shopProfile.shopName} onChange={(e) => setShopProfile({ ...shopProfile, shopName: e.target.value })} />
+              <form onSubmit={handleUpdateShopProfile} className="space-y-8">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="shopName" className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop Name</Label>
+                    <Input id="shopName" placeholder="e.g. Sharma Kirana Store" value={shopProfile.shopName} onChange={(e) => setShopProfile({ ...shopProfile, shopName: e.target.value })} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shopCategory" className="flex items-center gap-2"><Tag className="h-4 w-4" /> Category</Label>
+                    <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({ ...shopProfile, shopCategory: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Food">Food & Snacks</SelectItem>
+                        <SelectItem value="Services">Professional Services</SelectItem>
+                        <SelectItem value="Retail">Retail Store</SelectItem>
+                        <SelectItem value="Repairs">Repairs & Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shopContact" className="flex items-center gap-2"><Phone className="h-4 w-4" /> Contact Number</Label>
+                    <Input id="shopContact" placeholder="e.g. 9876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({ ...shopProfile, shopContact: e.target.value })} />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shopAddress">Shop Address</Label>
-                  <Textarea id="shopAddress" placeholder="Street number, Colony, Landmark..." value={shopProfile.shopAddress} onChange={(e) => setShopProfile({ ...shopProfile, shopAddress: e.target.value })} />
+                  <Label htmlFor="shopAddress">Full Address</Label>
+                  <Textarea id="shopAddress" placeholder="Street, Colony, Landmark..." value={shopProfile.shopAddress} onChange={(e) => setShopProfile({ ...shopProfile, shopAddress: e.target.value })} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="shopDescription" className="flex items-center gap-2"><Info className="h-4 w-4" /> About Shop</Label>
+                  <Textarea id="shopDescription" placeholder="What makes your shop special?" value={shopProfile.shopDescription} onChange={(e) => setShopProfile({ ...shopProfile, shopDescription: e.target.value })} />
                 </div>
 
                 <div className="space-y-4">
-                  <Label>Shop Photos (Upload from Device)</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <Label>Original Shop Photos (Upload from Device)</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {shopProfile.shopImageUrls.map((url, index) => (
-                      <div key={index} className="relative aspect-square rounded-md overflow-hidden border">
+                      <div key={index} className="relative aspect-square rounded-md overflow-hidden border group">
                         <Image src={url} alt={`Shop ${index}`} fill className="object-cover" />
                         <Button 
                           type="button" 
                           variant="destructive" 
                           size="icon" 
-                          className="absolute top-1 right-1 h-6 w-6 rounded-full" 
+                          className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
                           onClick={() => handleRemoveShopPhoto(index)}
                         >
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
                     ))}
-                    <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
+                    <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors border-primary/30">
                       <div className="flex flex-col items-center justify-center p-2 text-center">
-                        <Upload className="w-6 h-6 mb-1 text-muted-foreground" />
+                        <Upload className="w-6 h-6 mb-1 text-primary" />
                         <p className="text-[10px] text-muted-foreground">Add Photo</p>
                       </div>
                       <input 
@@ -426,10 +481,11 @@ export default function DashboardPage() {
                       />
                     </label>
                   </div>
+                  <p className="text-xs text-muted-foreground italic">Tip: Upload photos of your shop's signboard and interior to build trust.</p>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isUpdatingProfile}>
-                  {isUpdatingProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save Shop Profile</>}
+                <Button type="submit" className="w-full h-12 text-lg shadow-lg" disabled={isUpdatingProfile}>
+                  {isUpdatingProfile ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <><Save className="mr-2 h-5 w-5" /> Save Shop Profile</>}
                 </Button>
               </form>
             </CardContent>

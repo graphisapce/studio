@@ -34,6 +34,9 @@ export interface UserProfile {
   role: 'customer' | 'business';
   shopName?: string;
   shopAddress?: string;
+  shopCategory?: BusinessCategory;
+  shopDescription?: string;
+  shopContact?: string;
   shopImageUrls?: string[];
   createdAt: string;
 }

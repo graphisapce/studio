@@ -21,7 +21,7 @@
         },
         "phone": {
           "type": "string",
-          "description": "The user's phone number."
+          "description": "The user's personal phone number."
         },
         "photoURL": {
           "type": "string",
@@ -44,12 +44,25 @@
           "type": "string",
           "description": "The physical address of the shop."
         },
+        "shopCategory": {
+          "type": "string",
+          "description": "The category of the business.",
+          "enum": ["Food", "Services", "Retail", "Repairs"]
+        },
+        "shopDescription": {
+          "type": "string",
+          "description": "A brief description of what the shop offers."
+        },
+        "shopContact": {
+          "type": "string",
+          "description": "Public contact number for the shop."
+        },
         "shopImageUrls": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "List of URLs for shop photos."
+          "description": "List of Base64 strings for shop photos."
         },
         "createdAt": {
           "type": "string",
@@ -86,10 +99,8 @@
           "type": "string"
         },
         "imageUrl": {
-          "type": "string"
-        },
-        "imageHint": {
-          "type": "string"
+          "type": "string",
+          "description": "Base64 image data."
         },
         "createdAt": {
           "type": "string",
