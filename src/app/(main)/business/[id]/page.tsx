@@ -1,37 +1,92 @@
+
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
-import { mockBusinesses, mockProducts } from '@/lib/data';
+import { notFound, useParams } from 'next/navigation';
+import { db } from "@/lib/firebase/clientApp";
+import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Phone, MessageCircle } from 'lucide-react';
+import { Phone, MessageCircle, Loader2, Store } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
+import type { UserProfile, Product } from "@/lib/types";
 
-export async function generateStaticParams() {
-  return mockBusinesses.map((business) => ({
-    id: business.id,
-  }));
-}
+export default function BusinessDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  
+  const [business, setBusiness] = useState<UserProfile | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default function BusinessDetailPage({ params }: { params: { id: string } }) {
-  const business = mockBusinesses.find((b) => b.id === params.id);
-  const products = mockProducts.filter((p) => p.businessId === params.id);
+  useEffect(() => {
+    if (!id) return;
 
-  if (!business) {
-    notFound();
+    const fetchBusiness = async () => {
+      try {
+        const docRef = doc(db, "users", id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setBusiness(docSnap.data() as UserProfile);
+        } else {
+          // Check mock data if not found in Firestore
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching business:", error);
+      }
+    };
+
+    const q = query(collection(db, "products"), where("businessId", "==", id));
+    const unsubscribeProducts = onSnapshot(q, (snapshot) => {
+      const productList: Product[] = [];
+      snapshot.forEach((doc) => {
+        productList.push({ id: doc.id, ...doc.data() } as Product);
+      });
+      setProducts(productList);
+      setLoading(false);
+    });
+
+    fetchBusiness();
+    return () => unsubscribeProducts();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
+
+  if (!business || !business.shopName) {
+    return (
+      <div className="container mx-auto py-20 text-center">
+        <Store className="mx-auto h-16 w-16 text-muted-foreground opacity-20 mb-4" />
+        <h1 className="text-2xl font-bold">Business not found</h1>
+        <p className="text-muted-foreground">The shop you are looking for does not exist.</p>
+        <Button className="mt-4" asChild><a href="/">Back to Home</a></Button>
+      </div>
+    );
+  }
+
+  const shopImage = (business.shopImageUrls && business.shopImageUrls.length > 0) 
+    ? business.shopImageUrls[0] 
+    : 'https://picsum.photos/seed/shop/800/400';
 
   return (
     <div className="container mx-auto max-w-6xl py-8 px-4">
       <header className="mb-8">
         <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-lg shadow-lg">
           <Image
-            src={business.imageUrl}
+            src={shopImage}
             alt={business.shopName}
             fill
             className="object-cover"
             priority
-            data-ai-hint={business.imageHint}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
            <Watermark className="!text-white/90" />
@@ -39,49 +94,54 @@ export default function BusinessDetailPage({ params }: { params: { id: string } 
             <h1 className="text-3xl md:text-5xl font-bold text-white font-headline">
               {business.shopName}
             </h1>
-            <p className="text-lg text-white/90 mt-1">{business.address}</p>
+            <p className="text-lg text-white/90 mt-1">{business.shopAddress}</p>
           </div>
         </div>
       </header>
 
       <main>
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Contact</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="flex-1">
-              <a href={`tel:${business.contactNumber}`}>
-                <Phone className="mr-2 h-5 w-5" /> Call Now
-              </a>
-            </Button>
-            <Button asChild size="lg" variant="secondary" className="flex-1 bg-green-500 hover:bg-green-600 text-white">
-              <a href={business.whatsappLink} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="grid gap-8 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle>Business Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">{business.shopDescription || "No description provided."}</p>
+                <div className="flex flex-col gap-3 pt-4">
+                  <Button asChild className="w-full">
+                    <a href={`tel:${business.shopContact}`}>
+                      <Phone className="mr-2 h-4 w-4" /> Call Now
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full border-green-500 text-green-600 hover:bg-green-50">
+                    <a href={`https://wa.me/${business.shopContact}`} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        <section>
-          <h2 className="text-2xl md:text-3xl font-bold mb-6 font-headline text-navy dark:text-white">
-            Products & Services
-          </h2>
-          {products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 border rounded-lg bg-card">
-              <h3 className="text-xl font-semibold">No products listed yet</h3>
-              <p className="text-muted-foreground mt-2">
-                This business hasn't added any products or services. Check back later!
-              </p>
-            </div>
-          )}
-        </section>
+          <div className="md:col-span-2">
+            <h2 className="text-2xl font-bold mb-6 font-headline flex items-center gap-2">
+              Products & Services
+              <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{products.length}</span>
+            </h2>
+            {products.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 border-2 border-dashed rounded-lg bg-card/50">
+                <p className="text-muted-foreground">This shop hasn't listed any products yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

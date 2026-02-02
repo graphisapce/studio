@@ -2,12 +2,14 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { db } from "@/lib/firebase/clientApp";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { mockBusinesses } from "@/lib/data";
-import type { Business, BusinessCategory } from "@/lib/types";
+import type { Business, BusinessCategory, UserProfile } from "@/lib/types";
 import { getDistanceFromLatLonInKm } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPinOff, LocateFixed } from "lucide-react";
+import { Search, MapPinOff, LocateFixed, Loader2 } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -20,18 +22,40 @@ const categories: BusinessCategory[] = [
 export function BusinessGrid() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
+  const [realBusinesses, setRealBusinesses] = useState<Business[]>([]);
+  const [loadingRealData, setLoadingRealData] = useState(true);
 
   // Location state
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
 
-  // Initial loading simulation state
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  
   useEffect(() => {
-    // Simulate initial content load
-    const timer = setTimeout(() => setIsInitialLoading(false), 1000);
+    // Fetch real businesses from Firestore
+    const q = query(collection(db, "users"), where("role", "==", "business"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const businesses: Business[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as UserProfile;
+        if (data.shopName) {
+          businesses.push({
+            id: data.uid,
+            ownerId: data.uid,
+            shopName: data.shopName,
+            category: data.shopCategory || 'Others',
+            address: data.shopAddress || 'Address not set',
+            contactNumber: data.shopContact || '',
+            whatsappLink: data.shopContact ? `https://wa.me/${data.shopContact}` : '',
+            imageUrl: (data.shopImageUrls && data.shopImageUrls.length > 0) ? data.shopImageUrls[0] : 'https://picsum.photos/seed/shop/600/400',
+            imageHint: 'shop',
+            latitude: 0, // Placeholder
+            longitude: 0 // Placeholder
+          });
+        }
+      });
+      setRealBusinesses(businesses);
+      setLoadingRealData(false);
+    });
 
     // Fetch geolocation
     if ("geolocation" in navigator) {
@@ -43,22 +67,20 @@ export function BusinessGrid() {
           });
           setIsLocationLoading(false);
         },
-        (error) => {
-          console.warn("Location permission denied.");
+        () => {
           setIsLocationLoading(false);
-          setIsDistanceFilterActive(false);
         }
       );
     } else {
       setIsLocationLoading(false);
-      setIsDistanceFilterActive(false);
     }
 
-    return () => clearTimeout(timer);
+    return () => unsubscribe();
   }, []);
 
   const filteredBusinesses = useMemo(() => {
-    let businesses = mockBusinesses;
+    // Combine real data and mock data (real data first)
+    let businesses = [...realBusinesses, ...mockBusinesses];
 
     if (userLocation && isDistanceFilterActive) {
       businesses = businesses.filter((business) => {
@@ -69,7 +91,7 @@ export function BusinessGrid() {
           business.latitude,
           business.longitude
         );
-        return distance <= 2; // Increased to 2km for better visibility with more categories
+        return distance <= 5;
       });
     }
 
@@ -78,13 +100,11 @@ export function BusinessGrid() {
       const matchesSearch = business.shopName.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [searchTerm, selectedCategory, userLocation, isDistanceFilterActive]);
+  }, [searchTerm, selectedCategory, userLocation, isDistanceFilterActive, realBusinesses]);
 
   const toggleCategory = (category: BusinessCategory) => {
     setSelectedCategory(prev => (prev === category ? null : category));
   };
-
-  const isLoading = isInitialLoading || (isLocationLoading && isDistanceFilterActive);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -93,7 +113,7 @@ export function BusinessGrid() {
           Discover Local Businesses
         </h1>
         <p className="text-center text-muted-foreground max-w-2xl mx-auto">
-          From street food to mobile repairs, find everything you need right in your neighborhood.
+          Find real local listings and original shops in your neighborhood.
         </p>
         <div className="relative max-w-xl mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -112,7 +132,7 @@ export function BusinessGrid() {
                 className="rounded-full"
               >
                 {isDistanceFilterActive ? <MapPinOff className="mr-2 h-4 w-4"/> : <LocateFixed className="mr-2 h-4 w-4"/>}
-                {isDistanceFilterActive ? 'Show All' : 'Nearby (2km)'}
+                {isDistanceFilterActive ? 'Show All' : 'Nearby (5km)'}
             </Button>
            )}
           {categories.map((category) => (
@@ -128,7 +148,7 @@ export function BusinessGrid() {
         </div>
       </div>
 
-      {isLoading ? (
+      {loadingRealData ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="space-y-2">
@@ -147,12 +167,7 @@ export function BusinessGrid() {
       ) : (
         <div className="text-center py-16">
           <h2 className="text-2xl font-semibold mb-2">No businesses found</h2>
-          <p className="text-muted-foreground">
-            {isDistanceFilterActive && userLocation 
-              ? "No businesses found nearby. Try showing all businesses." 
-              : "Try adjusting your search or filters."
-            }
-          </p>
+          <p className="text-muted-foreground">Try adjusting your search or filters.</p>
         </div>
       )}
     </div>
