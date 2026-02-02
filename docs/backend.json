@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -47,6 +48,44 @@
         "role",
         "createdAt"
       ]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Represents a product or service offered by a business.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "businessId": {
+          "type": "string",
+          "description": "The UID of the business owner."
+        },
+        "title": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        },
+        "imageUrl": {
+          "type": "string"
+        },
+        "imageHint": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "businessId",
+        "title",
+        "price"
+      ]
     }
   },
   "auth": {
@@ -61,6 +100,12 @@
         "$ref": "#/backend/entities/UserProfile"
       },
       "description": "User profile documents, keyed by user ID."
+    },
+    "/products/{productId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Product"
+      },
+      "description": "Product documents for businesses."
     }
   }
 }

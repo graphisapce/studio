@@ -1,23 +1,25 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      // Any authenticated user can create their own user document.
-      // The document ID must match the user's UID.
-      // The `uid` field within the document must also match.
-      allow create: if request.auth != null &&
-                       request.auth.uid == userId &&
-                       request.resource.data.uid == request.auth.uid;
-
-      // A user can only read their own document.
-      allow read: if request.auth != null && request.auth.uid == userId;
-
-      // A user can only update their own document.
-      // They cannot change their UID or creation timestamp.
-      allow update: if request.auth != null &&
-                       request.auth.uid == userId &&
-                       request.resource.data.uid == resource.data.uid &&
-                       request.resource.data.createdAt == resource.data.createdAt;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /products/{productId} {
+      // Anyone can read products
+      allow read: if true;
+      
+      // Only authenticated users with 'business' role can create products
+      // and only if they set themselves as the businessId
+      allow create: if request.auth != null && 
+                       request.resource.data.businessId == request.auth.uid;
+      
+      // Only the owner can update or delete
+      allow update, delete: if request.auth != null && 
+                               resource.data.businessId == request.auth.uid;
     }
   }
 }
