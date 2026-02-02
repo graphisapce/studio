@@ -30,4 +30,5 @@ export interface UserProfile {
   email: string;
   phone?: string;
   photoURL?: string;
-  role: 'customer' | 'business
+  role: 'customer' | 'business';
+}
