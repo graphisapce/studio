@@ -10,9 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPinOff, LocateFixed } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const categories: BusinessCategory[] = ['Food', 'Services', 'Retail', 'Repairs'];
+const categories: BusinessCategory[] = [
+  'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
+  'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
+  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
+];
 
 export function BusinessGrid() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,7 +23,6 @@ export function BusinessGrid() {
 
   // Location state
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
 
@@ -40,7 +42,6 @@ export function BusinessGrid() {
             longitude: position.coords.longitude,
           });
           setIsLocationLoading(false);
-          setLocationError(null);
         },
         (error) => {
           console.warn("Location permission denied.");
@@ -68,7 +69,7 @@ export function BusinessGrid() {
           business.latitude,
           business.longitude
         );
-        return distance <= 1; // 1 km radius
+        return distance <= 2; // Increased to 2km for better visibility with more categories
       });
     }
 
@@ -103,7 +104,7 @@ export function BusinessGrid() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl mx-auto">
           {userLocation && (
             <Button
                 variant={isDistanceFilterActive ? "secondary" : "outline"}
@@ -111,7 +112,7 @@ export function BusinessGrid() {
                 className="rounded-full"
               >
                 {isDistanceFilterActive ? <MapPinOff className="mr-2 h-4 w-4"/> : <LocateFixed className="mr-2 h-4 w-4"/>}
-                {isDistanceFilterActive ? 'Show All' : 'Nearby (1km)'}
+                {isDistanceFilterActive ? 'Show All' : 'Nearby (2km)'}
             </Button>
            )}
           {categories.map((category) => (
@@ -119,7 +120,7 @@ export function BusinessGrid() {
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
               onClick={() => toggleCategory(category)}
-              className="rounded-full"
+              className="rounded-full text-xs h-8"
             >
               {category}
             </Button>
@@ -148,7 +149,7 @@ export function BusinessGrid() {
           <h2 className="text-2xl font-semibold mb-2">No businesses found</h2>
           <p className="text-muted-foreground">
             {isDistanceFilterActive && userLocation 
-              ? "No businesses found within 1km. Try showing all businesses." 
+              ? "No businesses found nearby. Try showing all businesses." 
               : "Try adjusting your search or filters."
             }
           </p>

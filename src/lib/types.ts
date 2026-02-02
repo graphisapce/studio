@@ -1,5 +1,23 @@
 
-export type BusinessCategory = 'Food' | 'Services' | 'Retail' | 'Repairs';
+export type BusinessCategory = 
+  | 'Food' 
+  | 'Groceries' 
+  | 'Retail' 
+  | 'Electronics' 
+  | 'Repairs' 
+  | 'Services' 
+  | 'Beauty' 
+  | 'Health' 
+  | 'Education' 
+  | 'Automobile' 
+  | 'Gifts' 
+  | 'Home Decor' 
+  | 'Clothing' 
+  | 'Jewelry' 
+  | 'Hardware' 
+  | 'Pharmacy' 
+  | 'Stationery' 
+  | 'Others';
 
 export interface Business {
   id: string;

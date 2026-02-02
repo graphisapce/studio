@@ -62,6 +62,12 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory } from "@/lib/types";
 
+const categoryList: BusinessCategory[] = [
+  'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
+  'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
+  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
+];
+
 interface DashboardProduct {
   id: string;
   title: string;
@@ -409,7 +415,7 @@ export default function DashboardPage() {
         <TabsContent value="profile">
           <Card className="max-w-3xl mx-auto">
             <CardHeader>
-              <CardTitle>Original Shop Profile</CardTitle>
+              <CardTitle>Shop Profile Settings</CardTitle>
               <CardDescription>Fill in these details to build trust with original photos and clear info.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -426,11 +432,10 @@ export default function DashboardPage() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select Category" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Food">Food & Snacks</SelectItem>
-                        <SelectItem value="Services">Professional Services</SelectItem>
-                        <SelectItem value="Retail">Retail Store</SelectItem>
-                        <SelectItem value="Repairs">Repairs & Maintenance</SelectItem>
+                      <SelectContent className="max-h-[300px]">
+                        {categoryList.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

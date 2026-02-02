@@ -47,7 +47,26 @@
         "shopCategory": {
           "type": "string",
           "description": "The category of the business.",
-          "enum": ["Food", "Services", "Retail", "Repairs"]
+          "enum": [
+            "Food",
+            "Groceries",
+            "Retail",
+            "Electronics",
+            "Repairs",
+            "Services",
+            "Beauty",
+            "Health",
+            "Education",
+            "Automobile",
+            "Gifts",
+            "Home Decor",
+            "Clothing",
+            "Jewelry",
+            "Hardware",
+            "Pharmacy",
+            "Stationery",
+            "Others"
+          ]
         },
         "shopDescription": {
           "type": "string",
