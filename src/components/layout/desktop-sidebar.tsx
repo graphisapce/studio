@@ -5,11 +5,16 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase/clientApp";
+import { useMemo } from "react";
 
 export function DesktopSidebar() {
   const { user, userProfile, loading } = useAuth();
 
   const handleLogout = () => auth.signOut();
+
+  const showDashboard = useMemo(() => {
+    return !loading && user && userProfile?.role === 'business';
+  }, [loading, user, userProfile]);
 
   return (
     <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex">
@@ -22,10 +27,10 @@ export function DesktopSidebar() {
         {loading ? (
           <div className="px-4 py-2 flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-xs">Checking role...</span>
+            <span className="text-xs">Syncing role...</span>
           </div>
         ) : (
-          userProfile?.role === 'business' && (
+          showDashboard && (
             <Button variant="ghost" className="justify-start gap-3" asChild>
               <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
             </Button>

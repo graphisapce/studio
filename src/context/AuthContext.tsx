@@ -32,12 +32,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      // Clear any existing profile listener on auth state change
       if (unsubscribeProfile) {
         unsubscribeProfile();
         unsubscribeProfile = null;
       }
 
       if (firebaseUser) {
+        // Crucial: Set loading to true while we fetch the specific profile data
+        setLoading(true);
         setUser(firebaseUser);
         const userDocRef = doc(db, "users", firebaseUser.uid);
         
