@@ -1,3 +1,70 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "shop-food-1",
+      "description": "A bustling street food stall at night.",
+      "imageUrl": "https://images.unsplash.com/photo-1633779453744-ba1ca401124a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Zm9vZCUyMHN0YWxsfGVufDB8fHx8MTc3MDAyMTExOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "food stall"
+    },
+    {
+      "id": "shop-services-1",
+      "description": "A modern and clean barbershop interior.",
+      "imageUrl": "https://images.unsplash.com/photo-1754294437661-129b86f868ea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YmFyYmVyc2hvcCUyMGludGVyaW9yfGVufDB8fHx8MTc3MDA0MzM2NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "barbershop interior"
+    },
+    {
+      "id": "shop-retail-1",
+      "description": "A small boutique clothing store with racks of clothes.",
+      "imageUrl": "https://images.unsplash.com/photo-1666861585341-5bd1e7b1ed71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjbG90aGluZyUyMGJvdXRpcXVlfGVufDB8fHx8MTc3MDAyOTA0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "clothing boutique"
+    },
+    {
+      "id": "shop-repairs-1",
+      "description": "A cluttered but organized electronics repair workshop.",
+      "imageUrl": "https://images.unsplash.com/photo-1675798227643-da319f8ee8f7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cmVwYWlyJTIwd29ya3Nob3B8ZW58MHx8fHwxNzcwMDQzMzY1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "repair workshop"
+    },
+    {
+      "id": "shop-food-2",
+      "description": "A cozy cafe with warm lighting.",
+      "imageUrl": "https://images.unsplash.com/photo-1593536488177-1eb3c2d4e3d2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y296eSUyMGNhZmV8ZW58MHx8fHwxNzcwMDQzMzY0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cozy cafe"
+    },
+    {
+      "id": "shop-retail-2",
+      "description": "A local grocery store with fresh produce.",
+      "imageUrl": "https://images.unsplash.com/photo-1584771145729-0bd9fda6529b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Z3JvY2VyeSUyMHN0b3JlfGVufDB8fHx8MTc2OTk0NzkxMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "grocery store"
+    },
+    {
+      "id": "product-food-1",
+      "description": "A delicious plate of Chole Bhature.",
+      "imageUrl": "https://picsum.photos/seed/product-food-1/400/300",
+      "imageHint": "chole bhature"
+    },
+    {
+      "id": "product-food-2",
+      "description": "A slice of pizza with cheese pull.",
+      "imageUrl": "https://images.unsplash.com/photo-1544982503-9f984c14501a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwaXp6YSUyMHNsaWNlfGVufDB8fHx8MTc3MDAyNTIzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pizza slice"
+    },
+    {
+      "id": "product-service-1",
+      "description": "A stylish men's haircut.",
+      "imageUrl": "https://images.unsplash.com/photo-1654097800369-abc063d657c4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtZW4lMjdzJTIwaGFpcmN1dHxlbnwwfHx8fDE3NzAwNDMzNjV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "men's haircut"
+    },
+    {
+      "id": "product-retail-1",
+      "description": "A folded blue t-shirt.",
+      "imageUrl": "https://images.unsplash.com/photo-1558171813-4c088753af8f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxibHVlJTIwdC1zaGlydHxlbnwwfHx8fDE3NzAwNDMzNjR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "blue t-shirt"
+    },
+    {
+      "id": "product-repair-1",
+      "description": "A cracked smartphone screen before repair.",
+      "imageUrl": "https://images.unsplash.com/photo-1441804238730-210ce1c2cc00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjcmFja2VkJTIwc2NyZWVufGVufDB8fHx8MTc3MDA0MzM2NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cracked screen"
+    }
+  ]
 }

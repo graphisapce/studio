@@ -1,0 +1,145 @@
+import type { Business, Product } from './types';
+import { PlaceHolderImages } from './placeholder-images';
+
+const getImage = (id: string) => {
+  const image = PlaceHolderImages.find(img => img.id === id);
+  return {
+    url: image?.imageUrl || 'https://picsum.photos/seed/default/600/400',
+    hint: image?.imageHint || 'placeholder',
+  };
+};
+
+export const mockBusinesses: Business[] = [
+  {
+    id: '1',
+    ownerId: 'owner1',
+    shopName: 'Raju\'s Chole Bhature',
+    category: 'Food',
+    address: 'A-123, Jahangirpuri, Delhi',
+    contactNumber: '+919876543210',
+    whatsappLink: 'https://wa.me/919876543210',
+    imageUrl: getImage('shop-food-1').url,
+    imageHint: getImage('shop-food-1').hint,
+  },
+  {
+    id: '2',
+    ownerId: 'owner2',
+    shopName: 'Modern Gents Salon',
+    category: 'Services',
+    address: 'B-45, Jahangirpuri, Delhi',
+    contactNumber: '+919123456789',
+    whatsappLink: 'https://wa.me/919123456789',
+    imageUrl: getImage('shop-services-1').url,
+    imageHint: getImage('shop-services-1').hint,
+  },
+  {
+    id: '3',
+    ownerId: 'owner3',
+    shopName: 'Priya\'s Fashion House',
+    category: 'Retail',
+    address: 'C-789, Jahangirpuri, Delhi',
+    contactNumber: '+918765432109',
+    whatsappLink: 'https://wa.me/918765432109',
+    imageUrl: getImage('shop-retail-1').url,
+    imageHint: getImage('shop-retail-1').hint,
+  },
+  {
+    id: '4',
+    ownerId: 'owner4',
+    shopName: 'Expert Mobile Repairs',
+    category: 'Repairs',
+    address: 'D-101, Jahangirpuri, Delhi',
+    contactNumber: '+917890123456',
+    whatsappLink: 'https://wa.me/917890123456',
+    imageUrl: getImage('shop-repairs-1').url,
+    imageHint: getImage('shop-repairs-1').hint,
+  },
+    {
+    id: '5',
+    ownerId: 'owner5',
+    shopName: 'Gupta\'s Cafe Corner',
+    category: 'Food',
+    address: 'E-210, Jahangirpuri, Delhi',
+    contactNumber: '+919988776655',
+    whatsappLink: 'https://wa.me/919988776655',
+    imageUrl: getImage('shop-food-2').url,
+    imageHint: getImage('shop-food-2').hint,
+  },
+  {
+    id: '6',
+    ownerId: 'owner6',
+    shopName: 'Daily Needs Kirana',
+    category: 'Retail',
+    address: 'F-55, Jahangirpuri, Delhi',
+    contactNumber: '+918877665544',
+    whatsappLink: 'https://wa.me/918877665544',
+    imageUrl: getImage('shop-retail-2').url,
+    imageHint: getImage('shop-retail-2').hint,
+  },
+];
+
+export const mockProducts: Product[] = [
+  {
+    id: 'p1',
+    businessId: '1',
+    title: 'Special Chole Bhature',
+    price: 80,
+    description: '2 fluffy bhature served with spicy chole, onions, and pickle.',
+    imageUrl: getImage('product-food-1').url,
+    imageHint: getImage('product-food-1').hint,
+  },
+  {
+    id: 'p2',
+    businessId: '1',
+    title: 'Plain Bhature (2 pcs)',
+    price: 40,
+    description: 'Extra bhature to satisfy your hunger.',
+    imageUrl: 'https://picsum.photos/seed/bhature/400/300',
+    imageHint: 'bhature plain',
+  },
+  {
+    id: 'p3',
+    businessId: '2',
+    title: 'Haircut + Shave Combo',
+    price: 150,
+    description: 'A complete grooming package for the modern man.',
+    imageUrl: getImage('product-service-1').url,
+    imageHint: getImage('product-service-1').hint,
+  },
+  {
+    id: 'p4',
+    businessId: '2',
+    title: 'Beard Trim',
+    price: 70,
+    description: 'Get your beard in perfect shape.',
+    imageUrl: 'https://picsum.photos/seed/beardtrim/400/300',
+    imageHint: 'beard trim'
+  },
+  {
+    id: 'p5',
+    businessId: '3',
+    title: 'Cotton T-Shirt',
+    price: 499,
+    description: 'Comfortable and stylish round-neck cotton t-shirt.',
+    imageUrl: getImage('product-retail-1').url,
+    imageHint: getImage('product-retail-1').hint,
+  },
+  {
+    id: 'p6',
+    businessId: '4',
+    title: 'Screen Replacement',
+    price: 1200,
+    description: 'Cracked screen? We can fix it! Price varies by model.',
+    imageUrl: getImage('product-repair-1').url,
+    imageHint: getImage('product-repair-1').hint,
+  },
+   {
+    id: 'p7',
+    businessId: '5',
+    title: 'Margherita Pizza',
+    price: 250,
+    description: 'Classic cheese and tomato pizza with a crispy crust.',
+    imageUrl: getImage('product-food-2').url,
+    imageHint: getImage('product-food-2').hint,
+  },
+];
