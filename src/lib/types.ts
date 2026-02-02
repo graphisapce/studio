@@ -23,3 +23,11 @@ export interface Product {
   imageUrl: string;
   imageHint: string;
 }
+
+export interface UserProfile {
+  uid: string;
+  name: string;
+  email: string;
+  phone?: string;
+  photoURL?: string;
+  role: 'customer' | 'business

@@ -12,8 +12,9 @@ import {
   signInWithPopup,
   getAdditionalUserInfo,
   sendPasswordResetEmail,
+  UserCredential,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, googleProvider, db, isFirebaseConfigured } from "@/lib/firebase/clientApp";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -66,7 +67,10 @@ export default function LoginPage() {
   
   useEffect(() => {
     if(!authLoading && user) {
-        router.push('/dashboard');
+        // If user is already logged in, redirect them.
+        // The AuthProvider will fetch the profile, so we can't redirect here reliably.
+        // Let's redirect to a neutral page and let the layouts/pages handle role-based redirection.
+        router.push('/');
     }
   }, [user, authLoading, router]);
 
@@ -80,6 +84,15 @@ export default function LoginPage() {
     defaultValues: { name: "", email: "", phone: "", password: "" },
   });
 
+  async function handleLoginSuccess(userCredential: UserCredential) {
+    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+    if (userDoc.exists() && userDoc.data().role === 'business') {
+      router.push("/dashboard");
+    } else {
+      router.push("/");
+    }
+  }
+
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     if (!isFirebaseConfigured) {
       toast({
@@ -91,9 +104,9 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: "Success", description: "Logged in successfully." });
-      router.push("/dashboard");
+      await handleLoginSuccess(userCredential);
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
@@ -105,6 +118,14 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+  
+  async function handleSignupSuccess(selectedRole: "customer" | "business") {
+      if (selectedRole === 'business') {
+          router.push('/setup-business');
+      } else {
+          router.push('/');
+      }
   }
 
   async function onSignupSubmit(values: z.infer<typeof signupSchema>) {
@@ -131,7 +152,7 @@ export default function LoginPage() {
       });
 
       toast({ title: "Success", description: "Account created successfully." });
-      router.push("/dashboard");
+      await handleSignupSuccess(role);
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/email-already-in-use') {
@@ -174,216 +195,10 @@ export default function LoginPage() {
             role: role,
             createdAt: new Date().toISOString(),
         });
+        toast({ title: "Success", description: "Account created successfully." });
+        await handleSignupSuccess(role);
+      } else {
+        toast({ title: "Success", description: "Logged in successfully." });
+        await handleLoginSuccess(result);
       }
-      
-      toast({ title: "Success", description: "Logged in successfully." });
-      router.push("/dashboard");
-    } catch (error: any) {
-      let description = "Could not sign in with Google. Please try again.";
-      if (error.code === 'auth/popup-closed-by-user') {
-          description = "The sign-in window was closed. Please try again.";
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-          description = "An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.";
-      } else if (error.code === 'auth/operation-not-allowed') {
-          description = "Google Sign-In is not enabled for this project. Please enable it in the Firebase Console under Authentication > Sign-in method.";
-      } else if (error.code === 'permission-denied') {
-          description = "Could not save new user data to the database. Please check your Firestore security rules.";
-      } else if (error.message) {
-          description = error.message;
-      }
-      toast({ variant: "destructive", title: "Google Sign-In Failed", description });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function handleForgotPassword() {
-    if (!isFirebaseConfigured) {
-      toast({
-        variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Please set up your Firebase credentials in .env.local to use this feature.",
-      });
-      return;
-    }
-
-    const email = loginForm.getValues("email");
-    if (!email) {
-        loginForm.trigger("email");
-        return;
-    }
-    const isEmailValid = await loginForm.trigger("email");
-    if (!isEmailValid) return;
-
-    setIsLoading(true);
-    const successMessage = `If an account exists for ${email}, a password reset link has been sent. Please check your inbox and spam folder. The email may take a few minutes to arrive.`;
-
-    try {
-        await sendPasswordResetEmail(auth, email);
-        toast({
-            title: "Password Reset Email Sent",
-            description: successMessage,
-        });
-    } catch (error) {
-        // For security, always show a success message to prevent user enumeration
-        toast({
-            title: "Password Reset Email Sent",
-            description: successMessage,
-        });
-    } finally {
-        setIsLoading(false);
-    }
-  }
-
-
-  if (authLoading || user) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
-            <p>Loading...</p>
-        </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary/20 p-4 relative">
-       <Button variant="ghost" className="absolute top-4 left-4" asChild>
-        <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4"/>
-            Back to Home
-        </Link>
-       </Button>
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Logo className="justify-center mb-2"/>
-          <CardTitle className="text-2xl font-headline">Welcome to LocalVyapar</CardTitle>
-          <CardDescription>Your one-stop shop for everything local</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="space-y-3 mb-6 text-center">
-              <Label className="font-semibold">I am a...</Label>
-              <RadioGroup
-                onValueChange={(value: "customer" | "business") => setRole(value)}
-                defaultValue={role}
-                className="flex space-x-4 justify-center"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="customer" id="role-customer" />
-                  <Label htmlFor="role-customer" className="font-normal cursor-pointer">
-                    Customer
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="business" id="role-business" />
-                  <Label htmlFor="role-business" className="font-normal cursor-pointer">
-                    Business Owner
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="login">Sign In</TabsTrigger>
-                    <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                </TabsList>
-                <TabsContent value="login" className="pt-4">
-                <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <fieldset disabled={isLoading} className="space-y-4">
-                        <FormField control={loginForm.control} name="email" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={loginForm.control} name="password" render={({ field }) => (
-                            <FormItem>
-                              <div className="flex items-center justify-between">
-                                <FormLabel>Password</FormLabel>
-                                <Button
-                                    type="button"
-                                    variant="link"
-                                    className="p-0 h-auto text-sm font-medium text-primary/90 hover:text-primary"
-                                    onClick={handleForgotPassword}
-                                    disabled={isLoading}
-                                >
-                                    Forgot Password?
-                                </Button>
-                              </div>
-                            <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                    </fieldset>
-                    <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Signing In...' : 'Sign In'}</Button>
-                    </form>
-                </Form>
-                <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-                    </div>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-                    <GoogleIcon className="mr-2 h-5 w-5" />
-                    Sign in with Google
-                </Button>
-                </TabsContent>
-                <TabsContent value="signup" className="pt-4">
-                <Form {...signupForm}>
-                    <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                    <fieldset disabled={isLoading} className="space-y-4">
-                        <FormField control={signupForm.control} name="name" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={signupForm.control} name="email" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={signupForm.control} name="phone" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <FormControl><Input placeholder="e.g., 9876543210" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={signupForm.control} name="password" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl><Input type="password" placeholder="Minimum 8 characters" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                    </fieldset>
-                    <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Creating Account...' : 'Create Account'}</Button>
-                    </form>
-                </Form>
-                <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-                    </div>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-                    <GoogleIcon className="mr-2 h-5 w-5" />
-                    Sign up with Google
-                </Button>
-                </TabsContent>
-            </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+    } catch (error: any
