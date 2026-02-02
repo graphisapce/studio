@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Home, LayoutDashboard, LogIn, LogOut, Menu } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Menu, Loader2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase/clientApp";
 
 export function MobileHeader() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
@@ -28,12 +28,12 @@ export function MobileHeader() {
       { href: "/", icon: Home, label: "Home" },
     ];
 
-    if (userProfile?.role === 'business') {
+    if (!loading && userProfile?.role === 'business') {
       items.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
     }
 
     return items;
-  }, [userProfile]);
+  }, [userProfile, loading]);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">
@@ -46,10 +46,16 @@ export function MobileHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="right">
-          <SheetHeader className="mb-8">
+          <SheetHeader className="mb-8 border-b pb-4">
             <Logo />
+            {user && (
+              <div className="mt-4 text-left px-2">
+                <p className="font-bold text-primary truncate">{userProfile?.name || user.displayName || user.email}</p>
+                <p className="text-xs text-muted-foreground capitalize">{userProfile?.role || 'User'}</p>
+              </div>
+            )}
           </SheetHeader>
-          <nav className="flex flex-col gap-4">
+          <nav className="flex flex-col gap-2">
             {navItems.map((item) => (
               <Button key={item.label} variant="ghost" className="justify-start gap-4 p-4 text-left text-lg" asChild onClick={() => setOpen(false)}>
                 <Link href={item.href}>
@@ -58,15 +64,23 @@ export function MobileHeader() {
                 </Link>
               </Button>
             ))}
-             {!user ? (
+             
+             {loading && (
+               <div className="flex items-center gap-2 p-4 text-muted-foreground">
+                 <Loader2 className="h-5 w-5 animate-spin" />
+                 <span>Syncing...</span>
+               </div>
+             )}
+
+             {!user && !loading ? (
                 <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg" asChild onClick={() => setOpen(false)}>
                     <Link href="/login">
                     <LogIn className="h-6 w-6" />
                     <span>Login / Sign Up</span>
                     </Link>
                 </Button>
-             ) : (
-                <Button variant="ghost" onClick={handleLogout} className="justify-start gap-4 p-4 text-left text-lg">
+             ) : user && (
+                <Button variant="ghost" onClick={handleLogout} className="justify-start gap-4 p-4 text-left text-lg text-destructive hover:bg-destructive/10">
                     <LogOut className="h-6 w-6" />
                     <span>Logout</span>
                 </Button>

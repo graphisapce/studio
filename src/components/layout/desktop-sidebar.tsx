@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
-import { Home, LayoutDashboard, LogIn, LogOut } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Loader2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase/clientApp";
 
 export function DesktopSidebar() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   const handleLogout = () => auth.signOut();
 
@@ -18,27 +18,37 @@ export function DesktopSidebar() {
         <Button variant="ghost" className="justify-start gap-3" asChild>
           <Link href="/"><Home className="h-5 w-5" /><span>Home</span></Link>
         </Button>
-        {userProfile?.role === 'business' && (
-          <Button variant="ghost" className="justify-start gap-3" asChild>
-            <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
-          </Button>
+        
+        {loading ? (
+          <div className="px-4 py-2 flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-xs">Checking role...</span>
+          </div>
+        ) : (
+          userProfile?.role === 'business' && (
+            <Button variant="ghost" className="justify-start gap-3" asChild>
+              <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
+            </Button>
+          )
         )}
-        {!user && (
+
+        {!user && !loading && (
           <Button variant="ghost" className="justify-start gap-3" asChild>
             <Link href="/login"><LogIn className="h-5 w-5" /><span>Login / Sign Up</span></Link>
           </Button>
         )}
       </nav>
-      <div className="mt-auto p-4 text-sm">
+      <div className="mt-auto p-4 text-sm border-t pt-4">
         {user && (
           <div className="flex flex-col gap-2">
-            <p className="font-semibold truncate">{user.displayName || user.email}</p>
-            <Button variant="ghost" onClick={handleLogout} className="justify-start p-0 h-auto text-muted-foreground hover:text-foreground">
+            <p className="font-semibold truncate text-primary">{userProfile?.name || user.displayName || user.email}</p>
+            <p className="text-xs text-muted-foreground capitalize mb-2">{userProfile?.role || 'User'}</p>
+            <Button variant="ghost" onClick={handleLogout} className="justify-start p-0 h-auto text-destructive hover:text-destructive hover:bg-destructive/10">
               <LogOut className="h-5 w-5 mr-2" />Logout
             </Button>
           </div>
         )}
-        <p className="text-muted-foreground mt-4">&copy; {new Date().getFullYear()} LocalVyapar</p>
+        <p className="text-muted-foreground mt-4 text-[10px]">&copy; {new Date().getFullYear()} LocalVyapar</p>
       </div>
     </aside>
   );
