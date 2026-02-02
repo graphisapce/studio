@@ -1,3 +1,4 @@
+
 "use client";
 import Link from "next/link";
 import { Home, LayoutDashboard, LogIn, LogOut, Loader2 } from "lucide-react";
@@ -5,16 +6,13 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase/clientApp";
-import { useMemo } from "react";
 
 export function DesktopSidebar() {
   const { user, userProfile, loading } = useAuth();
 
   const handleLogout = () => auth.signOut();
 
-  const showDashboard = useMemo(() => {
-    return !loading && user && userProfile?.role === 'business';
-  }, [loading, user, userProfile]);
+  const isBusiness = userProfile?.role === 'business';
 
   return (
     <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex">
@@ -24,17 +22,17 @@ export function DesktopSidebar() {
           <Link href="/"><Home className="h-5 w-5" /><span>Home</span></Link>
         </Button>
         
-        {loading ? (
+        {loading && user && (
           <div className="px-4 py-2 flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-xs">Syncing role...</span>
           </div>
-        ) : (
-          showDashboard && (
-            <Button variant="ghost" className="justify-start gap-3" asChild>
-              <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
-            </Button>
-          )
+        )}
+
+        {!loading && user && isBusiness && (
+          <Button variant="ghost" className="justify-start gap-3" asChild>
+            <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
+          </Button>
         )}
 
         {!user && !loading && (

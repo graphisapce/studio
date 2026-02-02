@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,21 +9,16 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
 
-  // Wait for isMobile to be defined to avoid hydration flickering
-  if (isMobile === undefined) {
-    return null;
-  }
-
   return (
     <div className="flex min-h-screen bg-secondary/20">
-      {!isMobile && <DesktopSidebar />}
+      {isMobile === false && <DesktopSidebar />}
       <div className="flex-1 flex flex-col">
-        {isMobile && <MobileHeader />}
-        <main className={`flex-1 ${isMobile ? 'pb-20' : ''}`}>
+        {isMobile === true && <MobileHeader />}
+        <main className={`flex-1 ${isMobile === true ? 'pb-20' : ''}`}>
           {children}
         </main>
       </div>
-      {isMobile && <MobileBottomNav />}
+      {isMobile === true && <MobileBottomNav />}
     </div>
   );
 }

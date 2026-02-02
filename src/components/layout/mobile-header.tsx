@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Home, LayoutDashboard, LogIn, LogOut, Menu, Loader2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -23,17 +24,7 @@ export function MobileHeader() {
     setOpen(false);
   };
   
-  const navItems = useMemo(() => {
-    const items = [
-      { href: "/", icon: Home, label: "Home" },
-    ];
-
-    if (!loading && userProfile?.role === 'business') {
-      items.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
-    }
-
-    return items;
-  }, [userProfile, loading]);
+  const isBusiness = userProfile?.role === 'business';
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">
@@ -56,21 +47,28 @@ export function MobileHeader() {
             )}
           </SheetHeader>
           <nav className="flex flex-col gap-2">
-            {navItems.map((item) => (
-              <Button key={item.label} variant="ghost" className="justify-start gap-4 p-4 text-left text-lg" asChild onClick={() => setOpen(false)}>
-                <Link href={item.href}>
-                  <item.icon className="h-6 w-6" />
-                  <span>{item.label}</span>
+            <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg" asChild onClick={() => setOpen(false)}>
+                <Link href="/">
+                  <Home className="h-6 w-6" />
+                  <span>Home</span>
                 </Link>
-              </Button>
-            ))}
+            </Button>
              
-             {loading && (
+            {loading && user && (
                <div className="flex items-center gap-2 p-4 text-muted-foreground">
                  <Loader2 className="h-5 w-5 animate-spin" />
-                 <span>Syncing...</span>
+                 <span>Syncing role...</span>
                </div>
-             )}
+            )}
+
+            {!loading && user && isBusiness && (
+              <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg" asChild onClick={() => setOpen(false)}>
+                <Link href="/dashboard">
+                  <LayoutDashboard className="h-6 w-6" />
+                  <span>My Dashboard</span>
+                </Link>
+              </Button>
+            )}
 
              {!user && !loading ? (
                 <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg" asChild onClick={() => setOpen(false)}>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
@@ -29,43 +30,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
-    let unsubscribeProfile: (() => void) | null = null;
-
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      // Clear any existing profile listener on auth state change
-      if (unsubscribeProfile) {
-        unsubscribeProfile();
-        unsubscribeProfile = null;
-      }
-
-      if (firebaseUser) {
-        // Crucial: Set loading to true while we fetch the specific profile data
-        setLoading(true);
-        setUser(firebaseUser);
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        
-        unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
-          if (snapshot.exists()) {
-            setUserProfile(snapshot.data() as UserProfile);
-          } else {
-            setUserProfile(null);
-          }
-          setLoading(false);
-        }, (error) => {
-          console.error("Profile Sync Error:", error);
-          setLoading(false);
-        });
-      } else {
-        setUser(null);
+      setUser(firebaseUser);
+      
+      if (!firebaseUser) {
         setUserProfile(null);
         setLoading(false);
+        return;
       }
+
+      setLoading(true);
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      
+      const unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setUserProfile(snapshot.data() as UserProfile);
+        } else {
+          setUserProfile(null);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Profile Sync Error:", error);
+        setLoading(false);
+      });
+
+      return () => unsubscribeProfile();
     });
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
-    };
+    return () => unsubscribeAuth();
   }, []);
 
   return (
