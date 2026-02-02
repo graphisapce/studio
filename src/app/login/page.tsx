@@ -1,9 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth, googleProvider, isFirebaseConfigured } from "@/lib/firebase/clientApp";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+
 import {
   Card,
   CardContent,
@@ -28,6 +39,7 @@ import {
 } from "@/components/ui/radio-group";
 import { Logo } from "@/components/logo";
 import { ArrowLeft } from "lucide-react";
+import { GoogleIcon } from "@/components/icons/google-icon";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -43,6 +55,17 @@ const signupSchema = z.object({
 });
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    if(!authLoading && user) {
+        router.push('/dashboard');
+    }
+  }, [user, authLoading, router]);
+
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -53,14 +76,78 @@ export default function LoginPage() {
     defaultValues: { name: "", email: "", phone: "", password: "", role: "customer" },
   });
 
-  function onLoginSubmit(values: z.infer<typeof loginSchema>) {
-    console.log("Login:", values);
+  async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
+    if (!isFirebaseConfigured) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Please set up your Firebase credentials in .env.local to enable login.",
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({ title: "Success", description: "Logged in successfully." });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  function onSignupSubmit(values: z.infer<typeof signupSchema>) {
-    console.log("Signup:", values);
+  async function onSignupSubmit(values: z.infer<typeof signupSchema>) {
+    if (!isFirebaseConfigured) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Please set up your Firebase credentials in .env.local to enable sign up.",
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      // Here you would typically also save the user's role, name, phone to Firestore
+      toast({ title: "Success", description: "Account created successfully." });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsLoading(false);
+    }
   }
-  
+
+  async function handleGoogleSignIn() {
+    if (!isFirebaseConfigured) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Please set up your Firebase credentials in .env.local to enable Google sign in.",
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      toast({ title: "Success", description: "Logged in successfully." });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  if (authLoading || user) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+            <p>Loading...</p>
+        </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/20 p-4 relative">
        <Button variant="ghost" className="absolute top-4 left-4" asChild>
@@ -84,74 +171,90 @@ export default function LoginPage() {
             <TabsContent value="login">
               <Form {...loginForm}>
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                  <FormField control={loginForm.control} name="email" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={loginForm.control} name="password" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <Button type="submit" className="w-full">Sign In</Button>
+                   <fieldset disabled={isLoading} className="space-y-4">
+                      <FormField control={loginForm.control} name="email" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={loginForm.control} name="password" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                   </fieldset>
+                  <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Signing In...' : 'Sign In'}</Button>
                 </form>
               </Form>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                <GoogleIcon className="mr-2 h-5 w-5" />
+                Sign in with Google
+              </Button>
             </TabsContent>
             <TabsContent value="signup">
               <Form {...signupForm}>
                 <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                  <FormField control={signupForm.control} name="name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={signupForm.control} name="email" render={({ field }) => (
-                     <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                   <FormField control={signupForm.control} name="phone" render={({ field }) => (
-                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl><Input placeholder="e.g., 9876543210" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={signupForm.control} name="password" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl><Input type="password" placeholder="Minimum 8 characters" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={signupForm.control} name="role" render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>I am a...</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="customer" /></FormControl>
-                            <FormLabel className="font-normal">Customer</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="business" /></FormControl>
-                            <FormLabel className="font-normal">Business Owner</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <Button type="submit" className="w-full">Create Account</Button>
+                  <fieldset disabled={isLoading} className="space-y-4">
+                      <FormField control={signupForm.control} name="name" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={signupForm.control} name="email" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={signupForm.control} name="phone" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl><Input placeholder="e.g., 9876543210" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={signupForm.control} name="password" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl><Input type="password" placeholder="Minimum 8 characters" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={signupForm.control} name="role" render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormLabel>I am a...</FormLabel>
+                          <FormControl>
+                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="customer" /></FormControl>
+                                <FormLabel className="font-normal">Customer</FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="business" /></FormControl>
+                                <FormLabel className="font-normal">Business Owner</FormLabel>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                  </fieldset>
+                  <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Creating Account...' : 'Create Account'}</Button>
                 </form>
               </Form>
             </TabsContent>

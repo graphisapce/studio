@@ -4,15 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, LayoutDashboard, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { href: "/", icon: Home, label: "Home" },
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/login", icon: UserCircle, label: "Profile" },
-];
+import { useAuth } from "@/context/AuthContext";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const navItems = [
+    { href: "/", icon: Home, label: "Home" },
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/login", icon: UserCircle, label: user ? "Profile" : "Login" },
+  ];
 
   return (
     <nav className="fixed bottom-0 z-10 w-full border-t bg-background/95 backdrop-blur-sm md:hidden">
