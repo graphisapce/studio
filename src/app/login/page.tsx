@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,9 +12,8 @@ import {
   signInWithPopup,
   getAdditionalUserInfo,
   sendPasswordResetEmail,
-  UserCredential,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { auth, googleProvider, db, isFirebaseConfigured } from "@/lib/firebase/clientApp";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -81,15 +79,12 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<"customer" | "business">("customer");
   
+  // Fast redirection if already logged in
   useEffect(() => {
     if(!authLoading && user) {
-        if(userProfile?.role === 'business') {
-            router.push('/dashboard');
-        } else if (userProfile) {
-            router.push('/');
-        }
+      router.push("/");
     }
-  }, [user, userProfile, authLoading, router]);
+  }, [user, authLoading, router]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -106,20 +101,6 @@ export default function LoginPage() {
     defaultValues: { email: "" },
   });
 
-  async function handleLoginSuccess(userCredential: UserCredential) {
-    try {
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-      if (userDoc.exists() && userDoc.data().role === 'business') {
-        router.push("/dashboard");
-      } else {
-        router.push("/");
-      }
-    } catch (error) {
-      console.error("Profile check error, defaulting to home:", error);
-      router.push("/");
-    }
-  }
-
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     if (!isFirebaseConfigured) {
       toast({
@@ -131,10 +112,9 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: "Success", description: "Logged in successfully." });
-      // Don't await this to avoid blocking the UI if Firestore is flaky
-      handleLoginSuccess(userCredential);
+      router.push("/");
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
@@ -146,14 +126,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  }
-  
-  async function handleSignupSuccess(selectedRole: "customer" | "business") {
-      if (selectedRole === 'business') {
-          router.push('/setup-business');
-      } else {
-          router.push('/');
-      }
   }
 
   async function onSignupSubmit(values: z.infer<typeof signupSchema>) {
@@ -180,15 +152,13 @@ export default function LoginPage() {
       });
 
       toast({ title: "Success", description: "Account created successfully." });
-      await handleSignupSuccess(role);
+      router.push(role === 'business' ? '/setup-business' : '/');
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/email-already-in-use') {
         description = "An account with this email address already exists. Please try logging in.";
       } else if (error.code === 'auth/weak-password') {
         description = "The password is too weak. Please choose a stronger password of at least 8 characters.";
-      } else if (error.code === 'permission-denied') {
-        description = "Could not save user data. Your account was created, but we couldn't save your profile. Please check Firestore security rules.";
       } else if (error.message) {
         description = error.message;
       }
@@ -224,17 +194,15 @@ export default function LoginPage() {
             createdAt: new Date().toISOString(),
         });
         toast({ title: "Success", description: "Account created successfully." });
-        await handleSignupSuccess(role);
+        router.push(role === 'business' ? '/setup-business' : '/');
       } else {
         toast({ title: "Success", description: "Logged in successfully." });
-        handleLoginSuccess(result);
+        router.push("/");
       }
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/account-exists-with-different-credential') {
         description = "An account with this email already exists with a different sign-in method.";
-      } else if (error.code === 'permission-denied') {
-        description = "Could not save user data. Your account was created, but we couldn't save your profile. Please check Firestore security rules.";
       } else if (error.message) {
         description = error.message;
       }
@@ -244,32 +212,36 @@ export default function LoginPage() {
     }
   }
 
-    async function onForgotPasswordSubmit(values: z.infer<typeof forgotPasswordSchema>) {
-        if (!isFirebaseConfigured) {
-            toast({
-                variant: "destructive",
-                title: "Firebase Not Configured",
-                description: "Firebase is not set up, so we cannot send a reset email.",
-            });
-            return;
-        }
-        setIsLoading(true);
-        try {
-            await sendPasswordResetEmail(auth, values.email);
-            toast({
-                title: "Password Reset Email Sent",
-                description: "If an account with this email exists, a password reset link has been sent. Please also check your spam folder.",
-            });
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Error Sending Email",
-                description: "An unexpected error occurred. Please try again later.",
-            });
-        } finally {
-            setIsLoading(false);
-        }
+  async function onForgotPasswordSubmit(values: z.infer<typeof forgotPasswordSchema>) {
+    if (!isFirebaseConfigured) {
+        toast({
+            variant: "destructive",
+            title: "Firebase Not Configured",
+            description: "Firebase is not set up, so we cannot send a reset email.",
+        });
+        return;
     }
+    setIsLoading(true);
+    try {
+        await sendPasswordResetEmail(auth, values.email);
+        toast({
+            title: "Password Reset Email Sent",
+            description: "If an account with this email exists, a password reset link has been sent. Please also check your spam folder.",
+        });
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Error Sending Email",
+            description: "An unexpected error occurred. Please try again later.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
+  if (authLoading && !user) {
+    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
