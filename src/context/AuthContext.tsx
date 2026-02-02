@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
@@ -49,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsSyncing(true);
       const userDocRef = doc(db, "users", firebaseUser.uid);
       
-      // Use onSnapshot for real-time role updates and persistence
       unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as UserProfile;

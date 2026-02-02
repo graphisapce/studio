@@ -1,4 +1,3 @@
-
 "use client";
 import Link from "next/link";
 import { Home, LayoutDashboard, LogIn, LogOut, Loader2 } from "lucide-react";
@@ -18,7 +17,7 @@ export function DesktopSidebar() {
   }, [userProfile]);
 
   return (
-    <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex">
+    <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex h-screen sticky top-0">
       <div className="p-4"><Logo /></div>
       <nav className="flex flex-col gap-2 mt-8">
         <Button variant="ghost" className="justify-start gap-3" asChild>
@@ -57,7 +56,7 @@ export function DesktopSidebar() {
             ) : (
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Loading Role...</span>
+                <span>Syncing role...</span>
               </div>
             )}
             <Button variant="ghost" onClick={handleLogout} className="justify-start p-0 h-auto text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors">
