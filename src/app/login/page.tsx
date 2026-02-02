@@ -216,17 +216,19 @@ export default function LoginPage() {
     if (!isEmailValid) return;
 
     setIsLoading(true);
+    const successMessage = `If an account exists for ${email}, a password reset link has been sent. Please check your inbox and spam folder. The email may take a few minutes to arrive.`;
+
     try {
         await sendPasswordResetEmail(auth, email);
         toast({
             title: "Password Reset Email Sent",
-            description: `If an account exists for ${email}, you will receive a password reset link shortly. Please check your spam folder too.`,
+            description: successMessage,
         });
     } catch (error) {
         // For security, always show a success message to prevent user enumeration
         toast({
             title: "Password Reset Email Sent",
-            description: `If an account exists for ${email}, you will receive a password reset link shortly. Please check your spam folder too.`,
+            description: successMessage,
         });
     } finally {
         setIsLoading(false);
