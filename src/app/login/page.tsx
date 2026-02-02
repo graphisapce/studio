@@ -11,6 +11,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   getAdditionalUserInfo,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, googleProvider, db, isFirebaseConfigured } from "@/lib/firebase/clientApp";
@@ -166,9 +167,10 @@ export default function LoginPage() {
       if (additionalUserInfo?.isNewUser) {
         await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
-            name: user.displayName,
+            name: user.displayName || 'New User',
             email: user.email,
-            photoURL: user.photoURL,
+            photoURL: user.photoURL || '',
+            phone: user.phoneNumber || '',
             role: role,
             createdAt: new Date().toISOString(),
         });
@@ -194,6 +196,34 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
+
+  async function handleForgotPassword() {
+    const email = loginForm.getValues("email");
+    if (!email) {
+        loginForm.trigger("email");
+        return;
+    }
+    const isEmailValid = await loginForm.trigger("email");
+    if (!isEmailValid) return;
+
+    setIsLoading(true);
+    try {
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: "Password Reset Email Sent",
+            description: `If an account exists for ${email}, you will receive a password reset link shortly.`,
+        });
+    } catch (error) {
+        // For security, always show a success message to prevent user enumeration
+        toast({
+            title: "Password Reset Email Sent",
+            description: `If an account exists for ${email}, you will receive a password reset link shortly.`,
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
 
   if (authLoading || user) {
     return (
@@ -258,7 +288,18 @@ export default function LoginPage() {
                         )} />
                         <FormField control={loginForm.control} name="password" render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Password</FormLabel>
+                              <div className="flex items-center justify-between">
+                                <FormLabel>Password</FormLabel>
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    className="p-0 h-auto text-sm font-medium text-primary/90 hover:text-primary"
+                                    onClick={handleForgotPassword}
+                                    disabled={isLoading}
+                                >
+                                    Forgot Password?
+                                </Button>
+                              </div>
                             <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
                             <FormMessage />
                             </FormItem>
