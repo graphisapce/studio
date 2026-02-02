@@ -55,14 +55,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const data = snapshot.data() as UserProfile;
           setUserProfile(data);
         } else {
-          // Keep current profile if it's just a momentary sync gap
-          console.warn("User document not found yet during sync.");
+          // If profile doc doesn't exist yet, we still finish loading to avoid infinite spinner
+          console.warn("User profile document doesn't exist yet.");
         }
         setLoading(false);
         setIsSyncing(false);
       }, (error) => {
         console.error("Profile Sync Error:", error);
-        // Don't kill the session, just stop the loading spinner
         setLoading(false);
         setIsSyncing(false);
       });

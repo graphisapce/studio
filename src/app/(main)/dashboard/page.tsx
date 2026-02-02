@@ -36,7 +36,9 @@ import {
   X,
   Phone,
   Info,
-  Tag
+  Tag,
+  MapPin,
+  Globe
 } from "lucide-react";
 import {
   Dialog,
@@ -66,6 +68,16 @@ const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
   'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
   'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
+];
+
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", 
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", 
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
 ];
 
 interface DashboardProduct {
@@ -99,23 +111,47 @@ export default function DashboardPage() {
   // Form states for Shop Profile
   const [shopProfile, setShopProfile] = useState({
     shopName: "",
-    shopAddress: "",
     shopCategory: "" as BusinessCategory | "",
     shopDescription: "",
     shopContact: "",
     shopImageUrls: [] as string[]
   });
 
+  // Address parts state for professional form
+  const [addressParts, setAddressParts] = useState({
+    region: "India",
+    state: "",
+    city: "",
+    street: "",
+    landmark: "",
+    pincode: ""
+  });
+
   useEffect(() => {
     if (userProfile) {
       setShopProfile({
         shopName: userProfile.shopName || "",
-        shopAddress: userProfile.shopAddress || "",
         shopCategory: userProfile.shopCategory || "",
         shopDescription: userProfile.shopDescription || "",
         shopContact: userProfile.shopContact || "",
         shopImageUrls: userProfile.shopImageUrls || []
       });
+
+      // Attempt to parse existing address if any
+      if (userProfile.shopAddress) {
+        // Simple heuristic for parsing: street, landmark, city, state, region - pincode
+        const parts = userProfile.shopAddress.split(", ").map(p => p.trim());
+        if (parts.length >= 4) {
+          setAddressParts({
+            street: parts[0] || "",
+            landmark: parts[1] || "",
+            city: parts[2] || "",
+            state: parts[3] || "",
+            region: "India",
+            pincode: userProfile.shopAddress.split("-").pop()?.trim() || ""
+          });
+        }
+      }
     }
   }, [userProfile]);
 
@@ -210,11 +246,14 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user) return;
 
+    // Construct full address string
+    const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
+
     setIsUpdatingProfile(true);
     try {
       await updateDoc(doc(db, "users", user.uid), {
         shopName: shopProfile.shopName,
-        shopAddress: shopProfile.shopAddress,
+        shopAddress: fullAddress,
         shopCategory: shopProfile.shopCategory,
         shopDescription: shopProfile.shopDescription,
         shopContact: shopProfile.shopContact,
@@ -413,14 +452,15 @@ export default function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="profile">
-          <Card className="max-w-3xl mx-auto">
+          <Card className="max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle>Shop Profile Settings</CardTitle>
-              <CardDescription>Fill in these details to build trust with original photos and clear info.</CardDescription>
+              <CardDescription>Update your shop details with a professional address and original photos.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdateShopProfile} className="space-y-8">
-                <div className="grid gap-6 sm:grid-cols-2">
+                {/* Basic Info */}
+                <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="shopName" className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop Name</Label>
                     <Input id="shopName" placeholder="e.g. Sharma Kirana Store" value={shopProfile.shopName} onChange={(e) => setShopProfile({ ...shopProfile, shopName: e.target.value })} />
@@ -447,36 +487,108 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shopAddress">Full Address</Label>
-                  <Textarea id="shopAddress" placeholder="Street, Colony, Landmark..." value={shopProfile.shopAddress} onChange={(e) => setShopProfile({ ...shopProfile, shopAddress: e.target.value })} />
+                    <Label htmlFor="shopDescription" className="flex items-center gap-2"><Info className="h-4 w-4" /> About Shop</Label>
+                    <Textarea id="shopDescription" placeholder="What makes your shop special?" value={shopProfile.shopDescription} onChange={(e) => setShopProfile({ ...shopProfile, shopDescription: e.target.value })} />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="shopDescription" className="flex items-center gap-2"><Info className="h-4 w-4" /> About Shop</Label>
-                  <Textarea id="shopDescription" placeholder="What makes your shop special?" value={shopProfile.shopDescription} onChange={(e) => setShopProfile({ ...shopProfile, shopDescription: e.target.value })} />
+                {/* Professional Address Section */}
+                <div className="space-y-6 border-t pt-6">
+                  <h3 className="text-lg font-semibold flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Shop Location Details</h3>
+                  
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-muted-foreground"><Globe className="h-4 w-4" /> Region</Label>
+                      <Select value={addressParts.region} disabled>
+                        <SelectTrigger className="bg-muted">
+                          <SelectValue placeholder="Select Region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="India">India</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">State / UT</Label>
+                      <Select 
+                        value={addressParts.state} 
+                        onValueChange={(v) => setAddressParts(prev => ({ ...prev, state: v }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select State" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {indianStates.map((state) => (
+                            <SelectItem key={state} value={state}>{state}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city" className="text-muted-foreground">City / Town / Village</Label>
+                      <Input 
+                        id="city" 
+                        placeholder="e.g. New Delhi" 
+                        value={addressParts.city} 
+                        onChange={(e) => setAddressParts(prev => ({ ...prev, city: e.target.value }))} 
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="pincode" className="text-muted-foreground">Pincode</Label>
+                      <Input 
+                        id="pincode" 
+                        placeholder="e.g. 110001" 
+                        value={addressParts.pincode} 
+                        onChange={(e) => setAddressParts(prev => ({ ...prev, pincode: e.target.value }))} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="street" className="text-muted-foreground">House No, Building, Street, Road</Label>
+                      <Input 
+                        id="street" 
+                        placeholder="e.g. Flat 102, Shanti Niwas, MG Road" 
+                        value={addressParts.street} 
+                        onChange={(e) => setAddressParts(prev => ({ ...prev, street: e.target.value }))} 
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="landmark" className="text-muted-foreground">Landmark (Optional)</Label>
+                      <Input 
+                        id="landmark" 
+                        placeholder="e.g. Opposite City Park" 
+                        value={addressParts.landmark} 
+                        onChange={(e) => setAddressParts(prev => ({ ...prev, landmark: e.target.value }))} 
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <Label>Original Shop Photos (Upload from Device)</Label>
+                {/* Photos Section */}
+                <div className="space-y-4 border-t pt-6">
+                  <Label className="text-lg font-semibold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Original Shop Photos</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {shopProfile.shopImageUrls.map((url, index) => (
                       <div key={index} className="relative aspect-square rounded-md overflow-hidden border group">
                         <Image src={url} alt={`Shop ${index}`} fill className="object-cover" />
-                        <Button 
+                        <button 
                           type="button" 
-                          variant="destructive" 
-                          size="icon" 
-                          className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+                          className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" 
                           onClick={() => handleRemoveShopPhoto(index)}
                         >
                           <X className="h-3 w-3" />
-                        </Button>
+                        </button>
                       </div>
                     ))}
                     <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors border-primary/30">
                       <div className="flex flex-col items-center justify-center p-2 text-center">
                         <Upload className="w-6 h-6 mb-1 text-primary" />
-                        <p className="text-[10px] text-muted-foreground">Add Photo</p>
+                        <p className="text-[10px] text-muted-foreground font-medium">Add Photo</p>
                       </div>
                       <input 
                         type="file" 
@@ -486,10 +598,12 @@ export default function DashboardPage() {
                       />
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground italic">Tip: Upload photos of your shop's signboard and interior to build trust.</p>
+                  <p className="text-xs text-muted-foreground italic bg-primary/5 p-3 rounded-md border border-primary/10">
+                    <strong>Tip:</strong> Upload photos of your shop's signboard and interior. This builds trust with local customers.
+                  </p>
                 </div>
 
-                <Button type="submit" className="w-full h-12 text-lg shadow-lg" disabled={isUpdatingProfile}>
+                <Button type="submit" className="w-full h-12 text-lg shadow-lg hover:shadow-xl transition-all" disabled={isUpdatingProfile}>
                   {isUpdatingProfile ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <><Save className="mr-2 h-5 w-5" /> Save Shop Profile</>}
                 </Button>
               </form>
