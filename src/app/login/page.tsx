@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -84,7 +85,7 @@ export default function LoginPage() {
     if(!authLoading && user) {
         if(userProfile?.role === 'business') {
             router.push('/dashboard');
-        } else {
+        } else if (userProfile) {
             router.push('/');
         }
     }
@@ -106,10 +107,15 @@ export default function LoginPage() {
   });
 
   async function handleLoginSuccess(userCredential: UserCredential) {
-    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-    if (userDoc.exists() && userDoc.data().role === 'business') {
-      router.push("/dashboard");
-    } else {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      if (userDoc.exists() && userDoc.data().role === 'business') {
+        router.push("/dashboard");
+      } else {
+        router.push("/");
+      }
+    } catch (error) {
+      console.error("Profile check error, defaulting to home:", error);
       router.push("/");
     }
   }
@@ -127,7 +133,8 @@ export default function LoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: "Success", description: "Logged in successfully." });
-      await handleLoginSuccess(userCredential);
+      // Don't await this to avoid blocking the UI if Firestore is flaky
+      handleLoginSuccess(userCredential);
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
@@ -220,7 +227,7 @@ export default function LoginPage() {
         await handleSignupSuccess(role);
       } else {
         toast({ title: "Success", description: "Logged in successfully." });
-        await handleLoginSuccess(result);
+        handleLoginSuccess(result);
       }
     } catch (error: any) {
       let description = "An unexpected error occurred. Please try again.";
@@ -263,18 +270,6 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     }
-
-
-  if (authLoading || (!authLoading && user)) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
-            <div className="space-y-4 text-center">
-                <p className="text-lg font-semibold">Loading...</p>
-                <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary mx-auto"></div>
-            </div>
-        </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">

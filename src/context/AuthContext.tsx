@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db, isFirebaseConfigured } from "@/lib/firebase/clientApp";
 import type { UserProfile } from "@/lib/types";
 
@@ -40,33 +41,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
+    let unsubscribeProfile: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      // Clean up previous profile listener if any
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
       if (firebaseUser) {
         setUser(firebaseUser);
-        try {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              setUserProfile(userDoc.data() as UserProfile);
-            } else {
-              setUserProfile(null);
-            }
-        } catch (error) {
-            console.error("Firebase Auth Error: Failed to get user document.", error);
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        
+        // Use onSnapshot for better offline support and real-time updates
+        unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
+          if (snapshot.exists()) {
+            setUserProfile(snapshot.data() as UserProfile);
+          } else {
             setUserProfile(null);
-        }
+          }
+          setLoading(false);
+        }, (error) => {
+          console.error("Firestore Profile Sync Error:", error);
+          // Even if profile fails (offline), we still have the auth user
+          setLoading(false);
+        });
       } else {
         setUser(null);
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
-  // For initial load, show splash screen. For subsequent logins, don't block.
-  // But ensure layout waits for profile if user exists.
+  // For initial load, show splash screen.
   return (
     <AuthContext.Provider value={{ user, userProfile, loading }}>
       {loading && !user ? <AuthSplashScreen /> : children}

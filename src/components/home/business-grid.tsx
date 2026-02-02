@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -21,7 +22,7 @@ export function BusinessGrid() {
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
-  const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(true);
+  const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
 
   // Initial loading simulation state
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -42,13 +43,12 @@ export function BusinessGrid() {
           setLocationError(null);
         },
         (error) => {
-          setLocationError("Location permission denied. Showing all businesses.");
+          console.warn("Location permission denied.");
           setIsLocationLoading(false);
           setIsDistanceFilterActive(false);
         }
       );
     } else {
-      setLocationError("Geolocation is not supported. Showing all businesses.");
       setIsLocationLoading(false);
       setIsDistanceFilterActive(false);
     }
@@ -83,7 +83,7 @@ export function BusinessGrid() {
     setSelectedCategory(prev => (prev === category ? null : category));
   };
 
-  const isLoading = isInitialLoading || isLocationLoading;
+  const isLoading = isInitialLoading || (isLocationLoading && isDistanceFilterActive);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -126,13 +126,6 @@ export function BusinessGrid() {
           ))}
         </div>
       </div>
-
-      {locationError && !isLocationLoading && (
-        <Alert variant="destructive" className="mb-6 max-w-2xl mx-auto">
-          <AlertTitle>Location Error</AlertTitle>
-          <AlertDescription>{locationError}</AlertDescription>
-        </Alert>
-      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
