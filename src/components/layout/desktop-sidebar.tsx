@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useMemo } from "react";
 import { Home, LayoutDashboard, LogIn, LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -11,13 +12,17 @@ export function DesktopSidebar() {
 
   const handleLogout = () => auth.signOut();
 
-  const navItems = [
-    { href: "/", icon: Home, label: "Home" },
-  ];
+  const navItems = useMemo(() => {
+    const items = [
+      { href: "/", icon: Home, label: "Home" },
+    ];
 
-  if (userProfile?.role === 'business') {
-    navItems.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
-  }
+    if (userProfile?.role === 'business') {
+      items.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
+    }
+
+    return items;
+  }, [userProfile]);
 
   return (
     <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex">

@@ -8,12 +8,11 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
-  const { loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
-  // The AuthProvider already shows a splash screen, so we don't need another one.
-  // We wait for `isMobile` to be determined on the client to avoid a layout flash.
-  // Returning `null` is faster than a full loading component.
-  if (isMobile === undefined || loading) {
+  // If we have a user but no profile yet while loading, wait for it
+  // This ensures navigation items correctly show based on role
+  if (isMobile === undefined || (loading && user && !userProfile)) {
     return null;
   }
 

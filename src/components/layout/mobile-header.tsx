@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { Home, LayoutDashboard, LogIn, LogOut, Menu } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase/clientApp";
-import { useState } from "react";
 
 export function MobileHeader() {
   const { user, userProfile } = useAuth();
@@ -23,13 +23,17 @@ export function MobileHeader() {
     setOpen(false);
   };
   
-  const navItems = [
-    { href: "/", icon: Home, label: "Home" },
-  ];
+  const navItems = useMemo(() => {
+    const items = [
+      { href: "/", icon: Home, label: "Home" },
+    ];
 
-  if (userProfile?.role === 'business') {
-    navItems.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
-  }
+    if (userProfile?.role === 'business') {
+      items.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
+    }
+
+    return items;
+  }, [userProfile]);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">

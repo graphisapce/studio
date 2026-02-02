@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { Home, LayoutDashboard, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,15 +11,19 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { user, userProfile } = useAuth();
 
-  const navItems = [
-    { href: "/", icon: Home, label: "Home" },
-  ];
+  const navItems = useMemo(() => {
+    const items = [
+      { href: "/", icon: Home, label: "Home" },
+    ];
 
-  if (userProfile?.role === 'business') {
-    navItems.push({ href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
-  }
+    if (userProfile?.role === 'business') {
+      items.push({ href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
+    }
 
-  navItems.push({ href: "/login", icon: UserCircle, label: user ? "Profile" : "Login" });
+    items.push({ href: "/login", icon: UserCircle, label: user ? "Profile" : "Login" });
+    
+    return items;
+  }, [user, userProfile]);
 
   return (
     <nav className="fixed bottom-0 z-10 w-full border-t bg-background/95 backdrop-blur-sm md:hidden">

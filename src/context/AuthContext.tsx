@@ -40,12 +40,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
-      if (user) {
-        setUser(user);
+      if (firebaseUser) {
+        setUser(firebaseUser);
         try {
-            const userDocRef = doc(db, "users", user.uid);
+            const userDocRef = doc(db, "users", firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
             if (userDoc.exists()) {
               setUserProfile(userDoc.data() as UserProfile);
@@ -65,6 +65,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // For initial load, show splash screen. For subsequent logins, don't block.
+  // But ensure layout waits for profile if user exists.
   return (
     <AuthContext.Provider value={{ user, userProfile, loading }}>
       {loading && !user ? <AuthSplashScreen /> : children}
