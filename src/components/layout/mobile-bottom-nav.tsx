@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { Home, LayoutDashboard, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,34 +10,23 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { user, userProfile } = useAuth();
 
-  const navItems = useMemo(() => {
-    const items = [
-      { href: "/", icon: Home, label: "Home" },
-    ];
-
-    if (userProfile?.role === 'business') {
-      items.push({ href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
-    }
-
-    items.push({ href: "/login", icon: UserCircle, label: user ? "Profile" : "Login" });
-    
-    return items;
-  }, [user, userProfile]);
-
   return (
     <nav className="fixed bottom-0 z-10 w-full border-t bg-background/95 backdrop-blur-sm md:hidden">
       <div className="flex h-16 items-center justify-around">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link key={item.label} href={item.href} className="flex flex-col items-center gap-1 text-muted-foreground">
-              <item.icon className={cn("h-6 w-6", isActive && "text-primary")} />
-              <span className={cn("text-xs font-medium", isActive && "text-primary")}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
+        <Link href="/" className="flex flex-col items-center gap-1">
+          <Home className={cn("h-6 w-6", pathname === "/" ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-xs font-medium", pathname === "/" ? "text-primary" : "text-muted-foreground")}>Home</span>
+        </Link>
+        {userProfile?.role === 'business' && (
+          <Link href="/dashboard" className="flex flex-col items-center gap-1">
+            <LayoutDashboard className={cn("h-6 w-6", pathname === "/dashboard" ? "text-primary" : "text-muted-foreground")} />
+            <span className={cn("text-xs font-medium", pathname === "/dashboard" ? "text-primary" : "text-muted-foreground")}>Dashboard</span>
+          </Link>
+        )}
+        <Link href="/login" className="flex flex-col items-center gap-1">
+          <UserCircle className={cn("h-6 w-6", pathname === "/login" ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-xs font-medium", pathname === "/login" ? "text-primary" : "text-muted-foreground")}>{user ? "Profile" : "Login"}</span>
+        </Link>
       </div>
     </nav>
   );
