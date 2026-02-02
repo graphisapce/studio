@@ -54,9 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         } catch (error) {
             console.error("Firebase Auth Error: Failed to get user document.", error);
-            // This can happen if the client is offline, or if firestore rules are wrong.
-            // We set the user, but the profile will be null.
-            // The UI should handle the case where a user is authenticated but profile is not available.
             setUserProfile(null);
         }
       } else {
@@ -70,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, userProfile, loading }}>
-      {loading ? <AuthSplashScreen /> : children}
+      {loading && !user ? <AuthSplashScreen /> : children}
     </AuthContext.Provider>
   );
 };
