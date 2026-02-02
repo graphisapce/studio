@@ -1,10 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow a user to create, read, and update their own user document.
-    // The document ID must be the same as the user's UID.
     match /users/{userId} {
-      allow create, read, update: if request.auth != null && request.auth.uid == userId;
+      // Any authenticated user can create their own user document.
+      // The document ID must match the user's UID.
+      // The `uid` field within the document must also match.
+      allow create: if request.auth != null &&
+                       request.auth.uid == userId &&
+                       request.resource.data.uid == request.auth.uid;
+
+      // A user can only read their own document.
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // A user can only update their own document.
+      // They cannot change their UID or creation timestamp.
+      allow update: if request.auth != null &&
+                       request.auth.uid == userId &&
+                       request.resource.data.uid == resource.data.uid &&
+                       request.resource.data.createdAt == resource.data.createdAt;
     }
   }
 }
