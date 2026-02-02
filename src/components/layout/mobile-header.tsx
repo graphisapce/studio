@@ -15,7 +15,7 @@ import { auth } from "@/lib/firebase/clientApp";
 import { useState } from "react";
 
 export function MobileHeader() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
@@ -25,8 +25,11 @@ export function MobileHeader() {
   
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" },
   ];
+
+  if (userProfile?.role === 'business') {
+    navItems.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
+  }
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">

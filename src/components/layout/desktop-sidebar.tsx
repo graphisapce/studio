@@ -7,14 +7,17 @@ import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase/clientApp";
 
 export function DesktopSidebar() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   const handleLogout = () => auth.signOut();
 
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" },
   ];
+
+  if (userProfile?.role === 'business') {
+    navItems.push({ href: "/dashboard", icon: LayoutDashboard, label: "My Dashboard" });
+  }
 
   return (
     <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex">

@@ -8,13 +8,17 @@ import { useAuth } from "@/context/AuthContext";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { href: "/login", icon: UserCircle, label: user ? "Profile" : "Login" },
   ];
+
+  if (userProfile?.role === 'business') {
+    navItems.push({ href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
+  }
+
+  navItems.push({ href: "/login", icon: UserCircle, label: user ? "Profile" : "Login" });
 
   return (
     <nav className="fixed bottom-0 z-10 w-full border-t bg-background/95 backdrop-blur-sm md:hidden">
