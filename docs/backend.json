@@ -36,6 +36,21 @@
             "business"
           ]
         },
+        "shopName": {
+          "type": "string",
+          "description": "The name of the business shop."
+        },
+        "shopAddress": {
+          "type": "string",
+          "description": "The physical address of the shop."
+        },
+        "shopImageUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of URLs for shop photos."
+        },
         "createdAt": {
           "type": "string",
           "description": "The timestamp when the user account was created.",

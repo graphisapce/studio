@@ -1,3 +1,4 @@
+
 export type BusinessCategory = 'Food' | 'Services' | 'Retail' | 'Repairs';
 
 export interface Business {
@@ -31,4 +32,8 @@ export interface UserProfile {
   phone?: string;
   photoURL?: string;
   role: 'customer' | 'business';
+  shopName?: string;
+  shopAddress?: string;
+  shopImageUrls?: string[];
+  createdAt: string;
 }
