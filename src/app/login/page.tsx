@@ -137,6 +137,8 @@ export default function LoginPage() {
         description = "An account with this email address already exists. Please try logging in.";
       } else if (error.code === 'auth/weak-password') {
         description = "The password is too weak. Please choose a stronger password of at least 8 characters.";
+      } else if (error.code === 'permission-denied') {
+        description = "Could not save user data. Please check your Firestore security rules.";
       } else if (error.message) {
         description = error.message;
       }
@@ -180,6 +182,10 @@ export default function LoginPage() {
           description = "The sign-in window was closed. Please try again.";
       } else if (error.code === 'auth/account-exists-with-different-credential') {
           description = "An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.";
+      } else if (error.code === 'auth/operation-not-allowed') {
+          description = "Google Sign-In is not enabled for this project. Please enable it in the Firebase Console under Authentication > Sign-in method.";
+      } else if (error.code === 'permission-denied') {
+          description = "Could not save new user data to the database. Please check your Firestore security rules.";
       } else if (error.message) {
           description = error.message;
       }
@@ -320,7 +326,7 @@ export default function LoginPage() {
                 </div>
                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
                     <GoogleIcon className="mr-2 h-5 w-5" />
-                    Sign in with Google
+                    Sign up with Google
                 </Button>
                 </TabsContent>
             </Tabs>
