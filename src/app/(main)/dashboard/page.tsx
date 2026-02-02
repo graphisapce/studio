@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -117,7 +116,7 @@ export default function DashboardPage() {
     shopImageUrls: [] as string[]
   });
 
-  // Address parts state for professional form
+  // Address parts state
   const [addressParts, setAddressParts] = useState({
     region: "India",
     state: "",
@@ -137,9 +136,7 @@ export default function DashboardPage() {
         shopImageUrls: userProfile.shopImageUrls || []
       });
 
-      // Attempt to parse existing address if any
       if (userProfile.shopAddress) {
-        // Simple heuristic for parsing: street, landmark, city, state, region - pincode
         const parts = userProfile.shopAddress.split(", ").map(p => p.trim());
         if (parts.length >= 4) {
           setAddressParts({
@@ -246,7 +243,6 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user) return;
 
-    // Construct full address string
     const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
 
     setIsUpdatingProfile(true);
@@ -431,22 +427,6 @@ export default function DashboardPage() {
                   )) : <p className="col-span-2 text-xs text-muted-foreground italic text-center py-4">No original photos added.</p>}
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Shop Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground text-sm">Total Items</span>
-                    <span className="font-bold">{products.length}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground text-sm">Category</span>
-                    <span className="font-medium text-primary">{shopProfile.shopCategory || "Not Set"}</span>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </TabsContent>
@@ -459,7 +439,6 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdateShopProfile} className="space-y-8">
-                {/* Basic Info */}
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="shopName" className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop Name</Label>
@@ -491,7 +470,6 @@ export default function DashboardPage() {
                     <Textarea id="shopDescription" placeholder="What makes your shop special?" value={shopProfile.shopDescription} onChange={(e) => setShopProfile({ ...shopProfile, shopDescription: e.target.value })} />
                 </div>
 
-                {/* Professional Address Section */}
                 <div className="space-y-6 border-t pt-6">
                   <h3 className="text-lg font-semibold flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Shop Location Details</h3>
                   
@@ -569,7 +547,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Photos Section */}
                 <div className="space-y-4 border-t pt-6">
                   <Label className="text-lg font-semibold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Original Shop Photos</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -598,9 +575,6 @@ export default function DashboardPage() {
                       />
                     </label>
                   </div>
-                  <p className="text-xs text-muted-foreground italic bg-primary/5 p-3 rounded-md border border-primary/10">
-                    <strong>Tip:</strong> Upload photos of your shop's signboard and interior. This builds trust with local customers.
-                  </p>
                 </div>
 
                 <Button type="submit" className="w-full h-12 text-lg shadow-lg hover:shadow-xl transition-all" disabled={isUpdatingProfile}>

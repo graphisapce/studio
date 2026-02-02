@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
@@ -49,14 +48,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsSyncing(true);
       const userDocRef = doc(db, "users", firebaseUser.uid);
       
-      // Real-time listener that survives refreshes and session changes
+      // Use onSnapshot for real-time role updates and persistence
       unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as UserProfile;
           setUserProfile(data);
         } else {
-          // If profile doc doesn't exist yet, we still finish loading to avoid infinite spinner
           console.warn("User profile document doesn't exist yet.");
+          setUserProfile(null);
         }
         setLoading(false);
         setIsSyncing(false);
