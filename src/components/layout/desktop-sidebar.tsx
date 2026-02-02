@@ -13,7 +13,6 @@ export function DesktopSidebar() {
 
   const handleLogout = () => auth.signOut();
 
-  // Robust check that stays true even during brief sync periods
   const isBusiness = useMemo(() => {
     return userProfile?.role === 'business';
   }, [userProfile]);
@@ -48,8 +47,19 @@ export function DesktopSidebar() {
       <div className="mt-auto p-4 text-sm border-t pt-4">
         {user && (
           <div className="flex flex-col gap-2">
-            <p className="font-semibold truncate text-primary">{userProfile?.name || user.displayName || user.email}</p>
-            <p className="text-xs text-muted-foreground capitalize mb-2">{userProfile?.role || 'User'}</p>
+            <p className="font-semibold truncate text-primary">
+              {userProfile?.name || user.displayName || user.email}
+            </p>
+            {userProfile ? (
+              <p className="text-xs text-muted-foreground capitalize mb-2 font-medium">
+                {userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
+              </p>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Loading Role...</span>
+              </div>
+            )}
             <Button variant="ghost" onClick={handleLogout} className="justify-start p-0 h-auto text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors">
               <LogOut className="h-5 w-5 mr-2" />Logout
             </Button>

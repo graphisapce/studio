@@ -43,8 +43,16 @@ export function MobileHeader() {
               <Logo />
               {user && (
                 <div className="mt-4 text-left px-2">
-                  <p className="font-bold text-primary truncate">{userProfile?.name || user.displayName || user.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{userProfile?.role || 'User'}</p>
+                  <p className="font-bold text-primary truncate">
+                    {userProfile?.name || user.displayName || user.email}
+                  </p>
+                  {userProfile ? (
+                    <p className="text-xs text-muted-foreground capitalize font-medium">
+                      {userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Syncing role...</p>
+                  )}
                 </div>
               )}
             </SheetHeader>
