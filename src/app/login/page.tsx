@@ -91,7 +91,13 @@ export default function LoginPage() {
       toast({ title: "Success", description: "Logged in successfully." });
       router.push("/dashboard");
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        description = "Invalid email or password. Please check your credentials and try again.";
+      } else if (error.message) {
+        description = error.message;
+      }
+      toast({ variant: "destructive", title: "Login Failed", description });
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +119,15 @@ export default function LoginPage() {
       toast({ title: "Success", description: "Account created successfully." });
       router.push("/dashboard");
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "An account with this email address already exists. Please try logging in.";
+      } else if (error.code === 'auth/weak-password') {
+        description = "The password is too weak. Please choose a stronger password of at least 8 characters.";
+      } else if (error.message) {
+        description = error.message;
+      }
+      toast({ variant: "destructive", title: "Sign Up Failed", description });
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +148,15 @@ export default function LoginPage() {
       toast({ title: "Success", description: "Logged in successfully." });
       router.push("/dashboard");
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      let description = "Could not sign in with Google. Please try again.";
+      if (error.code === 'auth/popup-closed-by-user') {
+          description = "The sign-in window was closed. Please try again.";
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+          description = "An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.";
+      } else if (error.message) {
+          description = error.message;
+      }
+      toast({ variant: "destructive", title: "Google Sign-In Failed", description });
     } finally {
       setIsLoading(false);
     }
