@@ -168,7 +168,7 @@ export default function LoginPage() {
         await setDoc(doc(db, "users", user.uid), {
             uid: user.uid,
             name: user.displayName || 'New User',
-            email: user.email,
+            email: user.email || '',
             photoURL: user.photoURL || '',
             phone: user.phoneNumber || '',
             role: role,
@@ -198,6 +198,15 @@ export default function LoginPage() {
   }
 
   async function handleForgotPassword() {
+    if (!isFirebaseConfigured) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Please set up your Firebase credentials in .env.local to use this feature.",
+      });
+      return;
+    }
+
     const email = loginForm.getValues("email");
     if (!email) {
         loginForm.trigger("email");
@@ -211,13 +220,13 @@ export default function LoginPage() {
         await sendPasswordResetEmail(auth, email);
         toast({
             title: "Password Reset Email Sent",
-            description: `If an account exists for ${email}, you will receive a password reset link shortly.`,
+            description: `If an account exists for ${email}, you will receive a password reset link shortly. Please check your spam folder too.`,
         });
     } catch (error) {
         // For security, always show a success message to prevent user enumeration
         toast({
             title: "Password Reset Email Sent",
-            description: `If an account exists for ${email}, you will receive a password reset link shortly.`,
+            description: `If an account exists for ${email}, you will receive a password reset link shortly. Please check your spam folder too.`,
         });
     } finally {
         setIsLoading(false);
