@@ -45,7 +45,9 @@ import {
   MessageCircle, 
   Share2,
   Tag,
-  Rocket
+  Rocket,
+  Instagram,
+  Facebook
 } from "lucide-react";
 import {
   Dialog,
@@ -379,10 +381,39 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate Offer</Button></CardContent>
                   </Card>
                   <Card className="border-blue-200 bg-blue-50/20">
-                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> UPI ID</CardTitle></CardHeader>
-                    <CardContent className="space-y-4"><Input placeholder="name@upi" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} /><Button size="sm" variant="outline" className="w-full border-blue-500 text-blue-600" onClick={() => handleUpdateShopProfile()}>Save Payment ID</Button></CardContent>
+                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold">UPI ID</Label>
+                        <Input placeholder="name@upi" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold">Payment QR Image URL</Label>
+                        <Input placeholder="https://image-link.com/qr.jpg" value={shopProfile.paymentQrUrl} onChange={(e) => setShopProfile({...shopProfile, paymentQrUrl: e.target.value})} />
+                        <p className="text-[9px] text-muted-foreground italic">Tip: Upload QR to PostImages.org & paste the 'Direct Link'.</p>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full border-blue-500 text-blue-600" onClick={() => handleUpdateShopProfile()}>Save Payment Settings</Button>
+                    </CardContent>
                   </Card>
                 </div>
+
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Share2 className="h-5 w-5" /> Social Presence</CardTitle><CardDescription>Update your social media links for customers.</CardDescription></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Instagram className="h-4 w-4 text-pink-600" /> Instagram Link</Label>
+                        <Input placeholder="https://instagram.com/shop" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Facebook className="h-4 w-4 text-blue-600" /> Facebook Link</Label>
+                        <Input placeholder="https://facebook.com/shop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
+                      </div>
+                    </div>
+                    <Button className="w-full" onClick={() => handleUpdateShopProfile()}>Update Social Links</Button>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader><CardTitle className="text-lg">Digital Marketing Kit</CardTitle><CardDescription>Dukan ko promote karne ke liye naye tools.</CardDescription></CardHeader>
                   <CardContent className="grid sm:grid-cols-3 gap-6">
