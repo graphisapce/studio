@@ -21,8 +21,9 @@ const SupportAssistantOutputSchema = z.object({
 export type SupportAssistantOutput = z.infer<typeof SupportAssistantOutputSchema>;
 
 export async function supportAssistant(input: SupportAssistantInput): Promise<SupportAssistantOutput> {
+  // Direct check for the environment variable to provide better error reporting
   if (!process.env.GOOGLE_GENAI_API_KEY) {
-    throw new Error("API Key missing. Support bot is currently offline.");
+    throw new Error("API Key missing. Please set GOOGLE_GENAI_API_KEY in your environment.");
   }
   
   return supportAssistantFlow(input);
@@ -36,18 +37,18 @@ const prompt = ai.definePrompt({
   prompt: `You are the LocalVyapar Customer Support Manager. 
 Your goal is to help users understand and use the LocalVyapar platform.
 
-Knowledge Base:
+App Capabilities & Knowledge:
 1. What is LocalVyapar?: A hyperlocal marketplace to find shops within 1km.
-2. For Customers: Users can find verified local shops, check reviews, and contact sellers.
-3. For Businesses: Owners can list products, track profile views, and use AI to write descriptions.
-4. Premium Features: Costs ₹99/month. Includes "Verified" badge, Top search ranking, and direct WhatsApp button.
-5. Location: The app asks for GPS permission to show the nearest shops first.
-6. Payments: Securely handled via Cashfree for premium activations.
+2. Location Feature: Uses GPS to show nearest shops first. Users must allow location permission.
+3. For Customers: Find verified shops, check reviews, and call sellers directly.
+4. For Businesses: List products, use AI for descriptions, and track shop views.
+5. Premium Features: Costs ₹99/month. Includes "Verified" badge, Top search ranking, and direct WhatsApp button.
+6. Support: If a user asks "how to use" or "reply nahi mil raha", explain how the app works and guide them.
 
 Guidelines:
-- Always be polite and professional.
-- Use Hinglish (Hindi + English) to be friendly.
-- If a user asks about something unrelated to the app, gently bring them back to LocalVyapar services.
+- Always reply in Hinglish (Hindi + English) to be friendly and professional.
+- Be extremely helpful. If they ask how to do something, give them a step-by-step guide.
+- If a user asks something totally unrelated to shopping or the app, politely bring them back to LocalVyapar services.
 
 User Query: "{{{query}}}"`,
 });
@@ -61,11 +62,11 @@ const supportAssistantFlow = ai.defineFlow(
   async input => {
     try {
       const { output } = await prompt(input);
-      if (!output) throw new Error("Support bot failed to respond.");
+      if (!output) throw new Error("Support bot failed to generate a response.");
       return output;
     } catch (error: any) {
-      console.error("Genkit Support Error:", error);
-      throw new Error("Support system busy. Try again soon.");
+      console.error("Genkit Support Error Details:", error);
+      throw new Error(error.message || "Support system error.");
     }
   }
 );
