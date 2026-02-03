@@ -6,7 +6,7 @@ import { searchAssistant } from "@/ai/flows/search-assistant-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, MessageSquare, X, Loader2, Search, AlertCircle } from "lucide-react";
+import { Sparkles, MessageSquare, X, Loader2, Search } from "lucide-react";
 import { BusinessCategory } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,7 +37,6 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
       const res = await searchAssistant({ query, categories });
       setResponse(res.suggestion);
       
-      // Auto-filter results based on AI suggestion
       if (res.recommendedCategories.length > 0) {
         onSuggest(res.recommendedCategories[0] as BusinessCategory, res.searchKeywords[0] || "");
       } else {
@@ -48,9 +47,9 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
       toast({
         variant: "destructive",
         title: "AI Assistant Error",
-        description: "Gemini API key check karein. Error: " + (err.message || "Unknown error"),
+        description: "Gemini API key check karein.",
       });
-      setResponse("Sorry, AI Assistant abhi kaam nahi kar raha. Kripya Admin se sampark karein (API Key issue ho sakta hai).");
+      setResponse("Sorry, main abhi apki madad nahi kar pa raha hoon. Kripya baad mein try karein.");
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +61,7 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
         <Card className="w-80 shadow-2xl border-primary/20 animate-in slide-in-from-bottom-5">
           <CardHeader className="bg-primary text-primary-foreground p-4 flex flex-row items-center justify-between rounded-t-lg">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Sparkles className="h-4 w-4" /> AI Shopping Assistant
+              <Sparkles className="h-4 w-4" /> LocalVyapar AI Helper
             </CardTitle>
             <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => setIsOpen(false)}>
               <X className="h-4 w-4" />
@@ -77,7 +76,7 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
             )}
             <form onSubmit={handleAsk} className="flex gap-2">
               <Input 
-                placeholder="Ex: Mujhe pizza khana hai..." 
+                placeholder="Ex: Sasta mobile repair kahan hai?" 
                 className="text-xs h-9"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -87,7 +86,7 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </form>
-            <p className="text-[10px] text-muted-foreground text-center">Powered by Gemini AI</p>
+            <p className="text-[10px] text-muted-foreground text-center">Aapka personal hyperlocal guide</p>
           </CardContent>
         </Card>
       ) : (

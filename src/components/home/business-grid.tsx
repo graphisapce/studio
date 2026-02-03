@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -8,7 +9,7 @@ import type { Business, BusinessCategory, PlatformConfig } from "@/lib/types";
 import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Navigation, Star, ShieldCheck, MapPinCheck, Megaphone } from "lucide-react";
+import { Search, MapPin, Navigation, Star, ShieldCheck, MapPinCheck, Megaphone, Utensils, Zap, ShoppingCart, Wrench } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,12 @@ const categories: BusinessCategory[] = [
   'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
 ];
 
-export function BusinessGrid() {
+interface BusinessGridProps {
+  externalCategory?: BusinessCategory | null;
+  externalSearch?: string;
+}
+
+export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
@@ -29,7 +35,11 @@ export function BusinessGrid() {
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
   const { data: realBusinesses, isLoading: loadingRealData } = useCollection<Business>(businessesRef);
 
-  // Fetch Platform Config
+  useEffect(() => {
+    if (externalCategory !== undefined) setSelectedCategory(externalCategory);
+    if (externalSearch !== undefined) setSearchTerm(externalSearch);
+  }, [externalCategory, externalSearch]);
+
   useEffect(() => {
     const fetchConfig = async () => {
       const configRef = collection(firestore, "config");
@@ -41,7 +51,6 @@ export function BusinessGrid() {
     fetchConfig();
   }, [firestore]);
 
-  // Auto-request location on mount
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -51,9 +60,7 @@ export function BusinessGrid() {
             longitude: position.coords.longitude,
           });
         },
-        (error) => {
-          console.warn("Geolocation access denied:", error.message);
-        },
+        (error) => console.warn("Location denied:", error.message),
         { enableHighAccuracy: true }
       );
     }
@@ -61,10 +68,7 @@ export function BusinessGrid() {
 
   const sortedAndFilteredBusinesses = useMemo(() => {
     let businesses: Business[] = realBusinesses ? [...realBusinesses] : [];
-    
-    if (businesses.length === 0 && !loadingRealData) {
-      businesses = [...mockBusinesses];
-    }
+    if (businesses.length === 0 && !loadingRealData) businesses = [...mockBusinesses];
 
     let filtered = businesses.filter((business) => {
       if (!business) return false;
@@ -85,16 +89,11 @@ export function BusinessGrid() {
       if (userLocation && a.latitude && a.longitude && b.latitude && b.longitude) {
         const distA = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude);
         const distB = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude);
-
-        const aNear = distA <= 1;
-        const bNear = distB <= 1;
-
-        if (aNear && !bNear) return -1;
-        if (!aNear && bNear) return 1;
-
+        
+        if (distA <= 1 && distB > 1) return -1;
+        if (distB <= 1 && distA > 1) return 1;
         return distA - distB;
       }
-
       return (b.views || 0) - (a.views || 0);
     });
 
@@ -102,7 +101,7 @@ export function BusinessGrid() {
   }, [searchTerm, selectedCategory, userLocation, realBusinesses, loadingRealData]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 pb-20">
       {platformConfig?.announcement && (
         <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl mb-8 flex items-center gap-3 animate-pulse">
           <Megaphone className="h-5 w-5 text-primary shrink-0" />
@@ -110,7 +109,7 @@ export function BusinessGrid() {
         </div>
       )}
 
-      <div className="mb-10 space-y-6">
+      <div className="mb-10 space-y-8">
         <div className="text-center space-y-4">
            <div className="flex justify-center gap-2">
              <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-4 py-1">
@@ -118,23 +117,43 @@ export function BusinessGrid() {
              </Badge>
              {userLocation && (
                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 px-4 py-1">
-                <MapPinCheck className="h-3.5 w-3.5 mr-2" /> Live Location Active
+                <MapPinCheck className="h-3.5 w-3.5 mr-2" /> 1km Range Active
                </Badge>
              )}
            </div>
            
-           <h1 className="text-4xl md:text-6xl font-black font-headline tracking-tight text-navy">
-             Aapke <span className="text-primary">Aas-Paas</span> Ki Dukanein
+           <h1 className="text-4xl md:text-6xl font-black font-headline tracking-tight">
+             Market <span className="text-primary">Ab Aapke Haath</span> Mein
            </h1>
            <p className="text-muted-foreground max-w-xl mx-auto text-lg">
-             {userLocation ? "Showing shops within 1km of your location first." : "Enable location to see shops near you."}
+             Hamara smart system aapke liye sabse behtareen local shops dhoondta hai.
            </p>
+        </div>
+
+        {/* Quick Hub for Customers */}
+        <div className="flex justify-center gap-4 py-2">
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Food')}>
+            <div className="p-3 rounded-full bg-orange-100 text-orange-600"><Utensils className="h-6 w-6" /></div>
+            <span className="text-xs font-bold uppercase tracking-widest">Food</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Groceries')}>
+            <div className="p-3 rounded-full bg-green-100 text-green-600"><ShoppingCart className="h-6 w-6" /></div>
+            <span className="text-xs font-bold uppercase tracking-widest">Groceries</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Repairs')}>
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600"><Wrench className="h-6 w-6" /></div>
+            <span className="text-xs font-bold uppercase tracking-widest">Repairs</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Electronics')}>
+            <div className="p-3 rounded-full bg-purple-100 text-purple-600"><Zap className="h-6 w-6" /></div>
+            <span className="text-xs font-bold uppercase tracking-widest">Gadgets</span>
+          </Button>
         </div>
 
         <div className="relative max-w-2xl mx-auto">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
           <Input
-            placeholder="Search for 'Groceries', 'Salon', 'Mechanic'..."
+            placeholder="Kya dhoond rahe hain? (e.g. Pizza, Salon, Repairing)"
             className="pl-14 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10 focus-visible:ring-primary focus-visible:border-primary transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -147,9 +166,9 @@ export function BusinessGrid() {
             onClick={() => setSelectedCategory(null)}
             className="rounded-full h-10 px-6 font-bold"
           >
-            All Shops
+            All Listings
           </Button>
-          {categories.map((category) => (
+          {categories.slice(0, 10).map((category) => (
             <Button
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
@@ -179,28 +198,28 @@ export function BusinessGrid() {
           {sortedAndFilteredBusinesses.map((business) => {
             let distance = null;
             if (userLocation && business.latitude && business.longitude) {
-              distance = getDistanceFromLatLonInKm(
-                userLocation.latitude,
-                userLocation.longitude,
-                business.latitude,
-                business.longitude
-              );
+              distance = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, business.latitude, business.longitude);
             }
             
             return (
-              <div key={business.id} className="relative">
+              <div key={business.id} className="relative group">
                 {distance !== null && distance <= 1 && (
                   <div className="absolute -top-3 left-4 z-20">
                     <Badge className="bg-green-600 text-white border-none shadow-lg py-1 px-3">
-                      <Navigation className="h-3 w-3 mr-1 fill-white" /> 1km Range
+                      <Navigation className="h-3 w-3 mr-1 fill-white" /> Nearby
                     </Badge>
                   </div>
                 )}
                 <BusinessCard business={{ ...business, distance }} />
                 {distance !== null && (
-                  <div className="mt-2 flex items-center justify-end px-2">
+                  <div className="mt-2 flex items-center justify-between px-2">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className={`h-3 w-3 ${i < (business.rating || 5) ? "text-yellow-500 fill-yellow-500" : "text-muted"}`} />
+                      ))}
+                    </div>
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {distance.toFixed(1)} KM AWAY
+                      <MapPin className="h-3 w-3" /> {distance.toFixed(1)} KM
                     </span>
                   </div>
                 )}
@@ -212,10 +231,10 @@ export function BusinessGrid() {
         <div className="text-center py-24 bg-muted/20 rounded-[2rem] border-4 border-dashed border-muted">
           <div className="max-w-md mx-auto space-y-4">
             <MapPin className="h-16 w-16 mx-auto text-muted-foreground opacity-30" />
-            <h2 className="text-3xl font-black">No shops found here</h2>
-            <p className="text-muted-foreground">Try searching for something else or change the category filter.</p>
+            <h2 className="text-3xl font-black">Koi shop nahi mili</h2>
+            <p className="text-muted-foreground">Try searching for something else or ask our AI Helper!</p>
             <Button variant="link" className="text-primary font-bold" onClick={() => {setSearchTerm(""); setSelectedCategory(null);}}>
-              Clear all filters
+              Clear Filters
             </Button>
           </div>
         </div>
