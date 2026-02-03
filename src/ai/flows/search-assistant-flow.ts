@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview AI Shopping Assistant flow for LocalVyapar.
@@ -63,7 +62,12 @@ const searchAssistantFlow = ai.defineFlow(
       return output;
     } catch (error: any) {
       console.error("Genkit prompt execution failed:", error);
-      throw new Error("AI generation failed: " + (error.message || "Unknown Genkit Error"));
+      // Clean up the error message for the user
+      const msg = error.message || "Unknown Genkit Error";
+      if (msg.includes('404')) {
+        throw new Error("Model not found. Please check if gemini-1.5-flash is available for your API key.");
+      }
+      throw new Error("AI generation failed: " + msg);
     }
   }
 );
