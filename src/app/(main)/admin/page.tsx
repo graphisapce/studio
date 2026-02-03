@@ -5,10 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { 
   collection, 
-  query, 
   doc, 
-  deleteDoc, 
-  updateDoc 
 } from "firebase/firestore";
 import { 
   useFirestore, 
@@ -60,23 +57,28 @@ export default function AdminDashboardPage() {
   // Guard: Only admins allowed
   useEffect(() => {
     if (!authLoading) {
-      if (!user) router.push("/login");
-      else if (userProfile && userProfile.role !== "admin") {
-        toast({ variant: "destructive", title: "Access Denied", description: "Only administrators can view this page." });
+      if (!user) {
+        router.push("/login");
+      } else if (userProfile && userProfile.role !== "admin") {
+        toast({ 
+          variant: "destructive", 
+          title: "Access Denied", 
+          description: "This page is only for administrators." 
+        });
         router.push("/");
       }
     }
   }, [user, userProfile, authLoading, router, toast]);
 
   // Data Fetching
-  const businessesQuery = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
-  const { data: businesses, isLoading: loadingBusinesses } = useCollection<Business>(businessesQuery);
+  const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
+  const { data: businesses, isLoading: loadingBusinesses } = useCollection<Business>(businessesRef);
 
-  const usersQuery = useMemoFirebase(() => collection(firestore, "users"), [firestore]);
-  const { data: users, isLoading: loadingUsers } = useCollection<UserProfile>(usersQuery);
+  const usersRef = useMemoFirebase(() => collection(firestore, "users"), [firestore]);
+  const { data: users, isLoading: loadingUsers } = useCollection<UserProfile>(usersRef);
 
-  const productsQuery = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
-  const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
+  const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
+  const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsRef);
 
   const handleTogglePremium = (businessId: string, currentStatus: boolean) => {
     const businessRef = doc(firestore, "businesses", businessId);
@@ -108,47 +110,56 @@ export default function AdminDashboardPage() {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading Administrator Control Panel...</p>
+        <p className="text-muted-foreground">Opening Administrator Control Panel...</p>
       </div>
     );
   }
 
-  if (userProfile?.role !== 'admin') return null;
+  if (userProfile?.role !== 'admin') {
+    return (
+      <div className="container mx-auto py-20 text-center">
+         <ShieldAlert className="mx-auto h-16 w-16 text-destructive opacity-20 mb-4" />
+         <h1 className="text-2xl font-bold">Unauthorized Access</h1>
+         <p className="text-muted-foreground mt-2">You need administrative privileges to view this page.</p>
+         <Button className="mt-6" asChild><Link href="/">Back to Home</Link></Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 bg-red-100 text-red-600 rounded-xl">
+        <div className="p-3 bg-primary/10 text-primary rounded-xl">
           <ShieldAlert className="h-8 w-8" />
         </div>
         <div>
           <h1 className="text-3xl font-bold font-headline">Admin Control Panel</h1>
-          <p className="text-muted-foreground">Manage users, businesses, and platform-wide settings.</p>
+          <p className="text-muted-foreground">Full authority over users, businesses, and listings.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-blue-50 border-blue-100">
+        <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-blue-600 font-bold uppercase text-[10px]">Total Businesses</CardDescription>
+            <CardDescription className="font-bold uppercase text-[10px]">Businesses</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
               <Store className="h-6 w-6 text-blue-500" />
               {businesses?.length || 0}
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card className="bg-purple-50 border-purple-100">
+        <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-purple-600 font-bold uppercase text-[10px]">Registered Users</CardDescription>
+            <CardDescription className="font-bold uppercase text-[10px]">Users</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
               <Users className="h-6 w-6 text-purple-500" />
               {users?.length || 0}
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card className="bg-green-50 border-green-100">
+        <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-green-600 font-bold uppercase text-[10px]">Total Listings</CardDescription>
+            <CardDescription className="font-bold uppercase text-[10px]">Products</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
               <Package className="h-6 w-6 text-green-500" />
               {products?.length || 0}
@@ -167,8 +178,8 @@ export default function AdminDashboardPage() {
         <TabsContent value="businesses">
           <Card>
             <CardHeader>
-              <CardTitle>Manage Shopfronts</CardTitle>
-              <CardDescription>Approve premium status or remove shops.</CardDescription>
+              <CardTitle>Business Moderation</CardTitle>
+              <CardDescription>Grant premium access or delete shops.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -176,7 +187,6 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Shop Name</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Owner ID</TableHead>
                     <TableHead>Premium</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -190,7 +200,6 @@ export default function AdminDashboardPage() {
                         </Link>
                       </TableCell>
                       <TableCell><Badge variant="outline">{b.category}</Badge></TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{b.ownerId}</TableCell>
                       <TableCell>
                         {b.isPaid ? (
                           <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" /> Active</Badge>
@@ -202,7 +211,7 @@ export default function AdminDashboardPage() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className={b.isPaid ? "text-red-500" : "text-green-600"}
+                          className={b.isPaid ? "text-destructive" : "text-green-600"}
                           onClick={() => handleTogglePremium(b.id, !!b.isPaid)}
                         >
                           <Crown className="h-4 w-4 mr-1" /> {b.isPaid ? "Revoke" : "Grant"}
@@ -226,8 +235,8 @@ export default function AdminDashboardPage() {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>Registered Users</CardTitle>
-              <CardDescription>View all platform participants.</CardDescription>
+              <CardTitle>User Directory</CardTitle>
+              <CardDescription>All registered customers and business owners.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -254,7 +263,7 @@ export default function AdminDashboardPage() {
                           variant="destructive" 
                           size="sm"
                           onClick={() => handleDeleteEntry("users", u.id)}
-                          disabled={u.role === 'admin'}
+                          disabled={u.id === user?.uid} // Don't delete self
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -270,8 +279,8 @@ export default function AdminDashboardPage() {
         <TabsContent value="products">
           <Card>
             <CardHeader>
-              <CardTitle>Global Inventory</CardTitle>
-              <CardDescription>Monitor and moderate product listings.</CardDescription>
+              <CardTitle>Global Listings</CardTitle>
+              <CardDescription>Moderate all products across the platform.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -279,7 +288,6 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Business ID</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -288,7 +296,6 @@ export default function AdminDashboardPage() {
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.title}</TableCell>
                       <TableCell>₹{p.price}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{p.businessId}</TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="destructive" 

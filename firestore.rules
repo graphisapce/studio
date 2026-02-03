@@ -13,6 +13,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // Check if the user document has role == 'admin'
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -20,8 +21,8 @@ service cloud.firestore {
       return isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
+    function isExistingOwner(ownerId) {
+      return isSignedIn() && (request.auth.uid == ownerId || isAdmin());
     }
 
     function ownsBusiness(businessId) {
@@ -31,9 +32,10 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get, list: if isOwner(userId);
+      // Admins can see all users, users can see only themselves
+      allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isSignedIn();
-      allow update, delete: if isExistingOwner(userId);
+      allow update, delete: if isOwner(userId) || isAdmin();
     }
 
     match /businesses/{businessId} {
@@ -44,8 +46,8 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow get, list: if true;
-      allow create: if ownsBusiness(request.resource.data.businessId);
-      allow update, delete: if resource != null && ownsBusiness(resource.data.businessId);
+      allow create: if ownsBusiness(request.resource.data.businessId) || isAdmin();
+      allow update, delete: if resource != null && (ownsBusiness(resource.data.businessId) || isAdmin());
     }
   }
 }
