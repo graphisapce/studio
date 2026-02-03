@@ -15,6 +15,10 @@ import { isBusinessPremium } from "@/lib/utils";
 
 export function BusinessCard({ business }: { business: Business }) {
   const hasPremium = isBusinessPremium(business);
+  // Ensure we have a valid image URL or a fallback
+  const displayImage = business.imageUrl && business.imageUrl.trim() !== "" 
+    ? business.imageUrl 
+    : `https://picsum.photos/seed/${business.id}/600/400`;
   
   return (
     <Link href={`/business/${business.id}`}>
@@ -27,13 +31,13 @@ export function BusinessCard({ business }: { business: Business }) {
           </div>
         )}
         <CardHeader className="p-0">
-          <div className="relative aspect-[3/2] w-full">
+          <div className="relative aspect-[3/2] w-full bg-muted">
             <Image
-              src={business.imageUrl}
-              alt={business.shopName}
+              src={displayImage}
+              alt={business.shopName || "Business"}
               fill
               className="object-cover"
-              data-ai-hint={business.imageHint}
+              data-ai-hint={business.imageHint || "shop"}
             />
             <Watermark />
           </div>
@@ -42,10 +46,10 @@ export function BusinessCard({ business }: { business: Business }) {
           <div className="flex justify-between items-start mb-1">
              <Badge variant="secondary" className="mb-1">{business.category}</Badge>
           </div>
-          <CardTitle className="text-lg font-headline mb-1 truncate">{business.shopName}</CardTitle>
+          <CardTitle className="text-lg font-headline mb-1 truncate">{business.shopName || "Unnamed Shop"}</CardTitle>
           <CardDescription className="flex items-center gap-1 text-sm line-clamp-2">
             <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span>{business.address}</span>
+            <span>{business.address || "Address not available"}</span>
           </CardDescription>
         </CardContent>
       </Card>
