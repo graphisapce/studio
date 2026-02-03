@@ -49,7 +49,8 @@ import {
   Instagram,
   Facebook,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Download
 } from "lucide-react";
 import {
   Dialog,
@@ -274,6 +275,33 @@ export default function DashboardPage() {
     toast({ title: "Copied!", description: "WhatsApp status par paste karein." });
   };
 
+  const downloadQRCode = async () => {
+    if (!origin || !user?.uid) return;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(origin + '/business/' + user.uid)}`;
+    
+    try {
+      const response = await fetch(qrImageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `LocalVyapar-QR-${shopProfile.shopName.replace(/\s+/g, '-')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Download Started", description: "Aapka Shop QR code download ho raha hai." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Download Failed", description: "QR code download nahi ho paya. Kripya print screen use karein." });
+    }
+  };
+
+  const shareOnWhatsAppStatus = () => {
+    if (!origin || !user?.uid) return;
+    const message = `Swagat hai hamari dukan *${shopProfile.shopName}* par! 🙏 Hamari saari products aur latest deals ab online dekhein LocalVyapar par: \n\n${origin}/business/${user.uid}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
   if (authLoading || loadingBusiness || loadingProducts) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
@@ -403,7 +431,6 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate Offer</Button></CardContent>
                   </Card>
                   
-                  {/* Payment Settings Card Updated to match requested design */}
                   <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle>
@@ -453,7 +480,6 @@ export default function DashboardPage() {
                               <Upload className="h-3 w-3" /> {shopProfile.paymentQrUrl ? "Change QR Image" : "Select from Device"}
                             </Label>
                           </div>
-                          <p className="text-[9px] text-muted-foreground italic text-center">Apna GPay/PhonePe QR screenshot upload karein.</p>
                         </div>
                       </div>
                       
@@ -488,20 +514,33 @@ export default function DashboardPage() {
                 <Card>
                   <CardHeader><CardTitle className="text-lg">Digital Marketing Kit</CardTitle><CardDescription>Dukan ko promote karne ke liye naye tools.</CardDescription></CardHeader>
                   <CardContent className="grid sm:grid-cols-3 gap-6">
-                     <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30">
-                        <QrCode className="h-10 w-10 text-primary mb-3" />
-                        <p className="text-xs font-bold mb-2">Shop Profile QR</p>
-                        <Button variant="secondary" size="sm" className="w-full" onClick={() => typeof window !== 'undefined' && window.print()}>Print QR</Button>
+                     <div className="flex flex-col items-center p-6 border rounded-xl bg-muted/30 hover:bg-white transition-colors group">
+                        <div className="p-4 bg-primary/10 rounded-full mb-4 text-primary group-hover:scale-110 transition-transform">
+                          <QrCode className="h-8 w-8" />
+                        </div>
+                        <p className="text-sm font-bold mb-1">Shop Profile QR</p>
+                        <p className="text-[10px] text-muted-foreground mb-4 text-center">Customers seedha aapki dukan par pahuchenge.</p>
+                        <Button variant="outline" size="sm" className="w-full gap-2 border-primary text-primary hover:bg-primary/5" onClick={downloadQRCode}>
+                          <Download className="h-3 w-3" /> Download QR
+                        </Button>
                      </div>
-                     <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30">
-                        <Share2 className="h-10 w-10 text-purple-600 mb-3" />
-                        <p className="text-xs font-bold mb-2">WhatsApp Status</p>
-                        <Button variant="secondary" size="sm" className="w-full" onClick={() => origin && copyToClipboard(`Swagat hai hamari dukan ${shopProfile.shopName} par! LocalVyapar par hamari products dekhein: ${origin}/business/${user?.uid}`)}>Copy Status</Button>
+                     <div className="flex flex-col items-center p-6 border rounded-xl bg-muted/30 hover:bg-white transition-colors group">
+                        <div className="p-4 bg-green-50 rounded-full mb-4 text-green-600 group-hover:scale-110 transition-transform">
+                          <MessageCircle className="h-8 w-8" />
+                        </div>
+                        <p className="text-sm font-bold mb-1">WhatsApp Status</p>
+                        <p className="text-[10px] text-muted-foreground mb-4 text-center">Padosiyon ko apni dukan online dikhayein.</p>
+                        <Button variant="outline" size="sm" className="w-full gap-2 border-green-500 text-green-600 hover:bg-green-50" onClick={shareOnWhatsAppStatus}>
+                          <Share2 className="h-3 w-3" /> Share Status
+                        </Button>
                      </div>
-                     <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30 opacity-50">
-                        <Rocket className="h-10 w-10 text-orange-600 mb-3" />
-                        <p className="text-xs font-bold mb-2">Ads Manager</p>
-                        <Badge variant="outline">Coming Soon</Badge>
+                     <div className="flex flex-col items-center p-6 border rounded-xl bg-muted/30 opacity-60">
+                        <div className="p-4 bg-orange-50 rounded-full mb-4 text-orange-600">
+                          <Rocket className="h-8 w-8" />
+                        </div>
+                        <p className="text-sm font-bold mb-1">Ads Manager</p>
+                        <p className="text-[10px] text-muted-foreground mb-4 text-center">Zyada customers lane ke liye paid ads.</p>
+                        <Badge variant="secondary" className="w-full justify-center">Coming Soon</Badge>
                      </div>
                   </CardContent>
                 </Card>
@@ -553,7 +592,7 @@ export default function DashboardPage() {
                    <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg" />
                  )}
                </div>
-               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={() => typeof window !== 'undefined' && window.print()}><Printer className="h-4 w-4 mr-2" /> Print Marketing Flyer</Button>
+               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={downloadQRCode}><Download className="h-4 w-4 mr-2" /> Download Shop QR</Button>
                <p className="text-[10px] italic text-center opacity-80">Tip: Ise scan karte hi customers dukan dekh payenge.</p>
              </CardContent>
            </Card>
