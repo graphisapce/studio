@@ -37,6 +37,8 @@ export interface Business {
   lastTransactionId?: string;
   status?: 'pending' | 'approved' | 'rejected';
   views?: number;
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface Product {
@@ -59,4 +61,19 @@ export interface UserProfile {
   photoURL?: string;
   role: 'customer' | 'business' | 'admin';
   createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  businessId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface PlatformConfig {
+  announcement?: string;
+  isMaintenance?: boolean;
 }

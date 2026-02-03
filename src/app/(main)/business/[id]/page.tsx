@@ -1,23 +1,32 @@
 "use client";
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { doc, collection, query, where, increment } from "firebase/firestore";
+import { doc, collection, query, where, increment, addDoc } from "firebase/firestore";
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Phone, MessageCircle, Loader2, Store, Lock, Crown, Eye } from 'lucide-react';
+import { Phone, MessageCircle, Loader2, Store, Lock, Crown, Eye, Share2, Star } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
-import type { Business, Product } from "@/lib/types";
+import type { Business, Product, Review } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
 import { isBusinessPremium } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function BusinessDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const firestore = useFirestore();
+  const { user, userProfile } = useAuth();
+  const { toast } = useToast();
+
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const businessRef = useMemoFirebase(() => id ? doc(firestore, "businesses", id) : null, [firestore, id]);
   const { data: business, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -27,6 +36,12 @@ export default function BusinessDetailPage() {
     [firestore, id]
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
+
+  const reviewsQuery = useMemoFirebase(() => 
+    id ? query(collection(firestore, "reviews"), where("businessId", "==", id)) : null, 
+    [firestore, id]
+  );
+  const { data: reviews, isLoading: loadingReviews } = useCollection<Review>(reviewsQuery);
 
   // Increment view count on mount
   useEffect(() => {
@@ -42,7 +57,49 @@ export default function BusinessDetailPage() {
     return products?.filter(p => p.status === 'approved') || [];
   }, [products]);
 
-  if (loadingBusiness || loadingProducts) {
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: business?.shopName || 'LocalVyapar',
+          text: `Check out ${business?.shopName} on LocalVyapar!`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Share failed:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({ title: "Link Copied", description: "Share it with your friends!" });
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !userProfile) {
+      toast({ variant: "destructive", title: "Login Required", description: "Please login to leave a review." });
+      return;
+    }
+    setIsSubmittingReview(true);
+    try {
+      await addDoc(collection(firestore, "reviews"), {
+        businessId: id,
+        userId: user.uid,
+        userName: userProfile.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString()
+      });
+      toast({ title: "Review Submitted", description: "Thank you for your feedback!" });
+      setComment("");
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "Could not submit review." });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  if (loadingBusiness || loadingProducts || loadingReviews) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -80,31 +137,36 @@ export default function BusinessDetailPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
            <Watermark className="!text-white/90" />
-          <div className="absolute bottom-0 left-0 p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <h1 className="text-3xl md:text-5xl font-bold text-white font-headline">
-                {business.shopName}
-              </h1>
-              {hasPremium && (
-                <Badge className="bg-yellow-500 text-white border-none flex gap-1 items-center">
-                  <Crown className="h-3 w-3" /> Premium
-                </Badge>
-              )}
+          <div className="absolute bottom-0 left-0 p-6 flex justify-between items-end w-full">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-3xl md:text-5xl font-bold text-white font-headline">
+                  {business.shopName}
+                </h1>
+                {hasPremium && (
+                  <Badge className="bg-yellow-500 text-white border-none flex gap-1 items-center">
+                    <Crown className="h-3 w-3" /> Premium
+                  </Badge>
+                )}
+              </div>
+              <p className="text-lg text-white/90 mt-1 flex items-center gap-2">
+                {business.address}
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded flex items-center gap-1">
+                  <Eye className="h-3 w-3" /> {business.views || 0} views
+                </span>
+              </p>
             </div>
-            <p className="text-lg text-white/90 mt-1 flex items-center gap-2">
-              {business.address}
-              <span className="text-xs bg-white/20 px-2 py-0.5 rounded flex items-center gap-1">
-                <Eye className="h-3 w-3" /> {business.views || 0} views
-              </span>
-            </p>
+            <Button onClick={handleShare} size="icon" variant="secondary" className="rounded-full bg-white/20 hover:bg-white/40 text-white border-none backdrop-blur-md">
+              <Share2 className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </header>
 
       <main>
         <div className="grid gap-8 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <Card className="sticky top-24">
+          <div className="md:col-span-1 space-y-6">
+            <Card>
               <CardHeader>
                 <CardTitle>Business Info</CardTitle>
               </CardHeader>
@@ -135,6 +197,46 @@ export default function BusinessDetailPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" /> Reviews
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <form onSubmit={handleSubmitReview} className="space-y-4">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button key={s} type="button" onClick={() => setRating(s)}>
+                        <Star className={`h-6 w-6 ${s <= rating ? "text-yellow-500 fill-yellow-500" : "text-muted opacity-30"}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea placeholder="Share your experience..." value={comment} onChange={(e) => setComment(e.target.value)} required />
+                  <Button type="submit" className="w-full" disabled={isSubmittingReview}>
+                    {isSubmittingReview ? "Posting..." : "Post Review"}
+                  </Button>
+                </form>
+
+                <div className="space-y-4 border-t pt-4">
+                  {reviews?.map((r) => (
+                    <div key={r.id} className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-bold">{r.userName}</p>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: r.rating }).map((_, i) => (
+                            <Star key={i} className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground italic">"{r.comment}"</p>
+                    </div>
+                  ))}
+                  {(!reviews || reviews.length === 0) && <p className="text-xs text-muted-foreground text-center">No reviews yet.</p>}
                 </div>
               </CardContent>
             </Card>

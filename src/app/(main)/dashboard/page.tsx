@@ -36,7 +36,9 @@ import {
   Clock,
   XCircle,
   Eye,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  Wand2
 } from "lucide-react";
 import {
   Dialog,
@@ -65,6 +67,7 @@ import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
 import { load } from "@cashfreepayments/cashfree-js";
+import { generateProductDescription } from "@/ai/flows/generate-description-flow";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -92,6 +95,7 @@ export default function DashboardPage() {
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -147,6 +151,26 @@ export default function DashboardPage() {
       const reader = new FileReader();
       reader.onloadend = () => callback(reader.result as string);
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAIDescription = async () => {
+    if (!newProduct.title) {
+      toast({ variant: "destructive", title: "Wait!", description: "Please enter product name first." });
+      return;
+    }
+    setIsGeneratingAI(true);
+    try {
+      const res = await generateProductDescription({ 
+        title: newProduct.title, 
+        category: businessData?.category || 'General' 
+      });
+      setNewProduct(prev => ({ ...prev, description: res.description }));
+      toast({ title: "AI Magic Done!", description: "Description generated successfully." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "AI Error", description: err.message });
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -276,15 +300,21 @@ export default function DashboardPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="title">Item Name</Label>
-                    <Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} />
+                    <Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="e.g. Special Thali" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="price">Price (₹)</Label>
                     <Input id="price" type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="desc">Description</Label>
-                    <Textarea id="desc" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="desc">Description</Label>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px] text-primary hover:bg-primary/10" onClick={handleAIDescription} disabled={isGeneratingAI}>
+                        {isGeneratingAI ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                        AI Write
+                      </Button>
+                    </div>
+                    <Textarea id="desc" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} placeholder="Tell customers about your item..." />
                   </div>
                   <div className="grid gap-2">
                     <Label>Product Image</Label>

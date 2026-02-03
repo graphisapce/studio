@@ -1,73 +1,39 @@
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the LocalVyapar application.",
+      "description": "Represents a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "name": {
-          "type": "string",
-          "description": "The user's full name."
-        },
-        "role": {
-          "type": "string",
-          "description": "The user's role ('customer', 'business', or 'admin').",
-          "enum": ["customer", "business", "admin"]
-        },
-        "phone": {
-          "type": "string",
-          "description": "The user's phone number."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "business", "admin"] },
+        "email": { "type": "string", "format": "email" }
       },
       "required": ["id", "name", "role"]
     },
     "Business": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Business",
       "type": "object",
-      "description": "Represents a business registered on LocalVyapar.",
+      "description": "Represents a business.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "ownerId": {
-          "type": "string"
-        },
-        "shopName": {
-          "type": "string"
-        },
-        "category": {
-          "type": "string"
-        },
-        "address": {
-          "type": "string"
-        },
-        "contactNumber": {
-          "type": "string"
-        },
-        "whatsappLink": {
-          "type": "string"
-        },
-        "imageUrl": {
-          "type": "string"
-        },
-        "isPaid": {
-          "type": "boolean"
-        },
-        "premiumUntil": {
-          "type": "string",
-          "description": "ISO date string for subscription expiry."
-        }
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "views": { "type": "number" },
+        "isPaid": { "type": "boolean" }
+      }
+    },
+    "Review": {
+      "title": "Review",
+      "type": "object",
+      "description": "Customer reviews for a shop.",
+      "properties": {
+        "id": { "type": "string" },
+        "businessId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" }
       }
     }
   },
@@ -75,31 +41,17 @@
     "providers": ["password", "google"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": { "$ref": "#/backend/entities/User" },
-          "description": "Stores user profiles."
-        }
-      },
-      {
-        "path": "/businesses/{businessId}",
-        "definition": {
-          "entityName": "Business",
-          "schema": { "$ref": "#/backend/entities/Business" },
-          "description": "Stores business profiles."
-        }
-      },
-      {
-        "path": "/products/{productId}",
-        "definition": {
-          "entityName": "Product",
-          "schema": { "$ref": "#/backend/entities/Product" },
-          "description": "Stores product information."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/User" },
+      "description": "User profiles."
+    },
+    "/businesses/{businessId}": {
+      "schema": { "$ref": "#/backend/entities/Business" },
+      "description": "Business profiles."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/backend/entities/Review" },
+      "description": "Store reviews."
+    }
   }
 }

@@ -1,15 +1,14 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { collection } from "firebase/firestore";
+import { collection, query, limit, getDocs } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { mockBusinesses } from "@/lib/data";
-import type { Business, BusinessCategory } from "@/lib/types";
+import type { Business, BusinessCategory, PlatformConfig } from "@/lib/types";
 import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Navigation, Star, ShieldCheck, MapPinCheck } from "lucide-react";
+import { Search, MapPin, Navigation, Star, ShieldCheck, MapPinCheck, Megaphone } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -24,11 +23,23 @@ export function BusinessGrid() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
   const firestore = useFirestore();
 
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
   const { data: realBusinesses, isLoading: loadingRealData } = useCollection<Business>(businessesRef);
+
+  // Fetch Platform Config
+  useEffect(() => {
+    const fetchConfig = async () => {
+      const configRef = collection(firestore, "config");
+      const snap = await getDocs(query(configRef, limit(1)));
+      if (!snap.empty) {
+        setPlatformConfig(snap.docs[0].data() as PlatformConfig);
+      }
+    };
+    fetchConfig();
+  }, [firestore]);
 
   // Auto-request location on mount
   useEffect(() => {
@@ -42,7 +53,6 @@ export function BusinessGrid() {
         },
         (error) => {
           console.warn("Geolocation access denied:", error.message);
-          setLocationError("Please enable location for better results");
         },
         { enableHighAccuracy: true }
       );
@@ -52,12 +62,10 @@ export function BusinessGrid() {
   const sortedAndFilteredBusinesses = useMemo(() => {
     let businesses: Business[] = realBusinesses ? [...realBusinesses] : [];
     
-    // Fallback to mock if empty
     if (businesses.length === 0 && !loadingRealData) {
       businesses = [...mockBusinesses];
     }
 
-    // 1. Filter by Search and Category
     let filtered = businesses.filter((business) => {
       if (!business) return false;
       const shopName = business.shopName || "";
@@ -67,16 +75,13 @@ export function BusinessGrid() {
       return matchesCategory && matchesSearch;
     });
 
-    // 2. Sort Logic: Premium -> Nearby (1km) -> Distance
     filtered.sort((a, b) => {
       const aPremium = isBusinessPremium(a);
       const bPremium = isBusinessPremium(b);
 
-      // Rule 1: Premium always on top
       if (aPremium && !bPremium) return -1;
       if (!aPremium && bPremium) return 1;
 
-      // Rule 2: If both are same premium status, sort by proximity (1km range)
       if (userLocation && a.latitude && a.longitude && b.latitude && b.longitude) {
         const distA = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude);
         const distB = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude);
@@ -87,11 +92,9 @@ export function BusinessGrid() {
         if (aNear && !bNear) return -1;
         if (!aNear && bNear) return 1;
 
-        // Rule 3: Tie-break by exact distance
         return distA - distB;
       }
 
-      // Final Tie-break: Views
       return (b.views || 0) - (a.views || 0);
     });
 
@@ -100,6 +103,13 @@ export function BusinessGrid() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {platformConfig?.announcement && (
+        <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl mb-8 flex items-center gap-3 animate-pulse">
+          <Megaphone className="h-5 w-5 text-primary shrink-0" />
+          <p className="text-xs font-bold text-primary">{platformConfig.announcement}</p>
+        </div>
+      )}
+
       <div className="mb-10 space-y-6">
         <div className="text-center space-y-4">
            <div className="flex justify-center gap-2">

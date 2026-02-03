@@ -13,7 +13,6 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Check if the user document has role == 'admin'
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -32,7 +31,6 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      // Admins can see all users, users can see only themselves
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if isOwner(userId) || isAdmin();
@@ -48,6 +46,17 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if ownsBusiness(request.resource.data.businessId) || isAdmin();
       allow update, delete: if resource != null && (ownsBusiness(resource.data.businessId) || isAdmin());
+    }
+
+    match /reviews/{reviewId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /config/{configId} {
+      allow get: if true;
+      allow write: if isAdmin();
     }
   }
 }
