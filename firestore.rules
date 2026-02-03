@@ -39,7 +39,12 @@ service cloud.firestore {
     match /businesses/{businessId} {
       allow get, list: if true;
       allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isAdmin());
-      allow update, delete: if isExistingOwner(resource.data.ownerId) || isAdmin();
+      
+      // ALLOW owner/admin to update anything OR allow anyone to update ONLY the 'views' field
+      allow update: if (isExistingOwner(resource.data.ownerId) || isAdmin()) || 
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']));
+      
+      allow delete: if isExistingOwner(resource.data.ownerId) || isAdmin();
     }
 
     match /products/{productId} {
