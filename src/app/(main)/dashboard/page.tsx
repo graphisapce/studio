@@ -38,6 +38,8 @@ import {
   Eye,
   TrendingUp,
   Sparkles,
+  Camera,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   Dialog,
@@ -67,6 +69,7 @@ import { isBusinessPremium } from "@/lib/utils";
 import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
 import { load } from "@cashfreepayments/cashfree-js";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -106,7 +109,14 @@ export default function DashboardPage() {
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
 
   const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "" });
-  const [shopProfile, setShopProfile] = useState({ shopName: "", shopCategory: "" as BusinessCategory | "", shopDescription: "", shopContact: "", shopImageUrl: "" });
+  const [shopProfile, setShopProfile] = useState({ 
+    shopName: "", 
+    shopCategory: "" as BusinessCategory | "", 
+    shopDescription: "", 
+    shopContact: "", 
+    shopImageUrl: "", 
+    shopLogoUrl: "" 
+  });
   const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
 
   const hasPremium = isBusinessPremium(businessData);
@@ -118,7 +128,8 @@ export default function DashboardPage() {
         shopCategory: businessData.category || "",
         shopDescription: businessData.description || "",
         shopContact: businessData.contactNumber || "",
-        shopImageUrl: businessData.imageUrl || ""
+        shopImageUrl: businessData.imageUrl || "",
+        shopLogoUrl: businessData.logoUrl || ""
       });
 
       if (businessData.address) {
@@ -208,6 +219,7 @@ export default function DashboardPage() {
       contactNumber: shopProfile.shopContact,
       whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl || "",
+      logoUrl: shopProfile.shopLogoUrl || "",
       isPaid: businessData?.isPaid || false,
       premiumUntil: businessData?.premiumUntil || null,
       premiumStatus: businessData?.premiumStatus || 'none'
@@ -269,19 +281,24 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-            <Store className="h-8 w-8 text-primary" />
-            {businessData?.shopName || "My Business"}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <p className="text-muted-foreground">Manage your digital storefront</p>
-            {hasPremium && (
-              <Badge className="bg-yellow-500 flex gap-1">
-                <Crown className="h-3 w-3" /> Premium Active
-              </Badge>
-            )}
-          </div>
+        <div className="flex items-center gap-4">
+           <Avatar className="h-16 w-16 border-2 border-primary">
+             <AvatarImage src={businessData?.logoUrl} />
+             <AvatarFallback className="bg-primary/10 text-primary"><Store className="h-8 w-8" /></AvatarFallback>
+           </Avatar>
+           <div>
+             <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
+               {businessData?.shopName || "My Business"}
+             </h1>
+             <div className="flex flex-wrap items-center gap-2 mt-1">
+               <p className="text-muted-foreground text-sm">Manage your digital storefront</p>
+               {hasPremium && (
+                 <Badge className="bg-yellow-500 flex gap-1 text-[10px]">
+                   <Crown className="h-3 w-3" /> Premium Active
+                 </Badge>
+               )}
+             </div>
+           </div>
         </div>
 
         <div className="flex gap-2">
@@ -515,11 +532,42 @@ export default function DashboardPage() {
           <Card className="max-w-4xl mx-auto shadow-sm">
             <CardHeader>
               <CardTitle>Shop Profile Settings</CardTitle>
-              <CardDescription>Update your digital storefront information.</CardDescription>
+              <CardDescription>Update your digital storefront information and branding.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdateShopProfile} className="space-y-8">
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <h3 className="font-bold flex gap-2 items-center text-primary"><Camera className="h-5 w-5" /> Shop Branding (Logo & Banner)</h3>
+                  
+                  <div className="grid md:grid-cols-2 gap-8">
+                    {/* Logo Section */}
+                    <div className="space-y-4">
+                      <Label className="block">Official Logo (Square)</Label>
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-24 w-24 border-2 border-dashed border-primary">
+                          <AvatarImage src={shopProfile.shopLogoUrl} />
+                          <AvatarFallback><ImageIcon className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
+                        </Avatar>
+                        <Input type="file" accept="image/*" className="max-w-[150px]" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopLogoUrl: b}))} />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Appears as a circular profile icon.</p>
+                    </div>
+
+                    {/* Banner Section */}
+                    <div className="space-y-4">
+                      <Label className="block">Shop Banner (Wide)</Label>
+                      {shopProfile.shopImageUrl && (
+                        <div className="relative h-24 w-full rounded-md overflow-hidden border">
+                          <Image src={shopProfile.shopImageUrl} alt="Banner Preview" fill className="object-cover" />
+                        </div>
+                      )}
+                      <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopImageUrl: b}))} />
+                      <p className="text-[10px] text-muted-foreground">Appears at the top of your shop page.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 border-t pt-8">
                   <div className="space-y-2">
                     <Label>Shop Name</Label>
                     <Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} />
@@ -557,18 +605,6 @@ export default function DashboardPage() {
                     <div className="space-y-2"><Label>Shop No. / Street</Label><Input placeholder="Road name or Street" value={addressParts.street} onChange={(e) => setAddressParts({...addressParts, street: e.target.value})} /></div>
                     <div className="space-y-2"><Label>Landmark</Label><Input placeholder="Nearby famous place" value={addressParts.landmark} onChange={(e) => setAddressParts({...addressParts, landmark: e.target.value})} /></div>
                     <div className="space-y-2"><Label>Pincode</Label><Input placeholder="6-digit PIN" maxLength={6} value={addressParts.pincode} onChange={(e) => setAddressParts({...addressParts, pincode: e.target.value})} /></div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-t pt-8">
-                  <Label className="text-lg">Shop Banner Image</Label>
-                  <div className="flex flex-col gap-4">
-                    {shopProfile.shopImageUrl && typeof shopProfile.shopImageUrl === 'string' && (
-                      <div className="relative h-48 w-full rounded-xl overflow-hidden border-2 shadow-inner bg-muted">
-                        <Image src={shopProfile.shopImageUrl} alt="Shop Preview" fill className="object-cover" />
-                      </div>
-                    )}
-                    <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopImageUrl: b}))} />
                   </div>
                 </div>
 

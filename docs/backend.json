@@ -21,7 +21,9 @@
         "ownerId": { "type": "string" },
         "shopName": { "type": "string" },
         "views": { "type": "number" },
-        "isPaid": { "type": "boolean" }
+        "isPaid": { "type": "boolean" },
+        "imageUrl": { "type": "string", "description": "Shop Banner image" },
+        "logoUrl": { "type": "string", "description": "Shop Logo image" }
       }
     },
     "Review": {

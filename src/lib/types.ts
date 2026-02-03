@@ -26,7 +26,8 @@ export interface Business {
   address: string;
   contactNumber: string;
   whatsappLink: string;
-  imageUrl: string;
+  imageUrl: string; // Used as Banner
+  logoUrl?: string; // New: Official Shop Logo
   imageHint: string;
   latitude?: number;
   longitude?: number;
