@@ -236,7 +236,7 @@ export default function DashboardPage() {
       whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl,
       imageHint: 'shop',
-      isPaid: businessData?.isPaid || false // Preserving paid status
+      isPaid: businessData?.isPaid || false
     }, { merge: true });
 
     toast({ title: "Profile Updated", description: "Your shop details are being saved." });
@@ -246,9 +246,14 @@ export default function DashboardPage() {
   const handleUpgradeToPremium = () => {
     if (!user) return;
     const businessDocRef = doc(firestore, "businesses", user.uid);
+    
+    // Crucial: Include ownerId and id to satisfy security rules if document is being created/merged
     setDocumentNonBlocking(businessDocRef, {
+      id: user.uid,
+      ownerId: user.uid,
       isPaid: true
     }, { merge: true });
+    
     toast({ title: "Success", description: "Upgraded to Premium! WhatsApp integration is now active." });
   };
 
