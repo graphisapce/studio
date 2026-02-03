@@ -15,13 +15,14 @@ import { isBusinessPremium } from "@/lib/utils";
 
 export function BusinessCard({ business }: { business: Business }) {
   const hasPremium = isBusinessPremium(business);
-  // Ensure we have a valid image URL or a fallback
-  const displayImage = business.imageUrl && business.imageUrl.trim() !== "" 
+  
+  // Robust fallback logic: Ensure src is a non-empty string
+  const displayImage = (typeof business?.imageUrl === 'string' && business.imageUrl.trim() !== "") 
     ? business.imageUrl 
-    : `https://picsum.photos/seed/${business.id}/600/400`;
+    : `https://picsum.photos/seed/${business?.id || 'shop'}/600/400`;
   
   return (
-    <Link href={`/business/${business.id}`}>
+    <Link href={`/business/${business?.id}`}>
       <Card className="h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative">
         {hasPremium && (
           <div className="absolute top-2 right-2 z-10">
@@ -34,22 +35,22 @@ export function BusinessCard({ business }: { business: Business }) {
           <div className="relative aspect-[3/2] w-full bg-muted">
             <Image
               src={displayImage}
-              alt={business.shopName || "Business"}
+              alt={business?.shopName || "Business"}
               fill
               className="object-cover"
-              data-ai-hint={business.imageHint || "shop"}
+              data-ai-hint={business?.imageHint || "shop"}
             />
             <Watermark />
           </div>
         </CardHeader>
         <CardContent className="p-4">
           <div className="flex justify-between items-start mb-1">
-             <Badge variant="secondary" className="mb-1">{business.category}</Badge>
+             <Badge variant="secondary" className="mb-1">{business?.category || 'Other'}</Badge>
           </div>
-          <CardTitle className="text-lg font-headline mb-1 truncate">{business.shopName || "Unnamed Shop"}</CardTitle>
+          <CardTitle className="text-lg font-headline mb-1 truncate">{business?.shopName || "Unnamed Shop"}</CardTitle>
           <CardDescription className="flex items-center gap-1 text-sm line-clamp-2">
             <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span>{business.address || "Address not available"}</span>
+            <span>{business?.address || "Address not available"}</span>
           </CardDescription>
         </CardContent>
       </Card>

@@ -68,16 +68,7 @@ import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 
 // --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
-/**
- * 1. Apni UPI ID yahan dalein
- */
 const MY_UPI_ID = "9821692147-2@ybl"; 
-
-/**
- * 2. QR Code URL:
- * Google Drive direct link set kar diya gaya hai.
- * Link: https://drive.google.com/file/d/1QBn2Z0HBnQBfGv_fMtM4_lwWDbXQY1g2/view?usp=sharing
- */
 const MY_QR_CODE_URL = "https://drive.google.com/uc?export=view&id=1QBn2Z0HBnQBfGv_fMtM4_lwWDbXQY1g2"; 
 // ---------------------------------------------
 
@@ -178,7 +169,7 @@ export default function DashboardPage() {
       title: newProduct.title,
       price: parseFloat(newProduct.price),
       description: newProduct.description,
-      imageUrl: newProduct.imageUrl || "https://picsum.photos/seed/item/400/300",
+      imageUrl: newProduct.imageUrl || "",
       imageHint: 'product'
     });
     toast({ title: "Success", description: "Product added!" });
@@ -201,7 +192,7 @@ export default function DashboardPage() {
       description: shopProfile.shopDescription,
       contactNumber: shopProfile.shopContact,
       whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
-      imageUrl: shopProfile.shopImageUrl || "https://picsum.photos/seed/shop/800/400",
+      imageUrl: shopProfile.shopImageUrl || "",
       isPaid: businessData?.isPaid || false,
       premiumUntil: businessData?.premiumUntil || null
     }, { merge: true });
@@ -211,7 +202,6 @@ export default function DashboardPage() {
 
   const handleProcessPayment = () => {
     setIsProcessingPayment(true);
-    // Simulation: 30 Days Monthly Subscription
     setTimeout(() => {
       if (user) {
         const expiryDate = new Date();
@@ -328,24 +318,29 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="grid gap-6 sm:grid-cols-2">
-                      {products.map((p) => (
-                        <Card key={p.id} className="overflow-hidden group">
-                          <div className="relative aspect-video">
-                            <Image src={p.imageUrl} alt={p.title} fill className="object-cover" />
-                          </div>
-                          <CardHeader className="p-4 pb-2">
-                            <div className="flex justify-between font-bold">
-                              <span>{p.title}</span>
-                              <span className="text-primary">₹{p.price}</span>
+                      {products.map((p) => {
+                        const prodImg = (typeof p.imageUrl === 'string' && p.imageUrl.trim() !== "")
+                          ? p.imageUrl 
+                          : `https://picsum.photos/seed/prod-${p.id}/400/300`;
+                        return (
+                          <Card key={p.id} className="overflow-hidden group">
+                            <div className="relative aspect-video bg-muted">
+                              <Image src={prodImg} alt={p.title} fill className="object-cover" />
                             </div>
-                          </CardHeader>
-                          <CardFooter className="p-4 pt-0">
-                            <Button variant="destructive" size="sm" className="w-full opacity-80 group-hover:opacity-100 transition-opacity" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete Item
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      ))}
+                            <CardHeader className="p-4 pb-2">
+                              <div className="flex justify-between font-bold">
+                                <span>{p.title}</span>
+                                <span className="text-primary">₹{p.price}</span>
+                              </div>
+                            </CardHeader>
+                            <CardFooter className="p-4 pt-0">
+                              <Button variant="destructive" size="sm" className="w-full opacity-80 group-hover:opacity-100 transition-opacity" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete Item
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -414,7 +409,7 @@ export default function DashboardPage() {
                                   {imageError ? (
                                     <div className="text-center p-4">
                                       <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
-                                      <p className="text-xs text-muted-foreground">Image load failed. Make sure Drive link is set to "Anyone with the link".</p>
+                                      <p className="text-xs text-muted-foreground">Image load failed.</p>
                                     </div>
                                   ) : (
                                     <Image 
@@ -444,10 +439,6 @@ export default function DashboardPage() {
                               <Button className="w-full h-14 text-lg font-black shadow-lg" onClick={handleProcessPayment} disabled={isProcessingPayment}>
                                 {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Verifying Payment...</> : "I Have Paid ₹99"}
                               </Button>
-                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-blue-50 p-2.5 rounded-md border border-blue-100">
-                                <Info className="h-3.5 w-3.5 text-blue-500" />
-                                <span>Subscription will be activated automatically after verification.</span>
-                              </div>
                             </TabsContent>
 
                             <TabsContent value="card" className="space-y-4 py-4">
@@ -518,7 +509,6 @@ export default function DashboardPage() {
                 <div className="space-y-2">
                   <Label>WhatsApp Number (With Country Code, e.g. 919876543210)</Label>
                   <Input placeholder="e.g. 919876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} />
-                  <p className="text-[10px] text-muted-foreground font-medium">Customers will be redirected to WhatsApp using this number.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -546,8 +536,8 @@ export default function DashboardPage() {
                 <div className="space-y-4 border-t pt-8">
                   <Label className="text-lg">Shop Banner Image</Label>
                   <div className="flex flex-col gap-4">
-                    {shopProfile.shopImageUrl && (
-                      <div className="relative h-48 w-full rounded-xl overflow-hidden border-2 shadow-inner">
+                    {shopProfile.shopImageUrl && typeof shopProfile.shopImageUrl === 'string' && (
+                      <div className="relative h-48 w-full rounded-xl overflow-hidden border-2 shadow-inner bg-muted">
                         <Image src={shopProfile.shopImageUrl} alt="Preview" fill className="object-cover" />
                       </div>
                     )}

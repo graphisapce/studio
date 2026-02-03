@@ -48,13 +48,16 @@ export default function BusinessDetailPage() {
     );
   }
 
-  const shopImage = business.imageUrl || 'https://picsum.photos/seed/shop/800/400';
+  const shopImage = (typeof business.imageUrl === 'string' && business.imageUrl.trim() !== "") 
+    ? business.imageUrl 
+    : `https://picsum.photos/seed/shop-${business.id}/800/400`;
+    
   const hasPremium = isBusinessPremium(business);
 
   return (
     <div className="container mx-auto max-w-6xl py-8 px-4">
       <header className="mb-8">
-        <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-lg shadow-lg">
+        <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-lg shadow-lg bg-muted">
           <Image
             src={shopImage}
             alt={business.shopName}
