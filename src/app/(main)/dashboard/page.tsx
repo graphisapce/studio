@@ -71,7 +71,7 @@ import { isBusinessPremium } from "@/lib/utils";
 /**
  * 1. Apni UPI ID yahan dalein
  */
-const MY_UPI_ID = "9876543210@paytm"; 
+const MY_UPI_ID = "9821692147-2@ybl"; 
 
 /**
  * 2. QR Code URL:
