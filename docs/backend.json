@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -76,6 +77,10 @@
         "imageUrl": {
           "type": "string",
           "description": "URL of the business's image."
+        },
+        "isPaid": {
+          "type": "boolean",
+          "description": "Whether the business has a paid/premium subscription."
         }
       },
       "required": [
@@ -84,9 +89,7 @@
         "shopName",
         "category",
         "address",
-        "geoPoint",
         "contactNumber",
-        "whatsappLink",
         "imageUrl"
       ]
     },
@@ -131,7 +134,6 @@
         "title",
         "price",
         "description",
-        "category",
         "imageUrl"
       ]
     }

@@ -1,3 +1,4 @@
+
 export type BusinessCategory = 
   | 'Food' 
   | 'Groceries' 
@@ -31,6 +32,7 @@ export interface Business {
   latitude?: number;
   longitude?: number;
   description?: string;
+  isPaid?: boolean;
 }
 
 export interface Product {

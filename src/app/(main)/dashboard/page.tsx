@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -36,7 +37,10 @@ import {
   Info,
   Tag,
   MapPin,
-  Globe
+  Globe,
+  Crown,
+  Lock,
+  MessageCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -61,6 +65,8 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -227,13 +233,23 @@ export default function DashboardPage() {
       category: shopProfile.shopCategory,
       description: shopProfile.shopDescription,
       contactNumber: shopProfile.shopContact,
-      whatsappLink: `https://wa.me/${shopProfile.shopContact}`,
+      whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl,
-      imageHint: 'shop'
+      imageHint: 'shop',
+      isPaid: businessData?.isPaid || false // Preserving paid status
     }, { merge: true });
 
     toast({ title: "Profile Updated", description: "Your shop details are being saved." });
     setIsUpdatingProfile(false);
+  };
+
+  const handleUpgradeToPremium = () => {
+    if (!user) return;
+    const businessDocRef = doc(firestore, "businesses", user.uid);
+    setDocumentNonBlocking(businessDocRef, {
+      isPaid: true
+    }, { merge: true });
+    toast({ title: "Success", description: "Upgraded to Premium! WhatsApp integration is now active." });
   };
 
   if (authLoading || loadingBusiness || loadingProducts) {
@@ -248,12 +264,21 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold font-headline text-navy dark:text-white flex items-center gap-2">
-            <Store className="h-8 w-8 text-primary" />
-            {businessData?.shopName || "My Business"}
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage your digital storefront and catalog</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold font-headline text-navy dark:text-white flex items-center gap-2">
+              <Store className="h-8 w-8 text-primary" />
+              {businessData?.shopName || "My Business"}
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-muted-foreground">Manage your digital storefront</p>
+              {businessData?.isPaid && (
+                <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600 border-none flex gap-1 items-center">
+                  <Crown className="h-3 w-3" /> Premium
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
 
         <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
@@ -371,6 +396,29 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
+            
+            <div className="lg:col-span-1">
+              {!businessData?.isPaid && (
+                <Card className="border-yellow-200 bg-yellow-50/30">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-yellow-700">
+                      <Crown className="h-5 w-5" /> Upgrade to Premium
+                    </CardTitle>
+                    <CardDescription>Get exclusive features to grow your business.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <ul className="space-y-2 text-sm text-yellow-800">
+                      <li className="flex items-center gap-2">✅ Direct WhatsApp Contact for customers</li>
+                      <li className="flex items-center gap-2">✅ Premium Badge on your shop</li>
+                      <li className="flex items-center gap-2">✅ Priority listing in searches</li>
+                    </ul>
+                    <Button onClick={handleUpgradeToPremium} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-md">
+                      Upgrade Now (Demo)
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </TabsContent>
 
@@ -403,8 +451,20 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="shopContact" className="flex items-center gap-2"><Phone className="h-4 w-4" /> Contact Number</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="shopContact" className="flex items-center gap-2"><Phone className="h-4 w-4" /> Contact/WhatsApp Number</Label>
+                      {!businessData?.isPaid && (
+                        <Badge variant="outline" className="text-[10px] flex gap-1 items-center border-yellow-300 text-yellow-700">
+                          <Lock className="h-2 w-2" /> WhatsApp Locked
+                        </Badge>
+                      )}
+                    </div>
                     <Input id="shopContact" placeholder="e.g. 9876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({ ...shopProfile, shopContact: e.target.value })} />
+                    {!businessData?.isPaid && (
+                      <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <Info className="h-3 w-3" /> WhatsApp button for customers is disabled. Upgrade to Premium to enable.
+                      </p>
+                    )}
                   </div>
                 </div>
 
