@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
@@ -80,17 +81,29 @@ export default function BusinessDetailPage() {
   const approvedProducts = useMemo(() => products?.filter(p => p.status === 'approved') || [], [products]);
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: business?.shopName || 'LocalVyapar',
-          text: `Check out ${business?.shopName} on LocalVyapar!`,
-          url: window.location.href,
+    const shareData = {
+      title: business?.shopName || 'LocalVyapar',
+      text: `Check out ${business?.shopName} on LocalVyapar! Best deals nearby.`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ 
+          title: "Link Copied",
+          description: "Shop link has been copied to your clipboard." 
         });
-      } catch (err) { console.error('Share failed:', err); }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast({ title: "Link Copied" });
+      }
+    } catch (err) {
+      // Fallback for user cancel or desktop browsers
+      await navigator.clipboard.writeText(window.location.href);
+      toast({ 
+        title: "Link Copied",
+        description: "Shop link has been copied to your clipboard." 
+      });
     }
   };
 
@@ -143,13 +156,17 @@ export default function BusinessDetailPage() {
           <Image src={business.imageUrl || `https://picsum.photos/seed/${business.id}/1200/400`} alt={business.shopName} fill className="object-cover" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           <Watermark className="!text-white/90" />
-          <div className="absolute top-4 right-4"><Button onClick={handleShare} size="icon" variant="secondary" className="rounded-full"><Share2 className="h-5 w-5" /></Button></div>
+          <div className="absolute top-4 right-4 z-20">
+            <Button onClick={handleShare} size="icon" variant="secondary" className="rounded-full shadow-lg border-2 border-white/20">
+              <Share2 className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="absolute -bottom-16 left-6 flex items-end gap-4 w-[calc(100%-48px)]">
-           <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background shadow-2xl">
+           <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background shadow-2xl bg-white">
              <AvatarImage src={business.logoUrl} className="object-cover" />
-             <AvatarFallback><Store className="h-12 w-12" /></AvatarFallback>
+             <AvatarFallback className="bg-primary/5 text-primary"><Store className="h-12 w-12" /></AvatarFallback>
            </Avatar>
            <div className="flex-1 pb-2">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -160,9 +177,17 @@ export default function BusinessDetailPage() {
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground font-medium">
                 <Badge variant="secondary">{business.category}</Badge>
                 <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {business.views || 0} views</span>
-                <div className="flex gap-2">
-                  {business.instagramUrl && <a href={business.instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-pink-600" /></a>}
-                  {business.facebookUrl && <a href={business.facebookUrl} target="_blank" rel="noopener noreferrer"><Facebook className="h-4 w-4 text-blue-600" /></a>}
+                <div className="flex gap-2 ml-2">
+                  {business.instagramUrl && (
+                    <a href={business.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded-full transition-colors">
+                      <Instagram className="h-4 w-4 text-pink-600" />
+                    </a>
+                  )}
+                  {business.facebookUrl && (
+                    <a href={business.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded-full transition-colors">
+                      <Facebook className="h-4 w-4 text-blue-600" />
+                    </a>
+                  )}
                 </div>
               </div>
            </div>
@@ -204,14 +229,19 @@ export default function BusinessDetailPage() {
                           <DialogDescription>Pay directly to the shop owner.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-6 py-4">
-                          {business.paymentQrUrl && (
-                            <div className="relative w-full aspect-square border-2 border-dashed rounded-xl overflow-hidden">
+                          {business.paymentQrUrl ? (
+                            <div className="relative w-full aspect-square border-2 border-dashed rounded-xl overflow-hidden bg-white">
                               <Image src={business.paymentQrUrl} alt="Payment QR" fill className="object-contain p-2" />
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-muted/20">
+                              <QrCode className="h-12 w-12 text-muted-foreground mb-2" />
+                              <p className="text-xs text-muted-foreground">QR not uploaded by shop</p>
                             </div>
                           )}
                           {business.upiId && (
                             <div className="space-y-3">
-                              <p className="text-xs font-bold text-muted-foreground uppercase">UPI ID: {business.upiId}</p>
+                              <p className="text-xs font-bold text-muted-foreground uppercase bg-muted/50 py-1 rounded">UPI ID: {business.upiId}</p>
                               <Button onClick={handlePayUPI} className="w-full h-12 bg-primary">
                                 Pay to UPI ID
                               </Button>
@@ -223,7 +253,7 @@ export default function BusinessDetailPage() {
                   )}
 
                   {hasPremium ? (
-                    <Button asChild variant="outline" className="w-full h-11 border-green-500 text-green-600"><a href={business.whatsappLink} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp Now</a></Button>
+                    <Button asChild variant="outline" className="w-full h-11 border-green-500 text-green-600 hover:bg-green-50"><a href={business.whatsappLink} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp Now</a></Button>
                   ) : (
                     <div className="relative pt-2"><Button variant="outline" className="w-full h-11 opacity-50" disabled><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp (Locked)</Button></div>
                   )}
@@ -254,9 +284,15 @@ export default function BusinessDetailPage() {
           <div className="md:col-span-2">
             <h2 className="text-2xl font-black font-headline mb-6">Store Inventory</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {approvedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} shopWhatsApp={business.contactNumber} shopName={business.shopName} isPremium={hasPremium} />
-              ))}
+              {approvedProducts.length > 0 ? (
+                approvedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} shopWhatsApp={business.contactNumber} shopName={business.shopName} isPremium={hasPremium} />
+                ))
+              ) : (
+                <div className="col-span-full py-20 text-center opacity-50 border-2 border-dashed rounded-xl">
+                  No products available for now.
+                </div>
+              )}
             </div>
           </div>
         </div>
