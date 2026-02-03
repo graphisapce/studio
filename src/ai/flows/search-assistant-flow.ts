@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI Shopping Assistant flow for LocalVyapar.
@@ -24,7 +25,7 @@ export type SearchAssistantOutput = z.infer<typeof SearchAssistantOutputSchema>;
 export async function searchAssistant(input: SearchAssistantInput): Promise<SearchAssistantOutput> {
   // Check if API key exists in environment
   if (!process.env.GOOGLE_GENAI_API_KEY) {
-    throw new Error("API Key missing. Please ensure GOOGLE_GENAI_API_KEY is set in your .env.local file.");
+    throw new Error("API Key missing in .env file. Please add GOOGLE_GENAI_API_KEY.");
   }
   
   return searchAssistantFlow(input);
@@ -32,6 +33,7 @@ export async function searchAssistant(input: SearchAssistantInput): Promise<Sear
 
 const prompt = ai.definePrompt({
   name: 'searchAssistantPrompt',
+  model: 'googleai/gemini-1.5-flash', // Explicitly using flash to avoid 404 errors
   input: { schema: SearchAssistantInputSchema },
   output: { schema: SearchAssistantOutputSchema },
   prompt: `You are the LocalVyapar AI Shopping Assistant. 
@@ -62,9 +64,9 @@ const searchAssistantFlow = ai.defineFlow(
     } catch (error: any) {
       console.error("Genkit execution failed:", error);
       
-      // Handle common 404/Tier issues
-      if (error.message?.includes('404')) {
-        throw new Error("Model not found or API key not authorized for this model. Using gemini-1.5-flash for compatibility.");
+      // Handle model access issues
+      if (error.message?.includes('404') || error.message?.includes('not found')) {
+        throw new Error("AI Model error. Please ensure your API key is correct and has access to Gemini 1.5 Flash.");
       }
       
       throw new Error("AI generation failed: " + (error.message || "Internal GenAI Error"));

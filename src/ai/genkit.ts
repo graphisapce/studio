@@ -1,11 +1,12 @@
+
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
 /**
  * Genkit Configuration
  * 
- * Using 'gemini-1.5-flash' as it is the most compatible model 
- * for both free and pay-as-you-go tiers, and significantly faster.
+ * Using 'gemini-1.5-flash' explicitly as it has the highest compatibility
+ * and avoids 404 errors common with 'pro' models in some regions/tiers.
  */
 export const ai = genkit({
   plugins: [googleAI()],
