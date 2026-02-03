@@ -67,7 +67,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/tabs-ui"; // Using customized tabs for better mobile UI
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
