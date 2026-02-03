@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, UserCircle, Loader2 } from "lucide-react";
+import { Home, LayoutDashboard, UserCircle, Loader2, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useMemo } from "react";
@@ -22,24 +21,22 @@ export function MobileBottomNav() {
           <span className={cn("text-xs font-medium", pathname === "/" ? "text-primary" : "text-muted-foreground")}>Home</span>
         </Link>
         
-        {(isSyncing || loading) && user && (
-           <div className="flex flex-col items-center gap-1 opacity-50">
-             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-             <span className="text-[10px] text-muted-foreground">Syncing...</span>
-           </div>
-        )}
-
+        <Link href="/favorites" className="flex flex-col items-center gap-1">
+          <Heart className={cn("h-6 w-6", pathname === "/favorites" ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-xs font-medium", pathname === "/favorites" ? "text-primary" : "text-muted-foreground")}>Favs</span>
+        </Link>
+        
         {user && isBusiness && (
           <Link href="/dashboard" className="flex flex-col items-center gap-1">
             <LayoutDashboard className={cn("h-6 w-6", pathname === "/dashboard" ? "text-primary" : "text-muted-foreground")} />
-            <span className={cn("text-xs font-medium", pathname === "/dashboard" ? "text-primary" : "text-muted-foreground")}>Dashboard</span>
+            <span className={cn("text-xs font-medium", pathname === "/dashboard" ? "text-primary" : "text-muted-foreground")}>Business</span>
           </Link>
         )}
 
         <Link href={user ? (isBusiness ? "/dashboard" : "/login") : "/login"} className="flex flex-col items-center gap-1">
-          <UserCircle className={cn("h-6 w-6", (pathname === "/login" || (pathname === "/dashboard" && isBusiness)) ? "text-primary" : "text-muted-foreground")} />
-          <span className={cn("text-xs font-medium", (pathname === "/login") ? "text-primary" : "text-muted-foreground")}>
-            {user ? (isBusiness ? "Dashboard" : "Profile") : "Login"}
+          <UserCircle className={cn("h-6 w-6", pathname === "/login" ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-xs font-medium", pathname === "/login" ? "text-primary" : "text-muted-foreground")}>
+            {user ? "Profile" : "Login"}
           </span>
         </Link>
       </div>

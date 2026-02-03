@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
@@ -26,27 +25,17 @@ import {
   Facebook,
   QrCode,
   Copy,
-  CheckCircle2
+  Heart
 } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
-import type { Business, Product, Review } from "@/lib/types";
+import type { Business, Product, Review, UserProfile } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
 import { isBusinessPremium, isShopOpen } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/dialog-ui";
-
-// Re-using local dialog imports as the prompt mentioned dialog-ui might be standard
 import {
   Dialog as UIDialog,
   DialogContent as UIDialogContent,
@@ -91,39 +80,40 @@ export default function BusinessDetailPage() {
   }, [id, firestore]);
 
   const approvedProducts = useMemo(() => products?.filter(p => p.status === 'approved') || [], [products]);
+  const isFavorite = useMemo(() => userProfile?.favorites?.includes(id), [userProfile, id]);
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const shareText = `Check out ${business?.shopName} on LocalVyapar! Dhoondein apne pados ki best deals.`;
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareUrl);
+  const toggleFavorite = () => {
+    if (!user || !userProfile) {
+      toast({ variant: "destructive", title: "Login Required", description: "Favorites save karne ke liye login karein." });
+      return;
+    }
+    const userRef = doc(firestore, "users", user.uid);
+    const newFavorites = isFavorite 
+      ? userProfile.favorites?.filter(favId => favId !== id) 
+      : [...(userProfile.favorites || []), id];
+    
+    updateDocumentNonBlocking(userRef, { favorites: newFavorites });
     toast({ 
-      title: "Link Copied!", 
-      description: "Aap is link ko ab Instagram bio ya story mein laga sakte hain." 
+      title: isFavorite ? "Removed from Favorites" : "Added to Favorites", 
+      description: isFavorite ? "Dukaan favorites se hata di gayi." : "Ab yeh dukan aapke favorites page par dikhegi."
     });
   };
 
-  const handleSharePlatform = (platform: 'whatsapp' | 'facebook' | 'instagram') => {
-    let url = '';
-    switch (platform) {
-      case 'whatsapp':
-        url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
-        window.open(url, '_blank');
-        break;
-      case 'facebook':
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-        window.open(url, '_blank');
-        break;
-      case 'instagram':
-        copyToClipboard();
-        break;
+  const handleLeadAction = (type: 'call' | 'whatsapp') => {
+    if (!id || !firestore) return;
+    const docRef = doc(firestore, "businesses", id);
+    if (type === 'call') {
+      updateDocumentNonBlocking(docRef, { callCount: increment(1) });
+      window.location.href = `tel:${business?.contactNumber}`;
+    } else {
+      updateDocumentNonBlocking(docRef, { whatsappCount: increment(1) });
+      window.open(business?.whatsappLink, '_blank');
     }
   };
 
-  const handlePayUPI = () => {
-    if (!business?.upiId) return;
-    const upiUrl = `upi://pay?pa=${business.upiId}&pn=${encodeURIComponent(business.shopName)}&cu=INR`;
-    window.open(upiUrl, '_blank');
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({ title: "Link Copied!", description: "Share it with your friends!" });
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -170,10 +160,13 @@ export default function BusinessDetailPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           <Watermark className="!text-white/90" />
           
-          <div className="absolute top-4 right-4 z-20">
+          <div className="absolute top-4 right-4 z-20 flex gap-2">
+            <Button size="icon" variant={isFavorite ? "default" : "secondary"} className="rounded-full shadow-lg" onClick={toggleFavorite}>
+              <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
+            </Button>
             <UIDialog open={isShareOpen} onOpenChange={setIsShareOpen}>
               <UIDialogTrigger asChild>
-                <Button size="icon" variant="secondary" className="rounded-full shadow-lg border-2 border-white/20">
+                <Button size="icon" variant="secondary" className="rounded-full shadow-lg">
                   <Share2 className="h-5 w-5" />
                 </Button>
               </UIDialogTrigger>
@@ -183,43 +176,13 @@ export default function BusinessDetailPage() {
                   <UIDialogDescription>Aap is dukan ko apne doston aur family ke saath share karein.</UIDialogDescription>
                 </UIDialogHeader>
                 <div className="grid grid-cols-2 gap-4 py-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex flex-col h-24 gap-2 border-green-200 hover:bg-green-50"
-                    onClick={() => handleSharePlatform('whatsapp')}
-                  >
+                  <Button variant="outline" className="h-24 flex flex-col gap-2" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(business.shopName + ' check karein LocalVyapar par: ' + window.location.href)}`, '_blank')}>
                     <MessageCircle className="h-8 w-8 text-green-600" />
-                    <span className="text-xs font-bold">WhatsApp</span>
+                    <span className="text-xs">WhatsApp</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex flex-col h-24 gap-2 border-blue-200 hover:bg-blue-50"
-                    onClick={() => handleSharePlatform('facebook')}
-                  >
-                    <Facebook className="h-8 w-8 text-blue-600" />
-                    <span className="text-xs font-bold">Facebook</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex flex-col h-24 gap-2 border-pink-200 hover:bg-pink-50"
-                    onClick={() => handleSharePlatform('instagram')}
-                  >
-                    <Instagram className="h-8 w-8 text-pink-600" />
-                    <span className="text-xs font-bold">Instagram</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex flex-col h-24 gap-2 border-gray-200 hover:bg-gray-50"
-                    onClick={copyToClipboard}
-                  >
+                  <Button variant="outline" className="h-24 flex flex-col gap-2" onClick={copyToClipboard}>
                     <Copy className="h-8 w-8 text-gray-600" />
-                    <span className="text-xs font-bold">Copy Link</span>
-                  </Button>
-                </div>
-                <div className="flex items-center space-x-2 bg-muted p-3 rounded-lg">
-                  <p className="text-[10px] text-muted-foreground truncate flex-1">{shareUrl}</p>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={copyToClipboard}>
-                    <Copy className="h-3 w-3" />
+                    <span className="text-xs">Copy Link</span>
                   </Button>
                 </div>
               </UIDialogContent>
@@ -241,18 +204,6 @@ export default function BusinessDetailPage() {
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground font-medium">
                 <Badge variant="secondary">{business.category}</Badge>
                 <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {business.views || 0} views</span>
-                <div className="flex gap-2 ml-2">
-                  {business.instagramUrl && (
-                    <a href={business.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded-full transition-colors">
-                      <Instagram className="h-4 w-4 text-pink-600" />
-                    </a>
-                  )}
-                  {business.facebookUrl && (
-                    <a href={business.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded-full transition-colors">
-                      <Facebook className="h-4 w-4 text-blue-600" />
-                    </a>
-                  )}
-                </div>
               </div>
            </div>
         </div>
@@ -278,7 +229,7 @@ export default function BusinessDetailPage() {
                 <div className="flex items-center gap-3 text-sm font-bold"><Clock className="h-5 w-5 text-primary" /><span>{isOpen ? "Open Now" : "Closed"} • {business.openingTime} - {business.closingTime}</span></div>
                 
                 <div className="flex flex-col gap-3 pt-4 border-t">
-                  <Button asChild className="w-full h-11"><a href={`tel:${business.contactNumber}`}><Phone className="mr-2 h-4 w-4" /> Call Shop</a></Button>
+                  <Button onClick={() => handleLeadAction('call')} className="w-full h-11"><Phone className="mr-2 h-4 w-4" /> Call Shop</Button>
                   
                   {hasPremium && (business.upiId || business.paymentQrUrl) && (
                     <UIDialog>
@@ -290,36 +241,23 @@ export default function BusinessDetailPage() {
                       <UIDialogContent className="sm:max-w-xs text-center">
                         <UIDialogHeader>
                           <UIDialogTitle>Make Payment</UIDialogTitle>
-                          <UIDialogDescription>Pay directly to the shop owner.</UIDialogDescription>
                         </UIDialogHeader>
                         <div className="space-y-6 py-4">
-                          {business.paymentQrUrl ? (
+                          {business.paymentQrUrl && (
                             <div className="relative w-full aspect-square border-2 border-dashed rounded-xl overflow-hidden bg-white">
                               <Image src={business.paymentQrUrl} alt="Payment QR" fill className="object-contain p-2" />
                             </div>
-                          ) : (
-                            <div className="w-full aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-muted/20">
-                              <QrCode className="h-12 w-12 text-muted-foreground mb-2" />
-                              <p className="text-xs text-muted-foreground">QR not uploaded by shop</p>
-                            </div>
                           )}
-                          {business.upiId && (
-                            <div className="space-y-3">
-                              <p className="text-xs font-bold text-muted-foreground uppercase bg-muted/50 py-1 rounded">UPI ID: {business.upiId}</p>
-                              <Button onClick={handlePayUPI} className="w-full h-12 bg-primary">
-                                Pay to UPI ID
-                              </Button>
-                            </div>
-                          )}
+                          {business.upiId && <p className="text-xs font-bold text-muted-foreground uppercase">UPI ID: {business.upiId}</p>}
                         </div>
                       </UIDialogContent>
                     </UIDialog>
                   )}
 
                   {hasPremium ? (
-                    <Button asChild variant="outline" className="w-full h-11 border-green-500 text-green-600 hover:bg-green-50"><a href={business.whatsappLink} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp Now</a></Button>
+                    <Button onClick={() => handleLeadAction('whatsapp')} variant="outline" className="w-full h-11 border-green-500 text-green-600"><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp Now</Button>
                   ) : (
-                    <div className="relative pt-2"><Button variant="outline" className="w-full h-11 opacity-50" disabled><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp (Locked)</Button></div>
+                    <div className="relative pt-2"><Button variant="outline" className="w-full h-11 opacity-50" disabled><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp (Premium Only)</Button></div>
                   )}
                 </div>
               </CardContent>

@@ -38,6 +38,8 @@ export interface Business {
   lastTransactionId?: string;
   status?: 'pending' | 'approved' | 'rejected';
   views?: number;
+  callCount?: number; // Tracks button clicks
+  whatsappCount?: number; // Tracks button clicks
   rating?: number;
   reviewCount?: number;
   isVerified?: boolean;
@@ -87,4 +89,5 @@ export interface Review {
 export interface PlatformConfig {
   announcement?: string;
   isMaintenance?: boolean;
+  lastUpdated?: string;
 }

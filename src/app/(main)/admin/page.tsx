@@ -3,13 +3,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, setDoc } from "firebase/firestore";
 import { 
   useFirestore, 
   useCollection, 
   useMemoFirebase,
   updateDocumentNonBlocking,
-  deleteDocumentNonBlocking
+  useDoc
 } from "@/firebase";
 import {
   Card,
@@ -21,19 +21,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
-  Trash2, 
   Store, 
   Users, 
-  Package, 
   ShieldAlert, 
   Crown,
-  CheckCircle,
-  XCircle,
-  ThumbsUp,
-  ThumbsDown,
-  Eye,
+  ShieldCheck,
   BarChart3,
-  ShieldCheck
+  Megaphone,
+  Save
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -46,21 +41,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Business, Product, UserProfile } from "@/lib/types";
-import Link from "next/link";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { Business, Product, UserProfile, PlatformConfig } from "@/lib/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   BarChart,
   Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Cell
@@ -71,6 +57,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [announcementText, setAnnouncementText] = useState("");
 
   useEffect(() => {
     if (!authLoading) {
@@ -78,6 +65,13 @@ export default function AdminDashboardPage() {
       else if (userProfile && userProfile.role !== "admin") router.push("/");
     }
   }, [user, userProfile, authLoading, router]);
+
+  const configRef = useMemoFirebase(() => doc(firestore, "config", "platform"), [firestore]);
+  const { data: config } = useDoc<PlatformConfig>(configRef);
+
+  useEffect(() => {
+    if (config?.announcement) setAnnouncementText(config.announcement);
+  }, [config]);
 
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
   const { data: businesses, isLoading: loadingBusinesses } = useCollection<Business>(businessesRef);
@@ -101,6 +95,18 @@ export default function AdminDashboardPage() {
   }, [businesses]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+  const handleUpdateConfig = async () => {
+    try {
+      await setDoc(doc(firestore, "config", "platform"), {
+        announcement: announcementText,
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+      toast({ title: "Platform Config Updated" });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error updating config" });
+    }
+  };
 
   const handleTogglePremium = (businessId: string, currentStatus: boolean) => {
     const businessRef = doc(firestore, "businesses", businessId);
@@ -145,7 +151,7 @@ export default function AdminDashboardPage() {
           <div className="p-3 bg-primary/10 text-primary rounded-xl"><ShieldAlert className="h-8 w-8" /></div>
           <div>
             <h1 className="text-3xl font-bold font-headline">Platform Administration</h1>
-            <p className="text-muted-foreground">Full authority over platform data and moderation.</p>
+            <p className="text-muted-foreground">Global settings and moderation controls.</p>
           </div>
         </div>
       </div>
@@ -172,7 +178,7 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
         
-        <Card className="lg:col-span-1 shadow-sm">
+        <Card className="lg:col-span-1 shadow-sm overflow-hidden">
           <CardHeader className="pb-2">
              <CardTitle className="text-sm font-bold flex items-center gap-2">
                <BarChart3 className="h-4 w-4" /> Category Distribution
@@ -197,9 +203,30 @@ export default function AdminDashboardPage() {
         <TabsList className="mb-8">
           <TabsTrigger value="pending">Approvals ({pendingProducts.length})</TabsTrigger>
           <TabsTrigger value="businesses">Businesses</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="all-products">Global Inventory</TabsTrigger>
+          <TabsTrigger value="config">Platform Config</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="config">
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" /> Homepage Announcement</CardTitle>
+               <CardDescription>Changes the marquee text shown to all users.</CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-4">
+               <div className="space-y-2">
+                 <Label>Announcement Text</Label>
+                 <Input 
+                   value={announcementText} 
+                   onChange={(e) => setAnnouncementText(e.target.value)} 
+                   placeholder="e.g. 50% Discount at local shops today!"
+                 />
+               </div>
+               <Button onClick={handleUpdateConfig} className="gap-2">
+                 <Save className="h-4 w-4" /> Update Globally
+               </Button>
+             </CardContent>
+           </Card>
+        </TabsContent>
 
         <TabsContent value="pending">
           <Card>
@@ -222,8 +249,8 @@ export default function AdminDashboardPage() {
                         <TableCell className="font-medium">{p.title}</TableCell>
                         <TableCell>₹{p.price}</TableCell>
                         <TableCell className="text-right space-x-2">
-                          <Button size="sm" className="bg-green-600" onClick={() => handleProductAction(p.id, 'approved')}><ThumbsUp className="h-4 w-4 mr-1" /> Approve</Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleProductAction(p.id, 'rejected')}><ThumbsDown className="h-4 w-4 mr-1" /> Reject</Button>
+                          <Button size="sm" className="bg-green-600" onClick={() => handleProductAction(p.id, 'approved')}>Approve</Button>
+                          <Button size="sm" variant="destructive" onClick={() => handleProductAction(p.id, 'rejected')}>Reject</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -242,7 +269,7 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Shop Name</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Views</TableHead>
+                    <TableHead>Views/Leads</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -256,43 +283,19 @@ export default function AdminDashboardPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {b.isPaid ? <Badge className="bg-green-500 w-fit">Premium</Badge> : <Badge variant="secondary" className="w-fit">Free</Badge>}
-                          {b.isVerified ? <Badge className="bg-blue-500 w-fit">Verified</Badge> : <Badge variant="outline" className="w-fit text-[10px]">Unverified</Badge>}
                         </div>
                       </TableCell>
-                      <TableCell>{b.views || 0}</TableCell>
+                      <TableCell>
+                        <span className="text-xs">{b.views || 0} V | {(b.callCount || 0) + (b.whatsappCount || 0)} L</span>
+                      </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="sm" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
-                           <ShieldCheck className="h-4 w-4 mr-1" /> {b.isVerified ? "Unverify" : "Verify"}
+                           {b.isVerified ? "Unverify" : "Verify"}
                         </Button>
-                        <Button variant="outline" size="sm" className={b.isPaid ? "text-destructive" : "text-green-600"} onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
-                          <Crown className="h-4 w-4 mr-1" /> {b.isPaid ? "Revoke" : "Grant"}
+                        <Button variant="outline" size="sm" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
+                          {b.isPaid ? "Revoke" : "Grant"} Premium
                         </Button>
                       </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users">
-          <Card>
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users?.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell>{u.name}</TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell><Badge variant="outline">{u.role}</Badge></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

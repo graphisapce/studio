@@ -31,17 +31,11 @@ import {
   MapPin,
   Crown,
   CheckCircle2,
-  CalendarDays,
-  ShieldCheck,
   Clock,
   XCircle,
   Eye,
   TrendingUp,
   Sparkles,
-  Camera,
-  Image as ImageIcon,
-  MessageCircle,
-  Phone,
   QrCode,
   CreditCard,
   Zap,
@@ -49,7 +43,9 @@ import {
   Instagram,
   Facebook,
   Share2,
-  Upload
+  PhoneCall,
+  MessageCircle,
+  BarChart4
 } from "lucide-react";
 import {
   Dialog,
@@ -372,12 +368,12 @@ export default function DashboardPage() {
           <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.views || 0}</p></CardContent>
         </Card>
         <Card className="bg-green-50/50 border-green-200/50">
-          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><TrendingUp className="h-3 w-3" /> Live Items</CardTitle></CardHeader>
-          <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{products?.filter(p => p.status === 'approved').length || 0}</p></CardContent>
+          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><PhoneCall className="h-3 w-3" /> Phone Leads</CardTitle></CardHeader>
+          <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.callCount || 0}</p></CardContent>
         </Card>
         <Card className="bg-blue-50/50 border-blue-200/50">
-          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><CreditCard className="h-3 w-3" /> Direct Pay</CardTitle></CardHeader>
-          <CardContent className="p-4 pt-0"><p className="text-lg font-bold truncate">{businessData?.upiId || "Not Setup"}</p></CardContent>
+          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><MessageCircle className="h-3 w-3" /> WhatsApp Leads</CardTitle></CardHeader>
+          <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.whatsappCount || 0}</p></CardContent>
         </Card>
         <Card className="bg-yellow-50/50 border-yellow-200/50">
           <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><Zap className="h-3 w-3" /> Active Offer</CardTitle></CardHeader>
@@ -522,7 +518,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-4">
                       <Avatar className="h-20 w-20 border-2 border-dashed border-primary">
                         <AvatarImage src={shopProfile.shopLogoUrl} />
-                        <AvatarFallback><ImageIcon className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
+                        <AvatarFallback><TrendingUp className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
                       </Avatar>
                       <Input type="file" accept="image/*" className="max-w-[150px]" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopLogoUrl: b}))} />
                     </div>
