@@ -109,7 +109,11 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push("/");
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Login Failed", description: error.message });
+      let errorMessage = "Kripya sahi email aur password check karein. Agar account nahi hai toh Sign Up karein.";
+      if (error.code === 'auth/invalid-credential') {
+        errorMessage = "Email ya Password galat hai. Check karein ya Sign Up karein.";
+      }
+      toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
     } finally {
       setIsLoading(false);
     }
