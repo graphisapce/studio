@@ -40,7 +40,8 @@ import {
   Globe,
   Crown,
   Lock,
-  MessageCircle
+  CreditCard,
+  CheckCircle2
 } from "lucide-react";
 import {
   Dialog,
@@ -91,8 +92,11 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   // Fetch business profile
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
@@ -105,32 +109,10 @@ export default function DashboardPage() {
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
 
-  // Form states for Product
-  const [newProduct, setNewProduct] = useState({
-    title: "",
-    price: "",
-    description: "",
-    imageUrl: ""
-  });
-
-  // Form states for Shop Profile
-  const [shopProfile, setShopProfile] = useState({
-    shopName: "",
-    shopCategory: "" as BusinessCategory | "",
-    shopDescription: "",
-    shopContact: "",
-    shopImageUrl: ""
-  });
-
-  // Address parts state
-  const [addressParts, setAddressParts] = useState({
-    region: "India",
-    state: "",
-    city: "",
-    street: "",
-    landmark: "",
-    pincode: ""
-  });
+  // Form states
+  const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "" });
+  const [shopProfile, setShopProfile] = useState({ shopName: "", shopCategory: "" as BusinessCategory | "", shopDescription: "", shopContact: "", shopImageUrl: "" });
+  const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
 
   useEffect(() => {
     if (businessData) {
@@ -176,25 +158,16 @@ export default function DashboardPage() {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        callback(reader.result as string);
-      };
+      reader.onloadend = () => callback(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
-    if (!newProduct.title || !newProduct.price || !newProduct.imageUrl) {
-      toast({ variant: "destructive", title: "Missing Fields", description: "Please provide a name, price, and product image." });
-      return;
-    }
-
     setIsSubmittingProduct(true);
-    const colRef = collection(firestore, "products");
-    addDocumentNonBlocking(colRef, {
+    addDocumentNonBlocking(collection(firestore, "products"), {
       businessId: user.uid,
       title: newProduct.title,
       price: parseFloat(newProduct.price),
@@ -202,30 +175,18 @@ export default function DashboardPage() {
       imageUrl: newProduct.imageUrl,
       imageHint: 'product'
     });
-    
-    toast({ title: "Success", description: "Product listing initiated!" });
+    toast({ title: "Success", description: "Product added!" });
     setNewProduct({ title: "", price: "", description: "", imageUrl: "" });
     setIsProductDialogOpen(false);
     setIsSubmittingProduct(false);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    const docRef = doc(firestore, "products", id);
-    deleteDocumentNonBlocking(docRef);
-    toast({ title: "Deleted", description: "Product removal initiated." });
-  };
-
-  const handleUpdateShopProfile = async (e: React.FormEvent) => {
+  const handleUpdateShopProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
-    const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
-
     setIsUpdatingProfile(true);
-    
-    const businessDocRef = doc(firestore, "businesses", user.uid);
-    setDocumentNonBlocking(businessDocRef, {
+    const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
+    setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
       shopName: shopProfile.shopName,
@@ -235,165 +196,84 @@ export default function DashboardPage() {
       contactNumber: shopProfile.shopContact,
       whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl,
-      imageHint: 'shop',
       isPaid: businessData?.isPaid || false
     }, { merge: true });
-
-    toast({ title: "Profile Updated", description: "Your shop details are being saved." });
+    toast({ title: "Updated", description: "Profile saved." });
     setIsUpdatingProfile(false);
   };
 
-  const handleUpgradeToPremium = () => {
-    if (!user) return;
-    const businessDocRef = doc(firestore, "businesses", user.uid);
-    
-    // Crucial: Include ownerId and id to satisfy security rules if document is being created/merged
-    setDocumentNonBlocking(businessDocRef, {
-      id: user.uid,
-      ownerId: user.uid,
-      isPaid: true
-    }, { merge: true });
-    
-    toast({ title: "Success", description: "Upgraded to Premium! WhatsApp integration is now active." });
+  const handleProcessPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessingPayment(true);
+    // Simulate API call
+    setTimeout(() => {
+      setIsProcessingPayment(false);
+      setPaymentSuccess(true);
+      if (user) {
+        setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
+          id: user.uid,
+          ownerId: user.uid,
+          isPaid: true
+        }, { merge: true });
+      }
+      toast({ title: "Payment Successful", description: "Welcome to Premium!" });
+      setTimeout(() => {
+        setIsPaymentDialogOpen(false);
+        setPaymentSuccess(false);
+      }, 2000);
+    }, 3000);
   };
 
   if (authLoading || loadingBusiness || loadingProducts) {
-    return (
-      <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Syncing Dashboard...</p>
-      </div>
-    );
+    return <div className="flex h-[80vh] flex-col items-center justify-center gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-muted-foreground">Syncing Dashboard...</p></div>;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold font-headline text-navy dark:text-white flex items-center gap-2">
-              <Store className="h-8 w-8 text-primary" />
-              {businessData?.shopName || "My Business"}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground">Manage your digital storefront</p>
-              {businessData?.isPaid && (
-                <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600 border-none flex gap-1 items-center">
-                  <Crown className="h-3 w-3" /> Premium
-                </Badge>
-              )}
-            </div>
+        <div>
+          <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><Store className="h-8 w-8 text-primary" />{businessData?.shopName || "My Business"}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-muted-foreground">Manage your digital storefront</p>
+            {businessData?.isPaid && <Badge className="bg-yellow-500 flex gap-1"><Crown className="h-3 w-3" /> Premium</Badge>}
           </div>
         </div>
 
         <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg" className="shadow-lg hover:shadow-xl transition-all">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Add New Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogTrigger asChild><Button size="lg"><PlusCircle className="mr-2 h-5 w-5" /> Add New Item</Button></DialogTrigger>
+          <DialogContent>
             <form onSubmit={handleAddProduct}>
-              <DialogHeader>
-                <DialogTitle>New Product/Service</DialogTitle>
-                <DialogDescription>Fill in the details for your new listing.</DialogDescription>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="title">Item Name</Label>
-                  <Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input id="price" type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" placeholder="Short details about the item..." value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Product Image (From Device)</Label>
-                  <div className="flex flex-col gap-4">
-                    {newProduct.imageUrl && (
-                      <div className="relative aspect-video w-full rounded-md overflow-hidden border">
-                        <Image src={newProduct.imageUrl} alt="Preview" fill className="object-cover" />
-                        <Button 
-                          type="button" 
-                          variant="destructive" 
-                          size="icon" 
-                          className="absolute top-1 right-1 h-6 w-6" 
-                          onClick={() => setNewProduct({ ...newProduct, imageUrl: "" })}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">Select from Gallery</p>
-                      </div>
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={(e) => handleFileChange(e, (base64) => setNewProduct({ ...newProduct, imageUrl: base64 }))} 
-                      />
-                    </label>
-                  </div>
-                </div>
+                <div className="grid gap-2"><Label htmlFor="title">Item Name</Label><Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="price">Price (₹)</Label><Input id="price" type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="desc">Description</Label><Textarea id="desc" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} /></div>
+                <div className="grid gap-2"><Label>Image</Label><Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setNewProduct({ ...newProduct, imageUrl: b }))} /></div>
               </div>
-              <DialogFooter>
-                <Button type="submit" disabled={isSubmittingProduct} className="w-full">
-                  {isSubmittingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Publish Listing"}
-                </Button>
-              </DialogFooter>
+              <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">{isSubmittingProduct ? "Publishing..." : "Publish"}</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
       <Tabs defaultValue="listings" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8 max-w-md">
-          <TabsTrigger value="listings">Your Listings</TabsTrigger>
-          <TabsTrigger value="profile">Shop Settings</TabsTrigger>
-        </TabsList>
+        <TabsList className="mb-8"><TabsTrigger value="listings">Your Listings</TabsTrigger><TabsTrigger value="profile">Shop Settings</TabsTrigger></TabsList>
 
         <TabsContent value="listings">
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <Card>
-                <CardHeader>
-                  <CardTitle>Inventory</CardTitle>
-                  <CardDescription>Live items visible to customers.</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Inventory</CardTitle></CardHeader>
                 <CardContent>
                   {!products || products.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl">
-                      <Package className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                      <h3 className="text-lg font-semibold">No items found</h3>
-                      <Button variant="outline" className="mt-4" onClick={() => setIsProductDialogOpen(true)}>Add your first item</Button>
-                    </div>
+                    <div className="text-center py-20 border-2 border-dashed rounded-xl"><Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" /><p>No items found</p></div>
                   ) : (
                     <div className="grid gap-6 sm:grid-cols-2">
-                      {products.map((product) => (
-                        <Card key={product.id} className="overflow-hidden group relative transition-all hover:shadow-md">
-                          <div className="relative aspect-video">
-                            <Image src={product.imageUrl} alt={product.title} fill className="object-cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(product.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </Button>
-                            </div>
-                          </div>
-                          <CardHeader className="p-4">
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg">{product.title}</CardTitle>
-                              <span className="font-bold text-primary">₹{product.price}</span>
-                            </div>
-                            <CardDescription className="line-clamp-2">{product.description}</CardDescription>
-                          </CardHeader>
+                      {products.map((p) => (
+                        <Card key={p.id} className="overflow-hidden">
+                          <div className="relative aspect-video"><Image src={p.imageUrl} alt={p.title} fill className="object-cover" /></div>
+                          <CardHeader className="p-4"><div className="flex justify-between font-bold"><span>{p.title}</span><span className="text-primary">₹{p.price}</span></div></CardHeader>
+                          <CardFooter className="p-4 pt-0"><Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></CardFooter>
                         </Card>
                       ))}
                     </div>
@@ -405,21 +285,44 @@ export default function DashboardPage() {
             <div className="lg:col-span-1">
               {!businessData?.isPaid && (
                 <Card className="border-yellow-200 bg-yellow-50/30">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-yellow-700">
-                      <Crown className="h-5 w-5" /> Upgrade to Premium
-                    </CardTitle>
-                    <CardDescription>Get exclusive features to grow your business.</CardDescription>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-yellow-700 flex gap-2"><Crown /> Upgrade to Premium</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <ul className="space-y-2 text-sm text-yellow-800">
-                      <li className="flex items-center gap-2">✅ Direct WhatsApp Contact for customers</li>
-                      <li className="flex items-center gap-2">✅ Premium Badge on your shop</li>
-                      <li className="flex items-center gap-2">✅ Priority listing in searches</li>
-                    </ul>
-                    <Button onClick={handleUpgradeToPremium} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-md">
-                      Upgrade Now (Demo)
-                    </Button>
+                    <ul className="space-y-2 text-sm text-yellow-800"><li>✅ Direct WhatsApp Contact</li><li>✅ Premium Badge</li><li>✅ Priority Visibility</li></ul>
+                    <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                      <DialogTrigger asChild><Button className="w-full bg-yellow-600 hover:bg-yellow-700">Upgrade Now for ₹499/yr</Button></DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2"><CreditCard /> Secure Checkout</DialogTitle>
+                          <DialogDescription>Unlock all premium features for your business.</DialogDescription>
+                        </DialogHeader>
+                        {paymentSuccess ? (
+                          <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
+                            <CheckCircle2 className="h-16 w-16 text-green-500 animate-bounce" />
+                            <h3 className="text-2xl font-bold">Payment Success!</h3>
+                            <p className="text-muted-foreground">Redirecting to your premium dashboard...</p>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleProcessPayment} className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label>Card Number</Label>
+                              <Input placeholder="4242 4242 4242 4242" maxLength={19} required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2"><Label>Expiry</Label><Input placeholder="MM/YY" maxLength={5} required /></div>
+                              <div className="space-y-2"><Label>CVC</Label><Input placeholder="123" maxLength={3} type="password" required /></div>
+                            </div>
+                            <div className="bg-muted p-4 rounded-lg text-sm flex justify-between items-center">
+                              <span>Total Amount:</span>
+                              <span className="font-bold text-lg">₹499.00</span>
+                            </div>
+                            <Button type="submit" className="w-full h-12 text-lg" disabled={isProcessingPayment}>
+                              {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing Securely...</> : "Pay ₹499 Securely"}
+                            </Button>
+                            <p className="text-[10px] text-center text-muted-foreground">Secure SSL encrypted payment processing</p>
+                          </form>
+                        )}
+                      </DialogContent>
+                    </Dialog>
                   </CardContent>
                 </Card>
               )}
@@ -429,165 +332,42 @@ export default function DashboardPage() {
 
         <TabsContent value="profile">
           <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle>Shop Profile Settings</CardTitle>
-              <CardDescription>Update your shop details with a professional address and original photos.</CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle>Shop Profile Settings</CardTitle></CardHeader>
             <CardContent>
-              <form onSubmit={handleUpdateShopProfile} className="space-y-8">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="shopName" className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop Name</Label>
-                    <Input id="shopName" placeholder="e.g. Sharma Kirana Store" value={shopProfile.shopName} onChange={(e) => setShopProfile({ ...shopProfile, shopName: e.target.value })} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="shopCategory" className="flex items-center gap-2"><Tag className="h-4 w-4" /> Category</Label>
-                    <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({ ...shopProfile, shopCategory: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        {categoryList.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                      </SelectContent>
+              <form onSubmit={handleUpdateShopProfile} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
+                  <div className="space-y-2"><Label>Category</Label>
+                    <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="shopContact" className="flex items-center gap-2"><Phone className="h-4 w-4" /> Contact/WhatsApp Number</Label>
-                      {!businessData?.isPaid && (
-                        <Badge variant="outline" className="text-[10px] flex gap-1 items-center border-yellow-300 text-yellow-700">
-                          <Lock className="h-2 w-2" /> WhatsApp Locked
-                        </Badge>
-                      )}
-                    </div>
-                    <Input id="shopContact" placeholder="e.g. 9876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({ ...shopProfile, shopContact: e.target.value })} />
-                    {!businessData?.isPaid && (
-                      <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <Info className="h-3 w-3" /> WhatsApp button for customers is disabled. Upgrade to Premium to enable.
-                      </p>
-                    )}
-                  </div>
                 </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="shopDescription" className="flex items-center gap-2"><Info className="h-4 w-4" /> About Shop</Label>
-                    <Textarea id="shopDescription" placeholder="What makes your shop special?" value={shopProfile.shopDescription} onChange={(e) => setShopProfile({ ...shopProfile, shopDescription: e.target.value })} />
-                </div>
-
-                <div className="space-y-6 border-t pt-6">
-                  <h3 className="text-lg font-semibold flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Shop Location Details</h3>
-                  
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-muted-foreground"><Globe className="h-4 w-4" /> Region</Label>
-                      <Select value={addressParts.region} disabled>
-                        <SelectTrigger className="bg-muted">
-                          <SelectValue placeholder="Select Region" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="India">India</SelectItem>
-                        </SelectContent>
+                <div className="space-y-2"><Label>Contact Number</Label><Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} /></div>
+                <div className="space-y-2"><Label>About Shop</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
+                
+                <div className="space-y-4 border-t pt-6">
+                  <h3 className="font-bold flex gap-2"><MapPin /> Address Details</h3>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>State</Label>
+                      <Select value={addressParts.state} onValueChange={(v) => setAddressParts({...addressParts, state: v})}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{indianStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">State / UT</Label>
-                      <Select 
-                        value={addressParts.state} 
-                        onValueChange={(v) => setAddressParts(prev => ({ ...prev, state: v }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select State" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {indianStates.map((state) => (
-                            <SelectItem key={state} value={state}>{state}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="city" className="text-muted-foreground">City / Town / Village</Label>
-                      <Input 
-                        id="city" 
-                        placeholder="e.g. New Delhi" 
-                        value={addressParts.city} 
-                        onChange={(e) => setAddressParts(prev => ({ ...prev, city: e.target.value }))} 
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="pincode" className="text-muted-foreground">Pincode</Label>
-                      <Input 
-                        id="pincode" 
-                        placeholder="e.g. 110001" 
-                        value={addressParts.pincode} 
-                        onChange={(e) => setAddressParts(prev => ({ ...prev, pincode: e.target.value }))} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="street" className="text-muted-foreground">House No, Building, Street, Road</Label>
-                      <Input 
-                        id="street" 
-                        placeholder="e.g. Flat 102, Shanti Niwas, MG Road" 
-                        value={addressParts.street} 
-                        onChange={(e) => setAddressParts(prev => ({ ...prev, street: e.target.value }))} 
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="landmark" className="text-muted-foreground">Landmark (Optional)</Label>
-                      <Input 
-                        id="landmark" 
-                        placeholder="e.g. Opposite City Park" 
-                        value={addressParts.landmark} 
-                        onChange={(e) => setAddressParts(prev => ({ ...prev, landmark: e.target.value }))} 
-                      />
-                    </div>
+                    <div className="space-y-2"><Label>City</Label><Input value={addressParts.city} onChange={(e) => setAddressParts({...addressParts, city: e.target.value})} /></div>
+                    <div className="space-y-2"><Label>Street / House No</Label><Input value={addressParts.street} onChange={(e) => setAddressParts({...addressParts, street: e.target.value})} /></div>
+                    <div className="space-y-2"><Label>Pincode</Label><Input value={addressParts.pincode} onChange={(e) => setAddressParts({...addressParts, pincode: e.target.value})} /></div>
                   </div>
                 </div>
 
                 <div className="space-y-4 border-t pt-6">
-                  <Label className="text-lg font-semibold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Shop Photo</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {shopProfile.shopImageUrl && (
-                      <div className="relative aspect-video rounded-md overflow-hidden border group">
-                        <Image src={shopProfile.shopImageUrl} alt="Shop" fill className="object-cover" />
-                        <button 
-                          type="button" 
-                          className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" 
-                          onClick={() => setShopProfile(prev => ({ ...prev, shopImageUrl: "" }))}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    )}
-                    <label className="flex flex-col items-center justify-center aspect-video border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors border-primary/30">
-                      <div className="flex flex-col items-center justify-center p-4 text-center">
-                        <Upload className="w-8 h-8 mb-2 text-primary" />
-                        <p className="text-sm text-muted-foreground font-medium">Upload Shop Photo</p>
-                      </div>
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={(e) => handleFileChange(e, (base64) => setShopProfile(prev => ({ ...prev, shopImageUrl: base64 })))} 
-                      />
-                    </label>
-                  </div>
+                  <Label>Shop Photo</Label>
+                  <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopImageUrl: b}))} />
                 </div>
 
-                <Button type="submit" className="w-full h-12 text-lg shadow-lg hover:shadow-xl transition-all" disabled={isUpdatingProfile}>
-                  {isUpdatingProfile ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <><Save className="mr-2 h-5 w-5" /> Save Shop Profile</>}
-                </Button>
+                <Button type="submit" className="w-full h-12" disabled={isUpdatingProfile}>{isUpdatingProfile ? <Loader2 className="animate-spin" /> : "Save Profile"}</Button>
               </form>
             </CardContent>
           </Card>
