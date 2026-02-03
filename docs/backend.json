@@ -16,7 +16,8 @@
         },
         "role": {
           "type": "string",
-          "description": "The user's role ('customer' or 'business')."
+          "description": "The user's role ('customer', 'business', or 'admin').",
+          "enum": ["customer", "business", "admin"]
         },
         "phone": {
           "type": "string",

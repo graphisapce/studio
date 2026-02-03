@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { useState, useMemo } from "react";
-import { Home, LayoutDashboard, LogIn, LogOut, Menu, Loader2 } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Menu, Loader2, ShieldAlert } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +24,7 @@ export function MobileHeader() {
   };
   
   const isBusiness = useMemo(() => userProfile?.role === 'business', [userProfile]);
+  const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:hidden">
@@ -48,7 +48,7 @@ export function MobileHeader() {
                   </p>
                   {userProfile ? (
                     <p className="text-xs text-muted-foreground capitalize font-medium">
-                      {userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
+                      {userProfile.role === 'admin' ? 'Administrator' : userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground italic">Syncing role...</p>
@@ -63,6 +63,15 @@ export function MobileHeader() {
                     <span>Home</span>
                   </Link>
               </Button>
+
+              {user && isAdmin && (
+                <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg bg-red-50 text-red-600" asChild onClick={() => setOpen(false)}>
+                  <Link href="/admin">
+                    <ShieldAlert className="h-6 w-6" />
+                    <span>Admin Panel</span>
+                  </Link>
+                </Button>
+              )}
                
               {user && isBusiness && (
                 <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg bg-primary/5 text-primary" asChild onClick={() => setOpen(false)}>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Home, LayoutDashboard, LogIn, LogOut, Loader2 } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -14,6 +14,10 @@ export function DesktopSidebar() {
 
   const isBusiness = useMemo(() => {
     return userProfile?.role === 'business';
+  }, [userProfile]);
+
+  const isAdmin = useMemo(() => {
+    return userProfile?.role === 'admin';
   }, [userProfile]);
 
   return (
@@ -37,6 +41,12 @@ export function DesktopSidebar() {
           </Button>
         )}
 
+        {user && isAdmin && (
+          <Button variant="ghost" className="justify-start gap-3 bg-red-50 text-red-600 hover:bg-red-100" asChild>
+            <Link href="/admin"><ShieldAlert className="h-5 w-5" /><span>Admin Panel</span></Link>
+          </Button>
+        )}
+
         {!user && !loading && (
           <Button variant="ghost" className="justify-start gap-3" asChild>
             <Link href="/login"><LogIn className="h-5 w-5" /><span>Login / Sign Up</span></Link>
@@ -51,7 +61,7 @@ export function DesktopSidebar() {
             </p>
             {userProfile ? (
               <p className="text-xs text-muted-foreground capitalize mb-2 font-medium">
-                {userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
+                {userProfile.role === 'admin' ? 'Administrator' : userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
               </p>
             ) : (
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
