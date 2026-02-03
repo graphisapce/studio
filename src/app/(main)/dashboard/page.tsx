@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -93,6 +94,7 @@ export default function DashboardPage() {
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [generatedCaption, setGeneratedCaption] = useState("");
+  const [origin, setOrigin] = useState("");
   
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -121,6 +123,10 @@ export default function DashboardPage() {
   });
 
   const hasPremium = isBusinessPremium(businessData);
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (businessData) {
@@ -253,6 +259,10 @@ export default function DashboardPage() {
     );
   }
 
+  const qrUrl = origin && user?.uid 
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(origin + '/business/' + user.uid)}`
+    : null;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
@@ -270,7 +280,7 @@ export default function DashboardPage() {
            </div>
         </div>
         <div className="flex gap-2">
-           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Flyer</Button>
+           <Button variant="outline" onClick={() => typeof window !== 'undefined' && window.print()}><Printer className="mr-2 h-4 w-4" /> Flyer</Button>
            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
             <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-5 w-5" /> Add Product</Button></DialogTrigger>
             <DialogContent>
@@ -379,12 +389,12 @@ export default function DashboardPage() {
                      <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30">
                         <QrCode className="h-10 w-10 text-primary mb-3" />
                         <p className="text-xs font-bold mb-2">Shop Profile QR</p>
-                        <Button variant="secondary" size="sm" className="w-full" onClick={() => window.print()}>Print QR</Button>
+                        <Button variant="secondary" size="sm" className="w-full" onClick={() => typeof window !== 'undefined' && window.print()}>Print QR</Button>
                      </div>
                      <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30">
                         <Share2 className="h-10 w-10 text-purple-600 mb-3" />
                         <p className="text-xs font-bold mb-2">WhatsApp Status</p>
-                        <Button variant="secondary" size="sm" className="w-full" onClick={() => copyToClipboard(`Swagat hai hamari dukan ${shopProfile.shopName} par! LocalVyapar par hamari products dekhein: ${window.location.origin}/business/${user?.uid}`)}>Copy Status</Button>
+                        <Button variant="secondary" size="sm" className="w-full" onClick={() => origin && copyToClipboard(`Swagat hai hamari dukan ${shopProfile.shopName} par! LocalVyapar par hamari products dekhein: ${origin}/business/${user?.uid}`)}>Copy Status</Button>
                      </div>
                      <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30 opacity-50">
                         <Rocket className="h-10 w-10 text-orange-600 mb-3" />
@@ -395,7 +405,7 @@ export default function DashboardPage() {
                 </Card>
              </TabsContent>
 
-             <TabsContent value="settings">
+             <TabsContent value="settings" className="space-y-6">
                <Card>
                  <CardContent className="pt-6">
                     <form onSubmit={handleUpdateShopProfile} className="space-y-6">
@@ -435,9 +445,13 @@ export default function DashboardPage() {
              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4" /> Marketing Kit</CardTitle><CardDescription className="text-white/70 text-[10px]">Apni dukan ki pehchan banayein.</CardDescription></CardHeader>
              <CardContent className="space-y-4">
                <div className="aspect-square bg-white rounded-xl flex items-center justify-center p-4">
-                 <Image src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} alt="QR Code" width={200} height={200} />
+                 {qrUrl ? (
+                   <Image src={qrUrl} alt="QR Code" width={200} height={200} />
+                 ) : (
+                   <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg" />
+                 )}
                </div>
-               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={() => window.print()}><Printer className="h-4 w-4 mr-2" /> Print Marketing Flyer</Button>
+               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={() => typeof window !== 'undefined' && window.print()}><Printer className="h-4 w-4 mr-2" /> Print Marketing Flyer</Button>
                <p className="text-[10px] italic text-center opacity-80">Tip: Ise scan karte hi customers dukan dekh payenge.</p>
              </CardContent>
            </Card>
