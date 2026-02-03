@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { Business } from "./types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -20,4 +21,16 @@ export function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: numb
 
 function deg2rad(deg: number) {
   return deg * (Math.PI / 180);
+}
+
+/**
+ * Checks if a business has an active premium subscription.
+ */
+export function isBusinessPremium(business: Business | null | undefined): boolean {
+  if (!business || !business.isPaid || !business.premiumUntil) return false;
+  
+  const expiryDate = new Date(business.premiumUntil);
+  const now = new Date();
+  
+  return expiryDate > now;
 }

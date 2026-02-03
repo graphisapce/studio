@@ -1,4 +1,3 @@
-
 export type BusinessCategory = 
   | 'Food' 
   | 'Groceries' 
@@ -33,6 +32,7 @@ export interface Business {
   longitude?: number;
   description?: string;
   isPaid?: boolean;
+  premiumUntil?: string | null; // ISO Date string for subscription expiry
 }
 
 export interface Product {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from 'next/image';
@@ -7,11 +6,12 @@ import { doc, collection, query, where } from "firebase/firestore";
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Phone, MessageCircle, Loader2, Store, Lock } from 'lucide-react';
+import { Phone, MessageCircle, Loader2, Store, Lock, Crown } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
 import type { Business, Product } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
+import { isBusinessPremium } from '@/lib/utils';
 
 export default function BusinessDetailPage() {
   const params = useParams();
@@ -49,6 +49,7 @@ export default function BusinessDetailPage() {
   }
 
   const shopImage = business.imageUrl || 'https://picsum.photos/seed/shop/800/400';
+  const hasPremium = isBusinessPremium(business);
 
   return (
     <div className="container mx-auto max-w-6xl py-8 px-4">
@@ -68,7 +69,11 @@ export default function BusinessDetailPage() {
               <h1 className="text-3xl md:text-5xl font-bold text-white font-headline">
                 {business.shopName}
               </h1>
-              {business.isPaid && <Badge className="bg-yellow-500 text-white border-none">Premium</Badge>}
+              {hasPremium && (
+                <Badge className="bg-yellow-500 text-white border-none flex gap-1 items-center">
+                  <Crown className="h-3 w-3" /> Premium
+                </Badge>
+              )}
             </div>
             <p className="text-lg text-white/90 mt-1">{business.address}</p>
           </div>
@@ -91,18 +96,18 @@ export default function BusinessDetailPage() {
                     </a>
                   </Button>
                   
-                  {business.isPaid ? (
+                  {hasPremium ? (
                     <Button asChild variant="outline" className="w-full border-green-500 text-green-600 hover:bg-green-50">
                       <a href={business.whatsappLink} target="_blank" rel="noopener noreferrer">
                         <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
                       </a>
                     </Button>
                   ) : (
-                    <div className="relative">
+                    <div className="relative pt-4">
                       <Button variant="outline" className="w-full opacity-50 cursor-not-allowed border-gray-300 text-gray-400" disabled>
                         <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp (Locked)
                       </Button>
-                      <div className="absolute -top-6 left-0 w-full text-center">
+                      <div className="absolute top-0 left-0 w-full text-center">
                         <span className="text-[10px] bg-muted px-2 py-0.5 rounded text-muted-foreground flex items-center justify-center gap-1">
                            <Lock className="h-3 w-3" /> Premium Feature
                         </span>

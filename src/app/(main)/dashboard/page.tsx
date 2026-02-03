@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,7 +10,6 @@ import {
   useDoc, 
   useMemoFirebase,
   addDocumentNonBlocking,
-  updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
   setDocumentNonBlocking
 } from "@/firebase";
@@ -19,6 +17,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -30,18 +29,15 @@ import {
   Package, 
   Store, 
   Save, 
-  Image as ImageIcon, 
-  Upload, 
-  X,
   Phone,
-  Info,
-  Tag,
   MapPin,
-  Globe,
   Crown,
-  Lock,
   CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  QrCode,
+  Smartphone,
+  CalendarDays,
+  Info
 } from "lucide-react";
 import {
   Dialog,
@@ -67,7 +63,12 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { isBusinessPremium } from "@/lib/utils";
+
+// --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
+const MY_UPI_ID = "yourname@upi"; // Apni UPI ID yahan dalein
+const MY_QR_CODE_URL = "https://picsum.photos/seed/myqr/300/300"; // Apne QR Code ki image URL yahan dalein
+// ---------------------------------------------
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -81,8 +82,7 @@ const indianStates = [
   "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", 
   "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
   "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Puducherry"
 ];
 
 export default function DashboardPage() {
@@ -109,10 +109,11 @@ export default function DashboardPage() {
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
 
-  // Form states
   const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "" });
   const [shopProfile, setShopProfile] = useState({ shopName: "", shopCategory: "" as BusinessCategory | "", shopDescription: "", shopContact: "", shopImageUrl: "" });
   const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
+
+  const hasPremium = isBusinessPremium(businessData);
 
   useEffect(() => {
     if (businessData) {
@@ -142,21 +143,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user) {
-        router.push("/login");
-      } else if (userProfile && userProfile.role !== "business") {
-        router.push("/");
-      }
+      if (!user) router.push("/login");
+      else if (userProfile && userProfile.role !== "business") router.push("/");
     }
   }, [user, userProfile, authLoading, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 800000) {
-        toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 800KB." });
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => callback(reader.result as string);
       reader.readAsDataURL(file);
@@ -172,7 +166,7 @@ export default function DashboardPage() {
       title: newProduct.title,
       price: parseFloat(newProduct.price),
       description: newProduct.description,
-      imageUrl: newProduct.imageUrl,
+      imageUrl: newProduct.imageUrl || "https://picsum.photos/seed/item/400/300",
       imageHint: 'product'
     });
     toast({ title: "Success", description: "Product added!" });
@@ -195,33 +189,37 @@ export default function DashboardPage() {
       description: shopProfile.shopDescription,
       contactNumber: shopProfile.shopContact,
       whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
-      imageUrl: shopProfile.shopImageUrl,
-      isPaid: businessData?.isPaid || false
+      imageUrl: shopProfile.shopImageUrl || "https://picsum.photos/seed/shop/800/400",
+      isPaid: businessData?.isPaid || false,
+      premiumUntil: businessData?.premiumUntil || null
     }, { merge: true });
     toast({ title: "Updated", description: "Profile saved." });
     setIsUpdatingProfile(false);
   };
 
-  const handleProcessPayment = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleProcessPayment = () => {
     setIsProcessingPayment(true);
-    // Simulate API call
+    // Simulation
     setTimeout(() => {
-      setIsProcessingPayment(false);
-      setPaymentSuccess(true);
       if (user) {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30); // 30 days monthly subscription
+        
         setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
           id: user.uid,
           ownerId: user.uid,
-          isPaid: true
+          isPaid: true,
+          premiumUntil: expiryDate.toISOString()
         }, { merge: true });
       }
-      toast({ title: "Payment Successful", description: "Welcome to Premium!" });
+      setIsProcessingPayment(false);
+      setPaymentSuccess(true);
+      toast({ title: "Premium Activated", description: "Your 30-day subscription is active!" });
       setTimeout(() => {
         setIsPaymentDialogOpen(false);
         setPaymentSuccess(false);
       }, 2000);
-    }, 3000);
+    }, 2500);
   };
 
   if (authLoading || loadingBusiness || loadingProducts) {
@@ -233,9 +231,18 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><Store className="h-8 w-8 text-primary" />{businessData?.shopName || "My Business"}</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-muted-foreground">Manage your digital storefront</p>
-            {businessData?.isPaid && <Badge className="bg-yellow-500 flex gap-1"><Crown className="h-3 w-3" /> Premium</Badge>}
+            {hasPremium && (
+              <Badge className="bg-yellow-500 flex gap-1 animate-pulse">
+                <Crown className="h-3 w-3" /> Premium Active
+              </Badge>
+            )}
+            {businessData?.premiumUntil && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" /> Expiring: {new Date(businessData.premiumUntil).toLocaleDateString()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -283,46 +290,87 @@ export default function DashboardPage() {
             </div>
             
             <div className="lg:col-span-1">
-              {!businessData?.isPaid && (
-                <Card className="border-yellow-200 bg-yellow-50/30">
-                  <CardHeader><CardTitle className="text-yellow-700 flex gap-2"><Crown /> Upgrade to Premium</CardTitle></CardHeader>
+              {!hasPremium && (
+                <Card className="border-yellow-200 bg-yellow-50/50">
+                  <CardHeader><CardTitle className="text-yellow-700 flex gap-2 items-center"><Crown className="text-yellow-500" /> Unlock Premium</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <ul className="space-y-2 text-sm text-yellow-800"><li>✅ Direct WhatsApp Contact</li><li>✅ Premium Badge</li><li>✅ Priority Visibility</li></ul>
+                    <div className="bg-white p-3 rounded-lg border border-yellow-100 shadow-sm">
+                       <p className="text-xl font-bold text-center text-primary">₹99 <span className="text-sm font-normal text-muted-foreground">/ month</span></p>
+                    </div>
+                    <ul className="space-y-2 text-sm text-yellow-800">
+                      <li className="flex items-center gap-2">✅ Direct WhatsApp Button</li>
+                      <li className="flex items-center gap-2">✅ Premium Badge on Profile</li>
+                      <li className="flex items-center gap-2">✅ Boosted Visibility</li>
+                    </ul>
                     <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                      <DialogTrigger asChild><Button className="w-full bg-yellow-600 hover:bg-yellow-700">Upgrade Now for ₹499/yr</Button></DialogTrigger>
+                      <DialogTrigger asChild><Button className="w-full bg-yellow-600 hover:bg-yellow-700 font-bold">Buy Monthly Subscription</Button></DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2"><CreditCard /> Secure Checkout</DialogTitle>
-                          <DialogDescription>Unlock all premium features for your business.</DialogDescription>
+                          <DialogTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Choose Payment Method</DialogTitle>
+                          <DialogDescription>Pay ₹99 for 30 days of premium benefits.</DialogDescription>
                         </DialogHeader>
+                        
                         {paymentSuccess ? (
                           <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
                             <CheckCircle2 className="h-16 w-16 text-green-500 animate-bounce" />
                             <h3 className="text-2xl font-bold">Payment Success!</h3>
-                            <p className="text-muted-foreground">Redirecting to your premium dashboard...</p>
+                            <p className="text-muted-foreground">Your premium features are now active.</p>
                           </div>
                         ) : (
-                          <form onSubmit={handleProcessPayment} className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                              <Label>Card Number</Label>
-                              <Input placeholder="4242 4242 4242 4242" maxLength={19} required />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2"><Label>Expiry</Label><Input placeholder="MM/YY" maxLength={5} required /></div>
-                              <div className="space-y-2"><Label>CVC</Label><Input placeholder="123" maxLength={3} type="password" required /></div>
-                            </div>
-                            <div className="bg-muted p-4 rounded-lg text-sm flex justify-between items-center">
-                              <span>Total Amount:</span>
-                              <span className="font-bold text-lg">₹499.00</span>
-                            </div>
-                            <Button type="submit" className="w-full h-12 text-lg" disabled={isProcessingPayment}>
-                              {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing Securely...</> : "Pay ₹499 Securely"}
-                            </Button>
-                            <p className="text-[10px] text-center text-muted-foreground">Secure SSL encrypted payment processing</p>
-                          </form>
+                          <Tabs defaultValue="upi" className="w-full mt-4">
+                            <TabsList className="grid w-full grid-cols-2">
+                              <TabsTrigger value="upi" className="flex gap-2"><Smartphone className="h-4 w-4" /> UPI / QR</TabsTrigger>
+                              <TabsTrigger value="card" className="flex gap-2"><CreditCard className="h-4 w-4" /> Card</TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="upi" className="space-y-6 py-4">
+                              <div className="flex flex-col items-center justify-center space-y-4">
+                                <p className="text-sm text-center text-muted-foreground">Scan QR to pay ₹99</p>
+                                <div className="relative h-48 w-48 border-4 border-primary/20 rounded-xl overflow-hidden p-2 bg-white">
+                                  <Image src={MY_QR_CODE_URL} alt="UPI QR" fill className="object-contain" />
+                                </div>
+                                <div className="text-center space-y-2 w-full">
+                                  <Label className="text-xs uppercase text-muted-foreground">Or pay to UPI ID</Label>
+                                  <div className="flex items-center gap-2 bg-muted p-2 rounded border justify-between">
+                                    <code className="text-sm font-bold">{MY_UPI_ID}</code>
+                                    <Button variant="ghost" size="sm" className="h-8 text-[10px]" onClick={() => {
+                                      navigator.clipboard.writeText(MY_UPI_ID);
+                                      toast({ title: "Copied", description: "UPI ID copied to clipboard" });
+                                    }}>Copy</Button>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button className="w-full h-12" onClick={handleProcessPayment} disabled={isProcessingPayment}>
+                                {isProcessingPayment ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying Payment...</> : "I have paid ₹99"}
+                              </Button>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-blue-50 p-2 rounded">
+                                <Info className="h-3 w-3" /> Note: Verification takes 1-2 seconds after you click.
+                              </div>
+                            </TabsContent>
+
+                            <TabsContent value="card" className="space-y-4 py-4">
+                              <div className="space-y-2"><Label>Card Number</Label><Input placeholder="4242 4242 4242 4242" maxLength={19} /></div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label>Expiry</Label><Input placeholder="MM/YY" /></div>
+                                <div className="space-y-2"><Label>CVC</Label><Input placeholder="123" type="password" /></div>
+                              </div>
+                              <Button className="w-full h-12" onClick={handleProcessPayment} disabled={isProcessingPayment}>
+                                {isProcessingPayment ? "Processing..." : "Pay ₹99 Securely"}
+                              </Button>
+                            </TabsContent>
+                          </Tabs>
                         )}
                       </DialogContent>
                     </Dialog>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {hasPremium && (
+                <Card className="bg-green-50 border-green-200">
+                  <CardHeader><CardTitle className="text-green-700 flex items-center gap-2 text-sm"><CheckCircle2 className="h-4 w-4" /> Subscription Active</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-green-600">All features unlocked until {new Date(businessData?.premiumUntil || "").toLocaleDateString()}. Enjoy boosted visibility!</p>
                   </CardContent>
                 </Card>
               )}
@@ -344,11 +392,11 @@ export default function DashboardPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2"><Label>Contact Number</Label><Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} /></div>
-                <div className="space-y-2"><Label>About Shop</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
+                <div className="space-y-2"><Label>Contact Number</Label><Input placeholder="e.g. 9876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} /></div>
+                <div className="space-y-2"><Label>About Shop</Label><Textarea placeholder="Describe what you sell or offer..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
                 
                 <div className="space-y-4 border-t pt-6">
-                  <h3 className="font-bold flex gap-2"><MapPin /> Address Details</h3>
+                  <h3 className="font-bold flex gap-2 items-center"><MapPin className="h-4 w-4" /> Address Details</h3>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>State</Label>
                       <Select value={addressParts.state} onValueChange={(v) => setAddressParts({...addressParts, state: v})}>
@@ -357,13 +405,13 @@ export default function DashboardPage() {
                       </Select>
                     </div>
                     <div className="space-y-2"><Label>City</Label><Input value={addressParts.city} onChange={(e) => setAddressParts({...addressParts, city: e.target.value})} /></div>
-                    <div className="space-y-2"><Label>Street / House No</Label><Input value={addressParts.street} onChange={(e) => setAddressParts({...addressParts, street: e.target.value})} /></div>
+                    <div className="space-y-2"><Label>Street / Shop No</Label><Input value={addressParts.street} onChange={(e) => setAddressParts({...addressParts, street: e.target.value})} /></div>
                     <div className="space-y-2"><Label>Pincode</Label><Input value={addressParts.pincode} onChange={(e) => setAddressParts({...addressParts, pincode: e.target.value})} /></div>
                   </div>
                 </div>
 
                 <div className="space-y-4 border-t pt-6">
-                  <Label>Shop Photo</Label>
+                  <Label>Shop Banner Image</Label>
                   <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopImageUrl: b}))} />
                 </div>
 
