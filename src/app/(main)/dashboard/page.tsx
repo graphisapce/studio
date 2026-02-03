@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -99,7 +100,6 @@ export default function DashboardPage() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   // Fetch business profile
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
@@ -405,23 +405,23 @@ export default function DashboardPage() {
                                 <div className="text-center">
                                   <p className="text-sm font-bold text-muted-foreground">Scan QR & Pay ₹99</p>
                                 </div>
-                                <div className="relative h-60 w-60 border-4 border-primary/20 rounded-2xl overflow-hidden p-2 bg-white shadow-xl flex items-center justify-center">
-                                  {imageError ? (
-                                    <div className="text-center p-4">
-                                      <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
-                                      <p className="text-xs text-muted-foreground">Image load failed.</p>
-                                    </div>
-                                  ) : (
-                                    <Image 
-                                      src={MY_QR_CODE_URL} 
-                                      alt="UPI QR Code" 
-                                      fill 
-                                      className="object-contain" 
-                                      priority
-                                      unoptimized
-                                      onError={() => setImageError(true)}
-                                    />
-                                  )}
+                                <div className="relative h-64 w-64 border-4 border-primary/20 rounded-2xl overflow-hidden p-4 bg-white shadow-xl flex items-center justify-center">
+                                  <img 
+                                    src={MY_QR_CODE_URL} 
+                                    alt="UPI QR Code" 
+                                    className="h-full w-full object-contain"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent && !parent.querySelector('.error-msg')) {
+                                        const msg = document.createElement('div');
+                                        msg.className = 'error-msg text-center text-xs text-muted-foreground p-2';
+                                        msg.innerHTML = '<div class="text-destructive mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>QR Image Failed to Load.<br/>Check Drive Permissions.';
+                                        parent.appendChild(msg);
+                                      }
+                                    }}
+                                  />
                                 </div>
                                 <div className="text-center space-y-2 w-full">
                                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-black">Or Use UPI ID</Label>
