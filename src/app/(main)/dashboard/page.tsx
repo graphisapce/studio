@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { collection, query, where, doc } from "firebase/firestore";
@@ -45,7 +46,10 @@ import {
   Share2,
   PhoneCall,
   MessageCircle,
-  BarChart4
+  BarChart4,
+  Printer,
+  History,
+  Phone
 } from "lucide-react";
 import {
   Dialog,
@@ -171,6 +175,15 @@ export default function DashboardPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
+  const activities = useMemo(() => {
+    if (!businessData) return [];
+    const list = [];
+    if (businessData.views) list.push({ icon: <Eye className="h-4 w-4" />, text: `${businessData.views} logon ne shop profile dekhi.`, time: 'Hamesha updated' });
+    if (businessData.callCount) list.push({ icon: <Phone className="h-4 w-4" />, text: `${businessData.callCount} logon ne call button dabaya.`, time: 'Real-time Lead' });
+    if (businessData.whatsappCount) list.push({ icon: <MessageCircle className="h-4 w-4" />, text: `${businessData.whatsappCount} logon ne WhatsApp enquire kiya.`, time: 'Potential Sale' });
+    return list;
+  }, [businessData]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -251,6 +264,10 @@ export default function DashboardPage() {
     setIsUpdatingProfile(false);
   };
 
+  const printShopFlyer = () => {
+    window.print();
+  };
+
   if (authLoading || loadingBusiness || loadingProducts) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
@@ -262,7 +279,27 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+      {/* Printable Flyer Template (Hidden from screen) */}
+      <div className="hidden print:block p-8 bg-white border-8 border-primary rounded-3xl text-center font-headline">
+        <h1 className="text-6xl font-black mb-4 text-primary">LocalVyapar</h1>
+        <h2 className="text-4xl font-bold mb-8">Scan & Shop at <span className="underline">{businessData?.shopName}</span></h2>
+        <div className="flex justify-center mb-8">
+          <Image 
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} 
+            alt="Shop QR" 
+            width={300} 
+            height={300} 
+            className="border-4 border-black p-2"
+          />
+        </div>
+        <p className="text-2xl font-bold mb-4">View our Menu, Inventory & Offers directly on your phone!</p>
+        <div className="flex justify-center gap-8 items-center mt-12">
+          {businessData?.isVerified && <div className="flex items-center gap-2 text-blue-600"><CheckCircle2 className="h-8 w-8" /> <span className="text-xl font-bold">Verified Shop</span></div>}
+          <div className="bg-primary text-white px-6 py-2 rounded-full text-xl font-bold">Powered by LocalVyapar</div>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 print:hidden">
         <div className="flex items-center gap-4">
            <Avatar className="h-16 w-16 border-2 border-primary">
              <AvatarImage src={businessData?.logoUrl} />
@@ -284,37 +321,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex gap-2">
-           <Dialog>
-             <DialogTrigger asChild>
-               <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">
-                 <QrCode className="mr-2 h-4 w-4" /> Shop QR
-               </Button>
-             </DialogTrigger>
-             <DialogContent className="sm:max-w-xs text-center">
-               <DialogHeader>
-                 <DialogTitle>Your Shop QR Code</DialogTitle>
-                 <DialogDescription>Customers can scan this to visit your digital shop.</DialogDescription>
-               </DialogHeader>
-               <div className="p-6 bg-white rounded-xl border shadow-sm mx-auto">
-                  <div className="w-48 h-48 bg-primary/5 flex items-center justify-center border-2 border-dashed border-primary rounded-lg relative overflow-hidden">
-                    <QrCode className="h-32 w-32 text-primary opacity-20" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                      <p className="text-[10px] font-bold text-primary mb-1">{businessData?.shopName}</p>
-                      <Image 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} 
-                        alt="Shop QR" 
-                        width={150} 
-                        height={150} 
-                        className="rounded-md shadow-md"
-                      />
-                    </div>
-                  </div>
-               </div>
-               <Button className="w-full mt-4" onClick={() => window.print()}>
-                 <Download className="mr-2 h-4 w-4" /> Print for Shop
-               </Button>
-             </DialogContent>
-           </Dialog>
+           <Button variant="outline" className="border-primary text-primary" onClick={printShopFlyer}>
+             <Printer className="mr-2 h-4 w-4" /> Print Flyer
+           </Button>
 
            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
             <DialogTrigger asChild>
@@ -362,7 +371,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 print:hidden">
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><Eye className="h-3 w-3" /> Profile Views</CardTitle></CardHeader>
           <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.views || 0}</p></CardContent>
@@ -381,196 +390,169 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="listings" className="w-full">
-        <TabsList className="mb-8">
-          <TabsTrigger value="listings">Your Listings</TabsTrigger>
-          <TabsTrigger value="growth">Marketing Tools</TabsTrigger>
-          <TabsTrigger value="profile">Shop Settings</TabsTrigger>
-        </TabsList>
+      <div className="grid lg:grid-cols-3 gap-8 print:hidden">
+        <div className="lg:col-span-2 space-y-8">
+          <Tabs defaultValue="listings" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="listings">Your Listings</TabsTrigger>
+              <TabsTrigger value="growth">Marketing Tools</TabsTrigger>
+              <TabsTrigger value="profile">Shop Settings</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="listings">
-          <Card>
-            <CardHeader><CardTitle>Inventory</CardTitle></CardHeader>
-            <CardContent>
-              {!products || products.length === 0 ? (
-                <div className="text-center py-20 border-2 border-dashed rounded-xl">
-                  <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p>No items found. Start by adding your first product.</p>
-                </div>
-              ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {products.map((p) => {
-                    const prodImg = (typeof p.imageUrl === 'string' && p.imageUrl.trim() !== "")
-                      ? p.imageUrl 
-                      : `https://picsum.photos/seed/prod-${p.id}/400/300`;
-                    
-                    return (
-                      <Card key={p.id} className="overflow-hidden group relative">
-                        <div className="absolute top-2 left-2 z-10">
-                          {p.status === 'approved' ? (
-                            <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge>
-                          ) : p.status === 'rejected' ? (
-                            <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-                              <Clock className="h-3 w-3 mr-1" /> Pending
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="relative aspect-video bg-muted">
-                          <Image src={prodImg} alt={p.title || "Product"} fill className="object-cover" />
-                        </div>
-                        <CardHeader className="p-4 pb-2">
-                          <div className="flex justify-between font-bold">
-                            <span>{p.title}</span>
-                            <span className="text-primary">₹{p.price}</span>
-                          </div>
-                        </CardHeader>
-                        <CardFooter className="p-4 pt-0">
-                          <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="growth">
-           <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-yellow-500" /> Live Flash Deal</CardTitle>
-                  <CardDescription>Appears on the homepage for customers within 1km.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Flash Deal Text (Short & Catchy)</Label>
-                    <Input placeholder="e.g. 20% Discount on Pizza today!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} />
-                  </div>
-                  <Button className="w-full" onClick={() => handleUpdateShopProfile()}>Update Live Offer</Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-blue-200 bg-blue-50/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-blue-500" /> Direct UPI Payment & QR</CardTitle>
-                  <CardDescription>Enable customers to pay you directly via UPI or QR.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Your UPI ID (VPA)</Label>
-                    <Input placeholder="e.g. name@okaxis" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Payment QR Image (GPay/PhonePe)</Label>
-                    {shopProfile.paymentQrUrl && (
-                      <div className="relative w-32 h-32 mb-2 border rounded-lg overflow-hidden">
-                        <Image src={shopProfile.paymentQrUrl} alt="Payment QR" fill className="object-contain" />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, paymentQrUrl: b}))} />
+            <TabsContent value="listings">
+              <Card>
+                <CardHeader><CardTitle>Inventory</CardTitle></CardHeader>
+                <CardContent>
+                  {!products || products.length === 0 ? (
+                    <div className="text-center py-20 border-2 border-dashed rounded-xl">
+                      <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p>No items found. Start by adding your first product.</p>
                     </div>
-                  </div>
-                  {hasPremium ? (
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateShopProfile()}>Save Payment Details</Button>
                   ) : (
-                    <div className="p-4 bg-muted rounded-lg text-center opacity-70">
-                       <p className="text-xs font-bold text-muted-foreground flex items-center justify-center gap-2"><Crown className="h-3 w-3" /> Payment Tools are Premium Features</p>
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      {products.map((p) => (
+                        <Card key={p.id} className="overflow-hidden group relative">
+                          <div className="absolute top-2 left-2 z-10">
+                            {p.status === 'approved' ? (
+                              <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge>
+                            ) : p.status === 'rejected' ? (
+                              <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
+                                <Clock className="h-3 w-3 mr-1" /> Pending
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="relative aspect-video bg-muted">
+                            <Image src={p.imageUrl || `https://picsum.photos/seed/prod-${p.id}/400/300`} alt={p.title} fill className="object-cover" />
+                          </div>
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex justify-between font-bold">
+                              <span>{p.title}</span>
+                              <span className="text-primary">₹{p.price}</span>
+                            </div>
+                          </CardHeader>
+                          <CardFooter className="p-4 pt-0">
+                            <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
                     </div>
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
 
-              <Card className="md:col-span-2 border-purple-200 bg-purple-50/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-purple-600" /> Social Media & Links</CardTitle>
-                  <CardDescription>Boost your trust by linking your social profiles.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Instagram className="h-4 w-4 text-pink-600" /> Instagram Link</Label>
-                    <Input placeholder="https://instagram.com/yourshop" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Facebook className="h-4 w-4 text-blue-600" /> Facebook Link</Label>
-                    <Input placeholder="https://facebook.com/yourshop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
-                  </div>
-                  <Button className="sm:col-span-2 w-full bg-purple-600 hover:bg-purple-700" onClick={() => handleUpdateShopProfile()}>Save Social Profiles</Button>
+            <TabsContent value="growth">
+               <div className="grid sm:grid-cols-2 gap-6">
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Input placeholder="e.g. 20% Discount today!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} />
+                      <Button className="w-full" size="sm" onClick={() => handleUpdateShopProfile()}>Update Live Offer</Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-blue-200 bg-blue-50/30">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm"><CreditCard className="h-4 w-4 text-blue-500" /> UPI Pay</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Input placeholder="name@okaxis" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
+                      {hasPremium ? <Button className="w-full bg-blue-600" size="sm" onClick={() => handleUpdateShopProfile()}>Save UPI</Button> : <Badge variant="secondary" className="w-full text-center">Premium Only</Badge>}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="sm:col-span-2 border-purple-200 bg-purple-50/30">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm"><Share2 className="h-4 w-4 text-purple-600" /> Social Links</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-4">
+                      <Input placeholder="Instagram Link" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
+                      <Input placeholder="Facebook Link" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
+                      <Button className="col-span-2 w-full bg-purple-600" size="sm" onClick={() => handleUpdateShopProfile()}>Save Socials</Button>
+                    </CardContent>
+                  </Card>
+               </div>
+            </TabsContent>
+
+            <TabsContent value="profile">
+              <Card>
+                <CardHeader><CardTitle>Shop Profile</CardTitle></CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUpdateShopProfile} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2"><Label>Contact</Label><Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} /></div>
+                      <div className="space-y-2"><Label>Pincode</Label><Input value={addressParts.pincode} onChange={(e) => setAddressParts({...addressParts, pincode: e.target.value})} /></div>
+                    </div>
+                    <Textarea placeholder="Shop Description..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} />
+                    <Button type="submit" className="w-full" disabled={isUpdatingProfile}>{isUpdatingProfile ? "Saving..." : "Save Shop Settings"}</Button>
+                  </form>
                 </CardContent>
               </Card>
-           </div>
-        </TabsContent>
+            </TabsContent>
+          </Tabs>
+        </div>
 
-        <TabsContent value="profile">
-          <Card className="max-w-4xl mx-auto">
-            <CardHeader><CardTitle>Shop Profile Settings</CardTitle></CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdateShopProfile} className="space-y-8">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <Label>Logo</Label>
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-20 w-20 border-2 border-dashed border-primary">
-                        <AvatarImage src={shopProfile.shopLogoUrl} />
-                        <AvatarFallback><TrendingUp className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
-                      </Avatar>
-                      <Input type="file" accept="image/*" className="max-w-[150px]" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopLogoUrl: b}))} />
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <Label>Banner</Label>
-                    <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopImageUrl: b}))} />
-                  </div>
-                </div>
+        <div className="space-y-8">
+           <Card className="border-primary/20">
+             <CardHeader className="pb-2">
+               <CardTitle className="text-sm font-bold flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Recent Activity</CardTitle>
+               <CardDescription className="text-[10px]">Real-time customer interactions</CardDescription>
+             </CardHeader>
+             <CardContent>
+               <div className="space-y-4">
+                 {activities.length > 0 ? activities.map((act, i) => (
+                   <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50 border border-border/50">
+                     <div className="p-2 bg-white rounded-full text-primary shadow-sm">{act.icon}</div>
+                     <div>
+                       <p className="text-xs font-medium leading-tight">{act.text}</p>
+                       <p className="text-[10px] text-muted-foreground mt-1">{act.time}</p>
+                     </div>
+                   </div>
+                 )) : (
+                   <div className="text-center py-10 opacity-50">Abhi tak koi activity nahi hui.</div>
+                 )}
+               </div>
+             </CardContent>
+           </Card>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
-                  <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2"><Label>Contact Number</Label><Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} /></div>
-                  <div className="space-y-2"><Label>Opening Time</Label><Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} /></div>
-                </div>
-
-                <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
-                
-                <div className="space-y-6 border-t pt-8">
-                  <h3 className="font-bold flex gap-2 items-center text-primary"><MapPin className="h-5 w-5" /> Location Address</h3>
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label>State</Label>
-                      <Select value={addressParts.state} onValueChange={(v) => setAddressParts({...addressParts, state: v})}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{indianStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2"><Label>City</Label><Input value={addressParts.city} onChange={(e) => setAddressParts({...addressParts, city: e.target.value})} /></div>
-                    <div className="space-y-2"><Label>Street / Area</Label><Input value={addressParts.street} onChange={(e) => setAddressParts({...addressParts, street: e.target.value})} /></div>
-                    <div className="space-y-2"><Label>Pincode</Label><Input value={addressParts.pincode} onChange={(e) => setAddressParts({...addressParts, pincode: e.target.value})} /></div>
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full h-14 text-lg font-black" disabled={isUpdatingProfile}>
-                  {isUpdatingProfile ? "Saving..." : "Save Shop Settings"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+           <Card className="bg-gradient-to-br from-primary to-blue-600 text-white border-none">
+             <CardHeader>
+               <CardTitle className="text-sm font-bold flex items-center gap-2"><QrCode className="h-4 w-4" /> Marketing Kit</CardTitle>
+               <CardDescription className="text-white/70 text-[10px]">Apni dukan ko promote karein!</CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-4">
+               <div className="p-4 bg-white rounded-xl shadow-lg flex justify-center">
+                 <Image 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} 
+                    alt="Shop QR" 
+                    width={150} 
+                    height={150} 
+                 />
+               </div>
+               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={printShopFlyer}>
+                 <Printer className="mr-2 h-4 w-4" /> Print Shop Flyer
+               </Button>
+               <p className="text-[10px] text-center opacity-80 italic">Tip: Ise print karke shop ke bahar lagayein!</p>
+             </CardContent>
+           </Card>
+        </div>
+      </div>
     </div>
   );
 }

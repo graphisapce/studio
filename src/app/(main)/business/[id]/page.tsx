@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
@@ -21,15 +22,14 @@ import {
   ShieldCheck, 
   CreditCard, 
   Zap,
-  Instagram,
-  Facebook,
-  QrCode,
-  Copy,
-  Heart
+  Volume2,
+  VolumeX,
+  Heart,
+  Copy
 } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
-import type { Business, Product, Review, UserProfile } from "@/lib/types";
+import type { Business, Product, Review } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
 import { isBusinessPremium, isShopOpen } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -44,6 +44,7 @@ import {
   DialogTitle as UIDialogTitle,
   DialogTrigger as UIDialogTrigger,
 } from "@/components/ui/dialog";
+import { generateShopAudioIntro } from '@/ai/flows/shop-audio-intro-flow';
 
 export default function BusinessDetailPage() {
   const params = useParams();
@@ -56,6 +57,9 @@ export default function BusinessDetailPage() {
   const [comment, setComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const businessRef = useMemoFirebase(() => id ? doc(firestore, "businesses", id) : null, [firestore, id]);
   const { data: business, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -97,6 +101,36 @@ export default function BusinessDetailPage() {
       title: isFavorite ? "Removed from Favorites" : "Added to Favorites", 
       description: isFavorite ? "Dukaan favorites se hata di gayi." : "Ab yeh dukan aapke favorites page par dikhegi."
     });
+  };
+
+  const handleAudioIntro = async () => {
+    if (audioUrl) {
+      setIsPlaying(true);
+      const audio = new Audio(audioUrl);
+      audio.play();
+      audio.onended = () => setIsPlaying(false);
+      return;
+    }
+
+    if (!business) return;
+    setIsGeneratingAudio(true);
+    try {
+      const res = await generateShopAudioIntro({
+        shopName: business.shopName,
+        category: business.category,
+        description: business.description || "",
+        address: business.address
+      });
+      setAudioUrl(res.media);
+      setIsPlaying(true);
+      const audio = new Audio(res.media);
+      audio.play();
+      audio.onended = () => setIsPlaying(false);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Audio Error", description: "AI Intro abhi available nahi hai." });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
   };
 
   const handleLeadAction = (type: 'call' | 'whatsapp') => {
@@ -200,6 +234,16 @@ export default function BusinessDetailPage() {
                 <h1 className="text-2xl md:text-4xl font-black font-headline">{business.shopName}</h1>
                 {business.isVerified && <ShieldCheck className="h-6 w-6 text-blue-500" />}
                 {hasPremium && <Badge className="bg-yellow-500"><Crown className="h-3 w-3 mr-1" /> Premium</Badge>}
+                <Button 
+                  onClick={handleAudioIntro} 
+                  disabled={isGeneratingAudio}
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-full gap-2 border-primary text-primary hover:bg-primary/10 ml-2"
+                >
+                  {isGeneratingAudio ? <Loader2 className="h-4 w-4 animate-spin" /> : isPlaying ? <VolumeX className="h-4 w-4 animate-pulse" /> : <Volume2 className="h-4 w-4" />}
+                  {isPlaying ? "Playing..." : "Listen Intro"}
+                </Button>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground font-medium">
                 <Badge variant="secondary">{business.category}</Badge>
