@@ -47,7 +47,9 @@ import {
   Tag,
   Rocket,
   Instagram,
-  Facebook
+  Facebook,
+  Upload,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   Dialog,
@@ -127,7 +129,9 @@ export default function DashboardPage() {
   const hasPremium = isBusinessPremium(businessData);
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
+    }
   }, []);
 
   useEffect(() => {
@@ -192,6 +196,24 @@ export default function DashboardPage() {
     } finally {
       setIsGeneratingCaption(false);
     }
+  };
+
+  const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "QR code image 2MB se kam honi chahiye." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setShopProfile(prev => ({ ...prev, paymentQrUrl: base64String }));
+      toast({ title: "QR Loaded", description: "Save button dabayein update karne ke liye." });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
@@ -380,19 +402,68 @@ export default function DashboardPage() {
                     <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
                     <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate Offer</Button></CardContent>
                   </Card>
-                  <Card className="border-blue-200 bg-blue-50/20">
-                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
+                  
+                  {/* Payment Settings Card Updated to match requested design */}
+                  <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] font-bold">UPI ID</Label>
-                        <Input placeholder="name@upi" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
+                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">UPI ID</Label>
+                        <Input 
+                          placeholder="e.g. name@upi" 
+                          className="h-9 bg-white"
+                          value={shopProfile.upiId} 
+                          onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} 
+                        />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold">Payment QR Image URL</Label>
-                        <Input placeholder="https://image-link.com/qr.jpg" value={shopProfile.paymentQrUrl} onChange={(e) => setShopProfile({...shopProfile, paymentQrUrl: e.target.value})} />
-                        <p className="text-[9px] text-muted-foreground italic">Tip: Upload QR to PostImages.org & paste the 'Direct Link'.</p>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Payment QR Image</Label>
+                        <div className="flex flex-col gap-3">
+                          {shopProfile.paymentQrUrl ? (
+                            <div className="relative w-24 h-24 border rounded-lg overflow-hidden bg-white mx-auto group">
+                              <Image src={shopProfile.paymentQrUrl} alt="QR Preview" fill className="object-contain" />
+                              <button 
+                                onClick={() => setShopProfile(prev => ({ ...prev, paymentQrUrl: "" }))}
+                                className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center w-full h-24 border-2 border-dashed rounded-lg bg-white/50 text-muted-foreground">
+                              <ImageIcon className="h-8 w-8 opacity-20" />
+                            </div>
+                          )}
+                          
+                          <div className="relative">
+                            <Input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              id="qr-upload" 
+                              onChange={handleQrUpload} 
+                            />
+                            <Label 
+                              htmlFor="qr-upload" 
+                              className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold"
+                            >
+                              <Upload className="h-3 w-3" /> {shopProfile.paymentQrUrl ? "Change QR Image" : "Select from Device"}
+                            </Label>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground italic text-center">Apna GPay/PhonePe QR screenshot upload karein.</p>
+                        </div>
                       </div>
-                      <Button size="sm" variant="outline" className="w-full border-blue-500 text-blue-600" onClick={() => handleUpdateShopProfile()}>Save Payment Settings</Button>
+                      
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold" 
+                        onClick={() => handleUpdateShopProfile()}
+                      >
+                        Save Payment Settings
+                      </Button>
                     </CardContent>
                   </Card>
                 </div>
