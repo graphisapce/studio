@@ -40,8 +40,9 @@ export function BusinessCard({ business }: BusinessCardProps) {
           </div>
         )}
         
-        <CardHeader className="p-0 relative overflow-hidden">
-          <div className="relative aspect-[4/3] w-full bg-muted group">
+        <CardHeader className="p-0 relative">
+          {/* Inner container for image zoom with overflow-hidden */}
+          <div className="relative aspect-[4/3] w-full bg-muted group overflow-hidden rounded-t-lg">
             <Image
               src={displayImage}
               alt={business?.shopName || "Business"}
@@ -51,16 +52,16 @@ export function BusinessCard({ business }: BusinessCardProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
             <Watermark />
-            
-            {/* Business Logo Overlap */}
-            <div className="absolute -bottom-6 left-4 z-20">
-               <Avatar className="h-14 w-14 border-4 border-white shadow-xl bg-white">
-                 <AvatarImage src={displayLogo || ""} alt={business?.shopName} className="object-cover" />
-                 <AvatarFallback className="bg-primary/5 text-primary">
-                   <Store className="h-6 w-6" />
-                 </AvatarFallback>
-               </Avatar>
-            </div>
+          </div>
+          
+          {/* Business Logo Overlap - Positioned outside the image container but inside the CardHeader */}
+          <div className="absolute -bottom-7 left-4 z-20">
+             <Avatar className="h-14 w-14 border-4 border-white shadow-xl bg-white">
+               <AvatarImage src={displayLogo || ""} alt={business?.shopName} className="object-cover" />
+               <AvatarFallback className="bg-primary/5 text-primary">
+                 <Store className="h-6 w-6" />
+               </AvatarFallback>
+             </Avatar>
           </div>
         </CardHeader>
         
