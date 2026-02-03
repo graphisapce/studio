@@ -39,7 +39,8 @@ import {
   Smartphone,
   CalendarDays,
   Info,
-  Copy
+  Copy,
+  AlertCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -107,6 +108,7 @@ export default function DashboardPage() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Fetch business profile
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
@@ -408,15 +410,23 @@ export default function DashboardPage() {
                                 <div className="text-center">
                                   <p className="text-sm font-bold text-muted-foreground">Scan QR & Pay ₹99</p>
                                 </div>
-                                <div className="relative h-60 w-60 border-8 border-primary/5 rounded-2xl overflow-hidden p-2 bg-white shadow-xl flex items-center justify-center">
-                                  <Image 
-                                    src={MY_QR_CODE_URL} 
-                                    alt="UPI QR Code" 
-                                    fill 
-                                    className="object-contain" 
-                                    priority
-                                    unoptimized
-                                  />
+                                <div className="relative h-60 w-60 border-4 border-primary/20 rounded-2xl overflow-hidden p-2 bg-white shadow-xl flex items-center justify-center">
+                                  {imageError ? (
+                                    <div className="text-center p-4">
+                                      <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
+                                      <p className="text-xs text-muted-foreground">Image load failed. Make sure Drive link is set to "Anyone with the link".</p>
+                                    </div>
+                                  ) : (
+                                    <Image 
+                                      src={MY_QR_CODE_URL} 
+                                      alt="UPI QR Code" 
+                                      fill 
+                                      className="object-contain" 
+                                      priority
+                                      unoptimized
+                                      onError={() => setImageError(true)}
+                                    />
+                                  )}
                                 </div>
                                 <div className="text-center space-y-2 w-full">
                                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-black">Or Use UPI ID</Label>
