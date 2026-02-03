@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -28,11 +29,9 @@ import {
   Trash2, 
   Package, 
   Store, 
-  Save, 
   Phone,
   MapPin,
   Crown,
-  CreditCard,
   CheckCircle2,
   CalendarDays,
   ShieldCheck,
@@ -61,7 +60,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
-import { Badge } from "@/badge";
+import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
 import { load } from "@cashfreepayments/cashfree-js";
