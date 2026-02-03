@@ -40,6 +40,9 @@ export function BusinessGrid() {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           });
+        },
+        (error) => {
+          console.warn("Geolocation access denied or failed:", error.message);
         }
       );
     }
@@ -56,7 +59,7 @@ export function BusinessGrid() {
 
     if (userLocation && isDistanceFilterActive) {
       businesses = businesses.filter((business) => {
-        if (!business.latitude || !business.longitude) return false;
+        if (!business?.latitude || !business?.longitude) return false;
         const distance = getDistanceFromLatLonInKm(
           userLocation.latitude,
           userLocation.longitude,
@@ -68,8 +71,10 @@ export function BusinessGrid() {
     }
 
     return businesses.filter((business) => {
+      if (!business) return false;
+      const shopName = business.shopName || "";
       const matchesCategory = !selectedCategory || business.category === selectedCategory;
-      const matchesSearch = business.shopName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = shopName.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
   }, [searchTerm, selectedCategory, userLocation, isDistanceFilterActive, realBusinesses, loadingRealData]);
