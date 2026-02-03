@@ -63,7 +63,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/badge";
 import { isBusinessPremium } from "@/lib/utils";
 import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
 import { load } from "@cashfreepayments/cashfree-js";
@@ -410,7 +410,12 @@ export default function DashboardPage() {
                               )}
                             </div>
                             <div className="relative aspect-video bg-muted">
-                              <Image src={prodImg} alt={p.title} fill className="object-cover" />
+                              <Image 
+                                src={prodImg} 
+                                alt={p.title || "Product Listing"} 
+                                fill 
+                                className="object-cover" 
+                              />
                             </div>
                             <CardHeader className="p-4 pb-2">
                               <div className="flex justify-between font-bold">
@@ -561,7 +566,7 @@ export default function DashboardPage() {
                   <div className="flex flex-col gap-4">
                     {shopProfile.shopImageUrl && typeof shopProfile.shopImageUrl === 'string' && (
                       <div className="relative h-48 w-full rounded-xl overflow-hidden border-2 shadow-inner bg-muted">
-                        <Image src={shopProfile.shopImageUrl} alt="Preview" fill className="object-cover" />
+                        <Image src={shopProfile.shopImageUrl} alt="Shop Preview" fill className="object-cover" />
                       </div>
                     )}
                     <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, shopImageUrl: b}))} />

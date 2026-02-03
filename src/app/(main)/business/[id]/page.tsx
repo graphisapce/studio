@@ -130,7 +130,7 @@ export default function BusinessDetailPage() {
         <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-lg shadow-lg bg-muted">
           <Image
             src={shopImage}
-            alt={business.shopName}
+            alt={business.shopName || "Business Banner"}
             fill
             className="object-cover"
             priority
