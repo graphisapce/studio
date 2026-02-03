@@ -9,9 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Crown, ShieldCheck } from "lucide-react";
+import { MapPin, Crown, ShieldCheck, Store } from "lucide-react";
 import { Watermark } from "@/components/watermark";
 import { isBusinessPremium } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface BusinessCardProps {
   business: Business & { distance?: number | null };
@@ -23,6 +24,10 @@ export function BusinessCard({ business }: BusinessCardProps) {
   const displayImage = (typeof business?.imageUrl === 'string' && business.imageUrl.trim() !== "") 
     ? business.imageUrl 
     : `https://picsum.photos/seed/${business?.id || 'shop'}/600/400`;
+  
+  const displayLogo = (typeof business?.logoUrl === 'string' && business.logoUrl.trim() !== "")
+    ? business.logoUrl
+    : null;
   
   return (
     <Link href={`/business/${business?.id}`}>
@@ -46,10 +51,20 @@ export function BusinessCard({ business }: BusinessCardProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
             <Watermark />
+            
+            {/* Business Logo Overlap */}
+            <div className="absolute -bottom-6 left-4 z-20">
+               <Avatar className="h-14 w-14 border-4 border-white shadow-xl bg-white">
+                 <AvatarImage src={displayLogo || ""} alt={business?.shopName} className="object-cover" />
+                 <AvatarFallback className="bg-primary/5 text-primary">
+                   <Store className="h-6 w-6" />
+                 </AvatarFallback>
+               </Avatar>
+            </div>
           </div>
         </CardHeader>
         
-        <CardContent className="p-5">
+        <CardContent className="p-5 pt-10"> {/* Extra padding-top for the logo overlap */}
           <div className="flex justify-between items-center mb-2">
              <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[10px] font-bold px-3">
                {business?.category || 'General'}
