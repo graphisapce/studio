@@ -13,7 +13,6 @@ import {
   MessageCircle, 
   Loader2, 
   Store, 
-  Lock, 
   Crown, 
   Eye, 
   Share2, 
@@ -25,7 +24,9 @@ import {
   Zap,
   Instagram,
   Facebook,
-  QrCode
+  QrCode,
+  Copy,
+  CheckCircle2
 } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
@@ -43,6 +44,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+} from "@/dialog-ui";
+
+// Re-using local dialog imports as the prompt mentioned dialog-ui might be standard
+import {
+  Dialog as UIDialog,
+  DialogContent as UIDialogContent,
+  DialogDescription as UIDialogDescription,
+  DialogHeader as UIDialogHeader,
+  DialogTitle as UIDialogTitle,
+  DialogTrigger as UIDialogTrigger,
 } from "@/components/ui/dialog";
 
 export default function BusinessDetailPage() {
@@ -55,6 +66,7 @@ export default function BusinessDetailPage() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const businessRef = useMemoFirebase(() => id ? doc(firestore, "businesses", id) : null, [firestore, id]);
   const { data: business, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -80,30 +92,31 @@ export default function BusinessDetailPage() {
 
   const approvedProducts = useMemo(() => products?.filter(p => p.status === 'approved') || [], [products]);
 
-  const handleShare = async () => {
-    const shareData = {
-      title: business?.shopName || 'LocalVyapar',
-      text: `Check out ${business?.shopName} on LocalVyapar! Best deals nearby.`,
-      url: window.location.href,
-    };
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const shareText = `Check out ${business?.shopName} on LocalVyapar! Dhoondein apne pados ki best deals.`;
 
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast({ 
-          title: "Link Copied",
-          description: "Shop link has been copied to your clipboard." 
-        });
-      }
-    } catch (err) {
-      // Fallback for user cancel or desktop browsers
-      await navigator.clipboard.writeText(window.location.href);
-      toast({ 
-        title: "Link Copied",
-        description: "Shop link has been copied to your clipboard." 
-      });
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({ 
+      title: "Link Copied!", 
+      description: "Aap is link ko ab Instagram bio ya story mein laga sakte hain." 
+    });
+  };
+
+  const handleSharePlatform = (platform: 'whatsapp' | 'facebook' | 'instagram') => {
+    let url = '';
+    switch (platform) {
+      case 'whatsapp':
+        url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+        window.open(url, '_blank');
+        break;
+      case 'facebook':
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        window.open(url, '_blank');
+        break;
+      case 'instagram':
+        copyToClipboard();
+        break;
     }
   };
 
@@ -156,10 +169,61 @@ export default function BusinessDetailPage() {
           <Image src={business.imageUrl || `https://picsum.photos/seed/${business.id}/1200/400`} alt={business.shopName} fill className="object-cover" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           <Watermark className="!text-white/90" />
+          
           <div className="absolute top-4 right-4 z-20">
-            <Button onClick={handleShare} size="icon" variant="secondary" className="rounded-full shadow-lg border-2 border-white/20">
-              <Share2 className="h-5 w-5" />
-            </Button>
+            <UIDialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+              <UIDialogTrigger asChild>
+                <Button size="icon" variant="secondary" className="rounded-full shadow-lg border-2 border-white/20">
+                  <Share2 className="h-5 w-5" />
+                </Button>
+              </UIDialogTrigger>
+              <UIDialogContent className="sm:max-w-md">
+                <UIDialogHeader>
+                  <UIDialogTitle>Share this Shop</UIDialogTitle>
+                  <UIDialogDescription>Aap is dukan ko apne doston aur family ke saath share karein.</UIDialogDescription>
+                </UIDialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col h-24 gap-2 border-green-200 hover:bg-green-50"
+                    onClick={() => handleSharePlatform('whatsapp')}
+                  >
+                    <MessageCircle className="h-8 w-8 text-green-600" />
+                    <span className="text-xs font-bold">WhatsApp</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col h-24 gap-2 border-blue-200 hover:bg-blue-50"
+                    onClick={() => handleSharePlatform('facebook')}
+                  >
+                    <Facebook className="h-8 w-8 text-blue-600" />
+                    <span className="text-xs font-bold">Facebook</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col h-24 gap-2 border-pink-200 hover:bg-pink-50"
+                    onClick={() => handleSharePlatform('instagram')}
+                  >
+                    <Instagram className="h-8 w-8 text-pink-600" />
+                    <span className="text-xs font-bold">Instagram</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex flex-col h-24 gap-2 border-gray-200 hover:bg-gray-50"
+                    onClick={copyToClipboard}
+                  >
+                    <Copy className="h-8 w-8 text-gray-600" />
+                    <span className="text-xs font-bold">Copy Link</span>
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-2 bg-muted p-3 rounded-lg">
+                  <p className="text-[10px] text-muted-foreground truncate flex-1">{shareUrl}</p>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={copyToClipboard}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </UIDialogContent>
+            </UIDialog>
           </div>
         </div>
 
@@ -217,17 +281,17 @@ export default function BusinessDetailPage() {
                   <Button asChild className="w-full h-11"><a href={`tel:${business.contactNumber}`}><Phone className="mr-2 h-4 w-4" /> Call Shop</a></Button>
                   
                   {hasPremium && (business.upiId || business.paymentQrUrl) && (
-                    <Dialog>
-                      <DialogTrigger asChild>
+                    <UIDialog>
+                      <UIDialogTrigger asChild>
                         <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 shadow-md">
                           <CreditCard className="mr-2 h-4 w-4" /> Pay via UPI/QR
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-xs text-center">
-                        <DialogHeader>
-                          <DialogTitle>Make Payment</DialogTitle>
-                          <DialogDescription>Pay directly to the shop owner.</DialogDescription>
-                        </DialogHeader>
+                      </UIDialogTrigger>
+                      <UIDialogContent className="sm:max-w-xs text-center">
+                        <UIDialogHeader>
+                          <UIDialogTitle>Make Payment</UIDialogTitle>
+                          <UIDialogDescription>Pay directly to the shop owner.</UIDialogDescription>
+                        </UIDialogHeader>
                         <div className="space-y-6 py-4">
                           {business.paymentQrUrl ? (
                             <div className="relative w-full aspect-square border-2 border-dashed rounded-xl overflow-hidden bg-white">
@@ -248,8 +312,8 @@ export default function BusinessDetailPage() {
                             </div>
                           )}
                         </div>
-                      </DialogContent>
-                    </Dialog>
+                      </UIDialogContent>
+                    </UIDialog>
                   )}
 
                   {hasPremium ? (
