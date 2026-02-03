@@ -25,9 +25,10 @@ function deg2rad(deg: number) {
 
 /**
  * Checks if a business has an active premium subscription.
+ * Now strictly checks for 'active' status and non-expired date.
  */
 export function isBusinessPremium(business: Business | null | undefined): boolean {
-  if (!business || !business.isPaid || !business.premiumUntil) return false;
+  if (!business || !business.isPaid || !business.premiumUntil || business.premiumStatus !== 'active') return false;
   
   const expiryDate = new Date(business.premiumUntil);
   const now = new Date();

@@ -32,7 +32,9 @@ export interface Business {
   longitude?: number;
   description?: string;
   isPaid?: boolean;
+  premiumStatus?: 'active' | 'pending' | 'expired' | 'none';
   premiumUntil?: string | null; // ISO Date string for subscription expiry
+  lastTransactionId?: string;
 }
 
 export interface Product {
