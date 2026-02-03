@@ -22,10 +22,9 @@ const SearchAssistantOutputSchema = z.object({
 export type SearchAssistantOutput = z.infer<typeof SearchAssistantOutputSchema>;
 
 export async function searchAssistant(input: SearchAssistantInput): Promise<SearchAssistantOutput> {
-  // Diagnostic check for API key
+  // Check if API key exists in environment
   if (!process.env.GOOGLE_GENAI_API_KEY) {
-    console.error("CRITICAL: GOOGLE_GENAI_API_KEY is missing in environment variables.");
-    throw new Error("API Key missing. Please set GOOGLE_GENAI_API_KEY in your .env.local file.");
+    throw new Error("API Key missing. Please ensure GOOGLE_GENAI_API_KEY is set in your .env.local file.");
   }
   
   return searchAssistantFlow(input);
@@ -61,13 +60,14 @@ const searchAssistantFlow = ai.defineFlow(
       if (!output) throw new Error("AI returned empty output");
       return output;
     } catch (error: any) {
-      console.error("Genkit prompt execution failed:", error);
-      // Clean up the error message for the user
-      const msg = error.message || "Unknown Genkit Error";
-      if (msg.includes('404')) {
-        throw new Error("Model not found. Please check if gemini-1.5-flash is available for your API key.");
+      console.error("Genkit execution failed:", error);
+      
+      // Handle common 404/Tier issues
+      if (error.message?.includes('404')) {
+        throw new Error("Model not found or API key not authorized for this model. Using gemini-1.5-flash for compatibility.");
       }
-      throw new Error("AI generation failed: " + msg);
+      
+      throw new Error("AI generation failed: " + (error.message || "Internal GenAI Error"));
     }
   }
 );

@@ -4,8 +4,8 @@ import {googleAI} from '@genkit-ai/google-genai';
 /**
  * Genkit Configuration
  * 
- * Switching to 'gemini-1.5-flash' as it is more widely compatible 
- * with free-tier API keys and faster for a shopping assistant.
+ * Using 'gemini-1.5-flash' as it is the most compatible model 
+ * for both free and pay-as-you-go tiers, and significantly faster.
  */
 export const ai = genkit({
   plugins: [googleAI()],
