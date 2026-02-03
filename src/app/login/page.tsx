@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ import {
   sendPasswordResetEmail,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -147,10 +148,11 @@ export default function LoginPage() {
     try {
       const googleProvider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, googleProvider);
-      const additionalUserInfo = getAdditionalUserInfo(result);
       const newUser = result.user;
 
-      if (additionalUserInfo?.isNewUser) {
+      // Check if profile exists, if not create it
+      const profileDoc = await getDoc(doc(db, "users", newUser.uid));
+      if (!profileDoc.exists()) {
         await setDoc(doc(db, "users", newUser.uid), {
             id: newUser.uid,
             name: newUser.displayName || 'New User',
