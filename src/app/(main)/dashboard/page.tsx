@@ -38,7 +38,6 @@ import {
   Eye,
   TrendingUp,
   Sparkles,
-  Wand2
 } from "lucide-react";
 import {
   Dialog,
@@ -63,7 +62,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
-import { Badge } from "@/badge";
+import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
 import { load } from "@cashfreepayments/cashfree-js";
