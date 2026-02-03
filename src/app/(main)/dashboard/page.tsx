@@ -70,7 +70,7 @@ import { isBusinessPremium } from "@/lib/utils";
 
 // --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
 const MY_UPI_ID = "9821692147-2@ybl"; 
-const MY_QR_CODE_URL = "https://drive.google.com/uc?export=view&id=1QBn2Z0HBnQBfGv_fMtM4_lwWDbXQY1g2"; 
+const MY_QR_CODE_URL = "https://i.ibb.co/B5DB6Vzn/qr-code.png"; // Updated to use direct ImgBB link if possible
 // ---------------------------------------------
 
 const categoryList: BusinessCategory[] = [
@@ -417,7 +417,7 @@ export default function DashboardPage() {
                                       if (parent && !parent.querySelector('.error-msg')) {
                                         const msg = document.createElement('div');
                                         msg.className = 'error-msg text-center text-xs text-muted-foreground p-2';
-                                        msg.innerHTML = '<div class="text-destructive mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>QR Image Failed to Load.<br/>Check Drive Permissions.';
+                                        msg.innerHTML = '<div class="text-destructive mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>QR Image Failed to Load.<br/>Use Direct Image Link.';
                                         parent.appendChild(msg);
                                       }
                                     }}
