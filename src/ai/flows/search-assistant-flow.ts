@@ -23,6 +23,12 @@ const SearchAssistantOutputSchema = z.object({
 export type SearchAssistantOutput = z.infer<typeof SearchAssistantOutputSchema>;
 
 export async function searchAssistant(input: SearchAssistantInput): Promise<SearchAssistantOutput> {
+  // Diagnostic check for API key
+  if (!process.env.GOOGLE_GENAI_API_KEY) {
+    console.error("CRITICAL: GOOGLE_GENAI_API_KEY is missing in environment variables.");
+    throw new Error("API Key missing. Please set GOOGLE_GENAI_API_KEY in your .env.local file.");
+  }
+  
   return searchAssistantFlow(input);
 }
 
@@ -51,7 +57,13 @@ const searchAssistantFlow = ai.defineFlow(
     outputSchema: SearchAssistantOutputSchema,
   },
   async input => {
-    const { output } = await prompt(input);
-    return output!;
+    try {
+      const { output } = await prompt(input);
+      if (!output) throw new Error("AI returned empty output");
+      return output;
+    } catch (error: any) {
+      console.error("Genkit prompt execution failed:", error);
+      throw new Error("AI generation failed: " + (error.message || "Unknown Genkit Error"));
+    }
   }
 );

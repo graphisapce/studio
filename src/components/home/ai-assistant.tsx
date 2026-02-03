@@ -6,8 +6,9 @@ import { searchAssistant } from "@/ai/flows/search-assistant-flow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, MessageSquare, X, Loader2, Search } from "lucide-react";
+import { Sparkles, MessageSquare, X, Loader2, Search, AlertCircle } from "lucide-react";
 import { BusinessCategory } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 const categories: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -24,12 +25,14 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
     setIsLoading(true);
+    setResponse(null);
     try {
       const res = await searchAssistant({ query, categories });
       setResponse(res.suggestion);
@@ -40,8 +43,14 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
       } else {
         onSuggest(null, res.searchKeywords[0] || query);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("AI Assistant Error:", err);
+      toast({
+        variant: "destructive",
+        title: "AI Assistant Error",
+        description: "Gemini API key check karein. Error: " + (err.message || "Unknown error"),
+      });
+      setResponse("Sorry, AI Assistant abhi kaam nahi kar raha. Kripya Admin se sampark karein (API Key issue ho sakta hai).");
     } finally {
       setIsLoading(false);
     }
@@ -61,8 +70,9 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
           </CardHeader>
           <CardContent className="p-4 space-y-4">
             {response && (
-              <div className="bg-muted p-3 rounded-lg text-xs leading-relaxed border border-primary/10">
-                {response}
+              <div className="bg-muted p-3 rounded-lg text-xs leading-relaxed border border-primary/10 flex gap-2">
+                <div className="mt-0.5"><MessageSquare className="h-3 w-3 text-primary" /></div>
+                <div>{response}</div>
               </div>
             )}
             <form onSubmit={handleAsk} className="flex gap-2">
@@ -71,11 +81,13 @@ export function AIAssistant({ onSuggest }: AIAssistantProps) {
                 className="text-xs h-9"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                disabled={isLoading}
               />
               <Button size="sm" type="submit" disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </form>
+            <p className="text-[10px] text-muted-foreground text-center">Powered by Gemini AI</p>
           </CardContent>
         </Card>
       ) : (
