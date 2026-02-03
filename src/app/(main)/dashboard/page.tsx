@@ -50,7 +50,8 @@ import {
   Facebook,
   Upload,
   Image as ImageIcon,
-  Download
+  Download,
+  AlertCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -80,6 +81,7 @@ import { isBusinessPremium } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
 import { generateSocialCaption } from "@/ai/flows/social-caption-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -203,8 +205,8 @@ export default function DashboardPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "File too large", description: "QR code image 2MB se kam honi chahiye." });
+    if (file.size > 500 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "QR code image 500KB se kam honi chahiye." });
       return;
     }
 
@@ -217,9 +219,43 @@ export default function DashboardPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 300 * 1024) {
+      toast({ 
+        variant: "destructive", 
+        title: "Photo too large!", 
+        description: "Product photo 300KB se kam honi chahiye. Kripya compress karke try karein." 
+      });
+      e.target.value = ""; // Clear input
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setNewProduct(prev => ({ ...prev, imageUrl: base64String }));
+      toast({ title: "Photo Selected", description: "Product photo successfully load ho gayi hai." });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // RULE: Free account can only add 3 items
+    if (!hasPremium && products && products.length >= 3) {
+      toast({ 
+        variant: "destructive", 
+        title: "Limit Reached!", 
+        description: "Free account mein aap sirf 3 items add kar sakte hain. Unlimited items ke liye Premium join karein!" 
+      });
+      return;
+    }
+
     setIsSubmittingProduct(true);
     addDocumentNonBlocking(collection(firestore, "products"), {
       businessId: user.uid,
@@ -334,11 +370,57 @@ export default function DashboardPage() {
         <div className="flex gap-2">
            <Button variant="outline" onClick={() => typeof window !== 'undefined' && window.print()}><Printer className="mr-2 h-4 w-4" /> Flyer</Button>
            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-            <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-5 w-5" /> Add Product</Button></DialogTrigger>
-            <DialogContent>
+            <DialogTrigger asChild>
+              <Button disabled={!hasPremium && products && products.length >= 3}>
+                <PlusCircle className="mr-2 h-5 w-5" /> Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
               <form onSubmit={handleAddProduct} className="space-y-4">
-                <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
+                <DialogHeader>
+                  <DialogTitle>New Product</DialogTitle>
+                  {!hasPremium && products && products.length >= 3 && (
+                    <DialogDescription className="text-destructive font-bold flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" /> Limit Reached! Upgrade to Premium.
+                    </DialogDescription>
+                  )}
+                </DialogHeader>
+                
                 <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label>Product Photo (Max 300KB)</Label>
+                    <div className="flex flex-col gap-3">
+                      {newProduct.imageUrl ? (
+                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
+                          <Image src={newProduct.imageUrl} alt="Preview" fill className="object-cover" />
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="icon" 
+                            className="absolute top-2 right-2 h-8 w-8"
+                            onClick={() => setNewProduct(prev => ({ ...prev, imageUrl: "" }))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg bg-muted/50 text-muted-foreground">
+                          <ImageIcon className="h-8 w-8 mb-2 opacity-20" />
+                          <Label htmlFor="product-image" className="cursor-pointer text-xs font-bold text-primary hover:underline">
+                            Select Photo from Device
+                          </Label>
+                          <Input 
+                            id="product-image" 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleProductImageUpload} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="space-y-2"><Label>Item Name</Label><Input required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} /></div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
@@ -360,12 +442,26 @@ export default function DashboardPage() {
                     <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
                   </div>
                 </div>
-                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit for Approval</Button></DialogFooter>
+                <DialogFooter>
+                  <Button type="submit" disabled={isSubmittingProduct} className="w-full">
+                    Submit for Approval
+                  </Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         </div>
       </div>
+
+      {!hasPremium && products && products.length >= 3 && (
+        <Alert className="mb-8 border-yellow-500 bg-yellow-50">
+          <Crown className="h-4 w-4 text-yellow-600" />
+          <AlertTitle className="text-yellow-800 font-bold">Free Limit Reached!</AlertTitle>
+          <AlertDescription className="text-yellow-700">
+            Aapne 3 items add kar liye hain. Unlimited items aur digital payment features ke liye aaj hi **Premium** join karein!
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
