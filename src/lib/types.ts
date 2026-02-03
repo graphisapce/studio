@@ -43,6 +43,9 @@ export interface Business {
   isVerified?: boolean;
   openingTime?: string; // Format: "09:00"
   closingTime?: string; // Format: "21:00"
+  upiId?: string; // For direct payments
+  flashDeal?: string; // Quick announcement/offer
+  flashDealExpiry?: string;
 }
 
 export interface Product {
@@ -65,6 +68,7 @@ export interface UserProfile {
   photoURL?: string;
   role: 'customer' | 'business' | 'admin';
   createdAt: string;
+  favorites?: string[]; // Array of business IDs
 }
 
 export interface Review {

@@ -8,7 +8,7 @@ import type { Business, BusinessCategory, PlatformConfig, Product } from "@/lib/
 import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Navigation, Star, ShieldCheck, MapPinCheck, Megaphone, Utensils, Zap, ShoppingCart, Wrench } from "lucide-react";
+import { Search, MapPin, Navigation, Star, ShieldCheck, Megaphone, Utensils, Zap, ShoppingCart, Wrench, Info } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -68,11 +68,19 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
     }
   }, []);
 
+  const liveDeals = useMemo(() => {
+    if (!realBusinesses || !userLocation) return [];
+    return realBusinesses.filter(b => {
+      if (!b.flashDeal || !b.latitude || !b.longitude) return false;
+      const dist = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude);
+      return dist <= 1;
+    });
+  }, [realBusinesses, userLocation]);
+
   const sortedAndFilteredBusinesses = useMemo(() => {
     let businesses: Business[] = realBusinesses ? [...realBusinesses] : [];
     if (businesses.length === 0 && !loadingRealData) businesses = [...mockBusinesses];
 
-    // Identify businesses that have products matching the search term
     const businessIdsWithMatchingProducts = new Set<string>();
     if (searchTerm.trim() !== "" && allProducts) {
       allProducts.forEach(p => {
@@ -115,6 +123,21 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
 
   return (
     <div className="container mx-auto px-4 py-8 pb-20">
+      {/* Live Flash Deals Ticker */}
+      {liveDeals.length > 0 && (
+        <div className="bg-yellow-400 text-black py-2 px-4 rounded-full mb-8 flex items-center overflow-hidden whitespace-nowrap shadow-lg">
+           <Zap className="h-4 w-4 mr-3 animate-pulse fill-black" />
+           <div className="animate-marquee inline-block flex gap-12">
+             {liveDeals.map(b => (
+               <span key={b.id} className="font-black text-xs uppercase">
+                 <span className="bg-black text-white px-2 py-0.5 rounded mr-2">{b.shopName}</span>
+                 {b.flashDeal}
+               </span>
+             ))}
+           </div>
+        </div>
+      )}
+
       {platformConfig?.announcement && (
         <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl mb-8 flex items-center gap-3 animate-pulse">
           <Megaphone className="h-5 w-5 text-primary shrink-0" />
@@ -124,17 +147,6 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
 
       <div className="mb-10 space-y-8">
         <div className="text-center space-y-4">
-           <div className="flex justify-center gap-2">
-             <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-4 py-1">
-              <ShieldCheck className="h-3.5 w-3.5 mr-2" /> Verified Local Shops
-             </Badge>
-             {userLocation && (
-               <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 px-4 py-1">
-                <MapPinCheck className="h-3.5 w-3.5 mr-2" /> 1km Range Active
-               </Badge>
-             )}
-           </div>
-           
            <h1 className="text-4xl md:text-6xl font-black font-headline tracking-tight">
              Market <span className="text-primary">Ab Aapke Haath</span> Mein
            </h1>
@@ -143,54 +155,28 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
            </p>
         </div>
 
-        {/* Quick Hub for Customers */}
         <div className="flex justify-center gap-4 py-2 overflow-x-auto no-scrollbar px-4">
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Food')}>
-            <div className="p-3 rounded-full bg-orange-100 text-orange-600"><Utensils className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Food</span>
-          </Button>
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Groceries')}>
-            <div className="p-3 rounded-full bg-green-100 text-green-600"><ShoppingCart className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Groceries</span>
-          </Button>
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Repairs')}>
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600"><Wrench className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Repairs</span>
-          </Button>
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Electronics')}>
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600"><Zap className="h-6 w-6" /></div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Gadgets</span>
-          </Button>
+          {['Food', 'Groceries', 'Repairs', 'Electronics'].map((cat) => (
+            <Button key={cat} variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 shrink-0" onClick={() => setSelectedCategory(cat as any)}>
+              <div className="p-3 rounded-full bg-primary/10 text-primary">
+                {cat === 'Food' && <Utensils className="h-6 w-6" />}
+                {cat === 'Groceries' && <ShoppingCart className="h-6 w-6" />}
+                {cat === 'Repairs' && <Wrench className="h-6 w-6" />}
+                {cat === 'Electronics' && <Zap className="h-6 w-6" />}
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest">{cat}</span>
+            </Button>
+          ))}
         </div>
 
         <div className="relative max-w-2xl mx-auto px-4">
           <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
           <Input
-            placeholder="Search Shops or Products (e.g. Pizza, Milk, Salon)"
-            className="pl-14 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10 focus-visible:ring-primary focus-visible:border-primary transition-all"
+            placeholder="Search Shops or Products (e.g. Pizza, Milk)"
+            className="pl-14 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-5xl mx-auto px-4">
-          <Button
-            variant={!selectedCategory ? "default" : "outline"}
-            onClick={() => setSelectedCategory(null)}
-            className="rounded-full h-10 px-6 font-bold"
-          >
-            All Listings
-          </Button>
-          {categories.slice(0, 10).map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
-              onClick={() => setSelectedCategory(category)}
-              className="rounded-full h-10 px-5 shadow-sm text-sm"
-            >
-              {category}
-            </Button>
-          ))}
         </div>
       </div>
 
@@ -199,57 +185,18 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="space-y-4">
               <Skeleton className="h-52 w-full rounded-2xl" />
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
             </div>
           ))}
         </div>
-      ) : sortedAndFilteredBusinesses.length > 0 ? (
+      ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {sortedAndFilteredBusinesses.map((business) => {
             let distance = null;
             if (userLocation && business.latitude && business.longitude) {
               distance = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, business.latitude, business.longitude);
             }
-            
-            return (
-              <div key={business.id} className="relative group">
-                {distance !== null && distance <= 1 && (
-                  <div className="absolute -top-3 left-4 z-20">
-                    <Badge className="bg-green-600 text-white border-none shadow-lg py-1 px-3">
-                      <Navigation className="h-3 w-3 mr-1 fill-white" /> Nearby
-                    </Badge>
-                  </div>
-                )}
-                <BusinessCard business={{ ...business, distance }} />
-                {distance !== null && (
-                  <div className="mt-2 flex items-center justify-between px-2">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`h-3 w-3 ${i < (business.rating || 5) ? "text-yellow-500 fill-yellow-500" : "text-muted"}`} />
-                      ))}
-                    </div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {distance.toFixed(1)} KM
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
+            return <BusinessCard key={business.id} business={{ ...business, distance }} />;
           })}
-        </div>
-      ) : (
-        <div className="text-center py-24 bg-muted/20 rounded-[2rem] border-4 border-dashed border-muted mx-4">
-          <div className="max-w-md mx-auto space-y-4">
-            <MapPin className="h-16 w-16 mx-auto text-muted-foreground opacity-30" />
-            <h2 className="text-3xl font-black">Koi shop nahi mili</h2>
-            <p className="text-muted-foreground">Try searching for something else or ask our AI Helper!</p>
-            <Button variant="link" className="text-primary font-bold" onClick={() => {setSearchTerm(""); setSelectedCategory(null);}}>
-              Clear Filters
-            </Button>
-          </div>
         </div>
       )}
     </div>
