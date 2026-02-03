@@ -41,7 +41,8 @@ import {
   Info,
   Copy,
   AlertCircle,
-  Clock
+  Clock,
+  ShieldCheck
 } from "lucide-react";
 import {
   Dialog,
@@ -68,7 +69,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/alert-ui";
+import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
+import { load } from "@cashfreepayments/cashfree-js";
 
 // --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
 const MY_UPI_ID = "9821692147-2@ybl"; 
@@ -101,10 +104,7 @@ export default function DashboardPage() {
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
   
-  const [transactionId, setTransactionId] = useState("");
-
   // Fetch business profile
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -121,7 +121,6 @@ export default function DashboardPage() {
   const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
 
   const hasPremium = isBusinessPremium(businessData);
-  const isPending = businessData?.premiumStatus === 'pending';
 
   useEffect(() => {
     if (businessData) {
@@ -206,47 +205,65 @@ export default function DashboardPage() {
     setIsUpdatingProfile(false);
   };
 
-  const handleProcessPayment = () => {
-    if (!transactionId || transactionId.length < 8) {
-      toast({ 
-        variant: "destructive", 
-        title: "Invalid ID", 
-        description: "Please enter a valid UPI Transaction ID / UTR number." 
-      });
-      return;
-    }
-
+  /**
+   * Cashfree Payment Integration
+   */
+  const handleCashfreePayment = async () => {
+    if (!user || !userProfile) return;
     setIsProcessingPayment(true);
-    setTimeout(() => {
-      if (user) {
-        // In a real app, this would be 'pending' until admin verifies.
-        // For demonstration, we'll set it to 'active' if they use code 'TEST1234'
-        const isAdminTest = transactionId.toUpperCase() === 'TEST1234';
-        
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30); 
-        
-        setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
-          id: user.uid,
-          ownerId: user.uid,
-          isPaid: true,
-          premiumUntil: expiryDate.toISOString(),
-          premiumStatus: isAdminTest ? 'active' : 'pending',
-          lastTransactionId: transactionId
-        }, { merge: true });
+
+    try {
+      // 1. Create order on server
+      const orderData = await createCashfreeOrder(user.uid, user.email || "", userProfile.phone || "");
+      
+      if (orderData.simulated) {
+        // FOR DEMO: Simulate successful payment
+        setTimeout(() => {
+          unlockPremiumFeatures();
+          setIsProcessingPayment(false);
+          setIsPaymentDialogOpen(false);
+          toast({ title: "Demo Success", description: "Premium Unlocked! (Simulation Mode)" });
+        }, 1500);
+        return;
       }
-      setIsProcessingPayment(false);
-      setPaymentSuccess(true);
-      toast({ 
-        title: "Request Received", 
-        description: "Your payment verification is in progress. Features will unlock soon!" 
+
+      // 2. Initialize SDK
+      const cashfree = await load({ mode: "sandbox" }); // or "production"
+      
+      // 3. Open Checkout
+      const result = await cashfree.checkout({
+        paymentSessionId: orderData.payment_session_id,
+        returnUrl: `${window.location.origin}/dashboard`,
       });
-      setTimeout(() => {
-        setIsPaymentDialogOpen(false);
-        setPaymentSuccess(false);
-        setTransactionId("");
-      }, 3000);
-    }, 2500);
+
+      if (result.error) {
+        toast({ variant: "destructive", title: "Payment Error", description: result.error.message });
+      } else if (result.redirect) {
+        // Handled by returnUrl
+      } else {
+        // Check Status
+        const status = await verifyCashfreeOrder(orderData.order_id);
+        if (status.order_status === "PAID") {
+          unlockPremiumFeatures();
+          toast({ title: "Success", description: "Payment verified. Welcome to Premium!" });
+        }
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const unlockPremiumFeatures = () => {
+    if (!user) return;
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+    setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
+      isPaid: true,
+      premiumUntil: expiryDate.toISOString(),
+      premiumStatus: 'active'
+    }, { merge: true });
   };
 
   if (authLoading || loadingBusiness || loadingProducts) {
@@ -272,14 +289,10 @@ export default function DashboardPage() {
               <Badge className="bg-yellow-500 flex gap-1 animate-pulse">
                 <Crown className="h-3 w-3" /> Premium Active
               </Badge>
-            ) : isPending ? (
-              <Badge variant="secondary" className="flex gap-1 bg-blue-100 text-blue-700">
-                <Clock className="h-3 w-3" /> Verification Pending
-              </Badge>
             ) : null}
             {businessData?.premiumUntil && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
-                <CalendarDays className="h-3 w-3" /> {hasPremium ? 'Expires:' : 'Plan End:'} {new Date(businessData.premiumUntil).toLocaleDateString()}
+                <CalendarDays className="h-3 w-3" /> Expires: {new Date(businessData.premiumUntil).toLocaleDateString()}
               </span>
             )}
           </div>
@@ -388,15 +401,6 @@ export default function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 relative z-10">
-                    {isPending && (
-                       <Alert className="bg-blue-50 border-blue-200 mb-4">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <AlertTitle className="text-blue-800 font-bold">Verification Pending</AlertTitle>
-                        <AlertDescription className="text-xs text-blue-700">
-                          We are verifying your last payment (ID: {businessData?.lastTransactionId}). This usually takes 1-4 hours.
-                        </AlertDescription>
-                      </Alert>
-                    )}
                     <div className="bg-white p-4 rounded-lg border border-yellow-100 shadow-sm text-center">
                        <p className="text-3xl font-bold text-primary">₹99</p>
                        <p className="text-xs text-muted-foreground font-bold">PER MONTH</p>
@@ -405,86 +409,41 @@ export default function DashboardPage() {
                       <li className="flex items-center gap-2">✅ Direct WhatsApp Button</li>
                       <li className="flex items-center gap-2">✅ Premium Verified Badge</li>
                       <li className="flex items-center gap-2">✅ Top Ranking in Search</li>
-                      <li className="flex items-center gap-2">✅ Shop Analytics</li>
+                      <li className="flex items-center gap-2">✅ Secure Online Payment</li>
                     </ul>
                     <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
                       <DialogTrigger asChild>
                         <Button className="w-full bg-yellow-600 hover:bg-yellow-700 font-bold h-12 shadow-md">
-                          {isPending ? "Submit New Payment" : "Buy Premium Subscription"}
+                          Upgrade with Cashfree
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5" /> 30-Day Subscription
+                            <ShieldCheck className="h-5 w-5 text-primary" /> Automatic Activation
                           </DialogTitle>
-                          <DialogDescription>Scan and Pay ₹99. Verification is mandatory.</DialogDescription>
+                          <DialogDescription>Your premium features will unlock instantly after successful payment.</DialogDescription>
                         </DialogHeader>
                         
-                        {paymentSuccess ? (
-                          <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-                            <Clock className="h-16 w-16 text-blue-500 animate-pulse" />
-                            <h3 className="text-2xl font-bold">Request Submitted</h3>
-                            <p className="text-muted-foreground">Admin will verify your Transaction ID and unlock features shortly.</p>
+                        <div className="space-y-6 py-4">
+                          <div className="bg-muted p-4 rounded-xl border-2 border-dashed text-center">
+                            <p className="text-sm font-bold">Subscription Plan</p>
+                            <p className="text-2xl font-black text-primary">₹99.00</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Valid for 30 Days</p>
                           </div>
-                        ) : (
-                          <div className="space-y-6 py-4">
-                            <div className="flex flex-col items-center justify-center space-y-4">
-                              <div className="text-center">
-                                <p className="text-sm font-bold text-muted-foreground">Scan QR & Pay ₹99</p>
-                              </div>
-                              <div className="relative h-64 w-64 border-4 border-primary/20 rounded-2xl overflow-hidden p-4 bg-white shadow-xl flex items-center justify-center">
-                                <img 
-                                  src={MY_QR_CODE_URL} 
-                                  alt="UPI QR Code" 
-                                  className="h-full w-full object-contain"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    const parent = target.parentElement;
-                                    if (parent && !parent.querySelector('.error-msg')) {
-                                      const msg = document.createElement('div');
-                                      msg.className = 'error-msg text-center text-xs text-muted-foreground p-2';
-                                      msg.innerHTML = '<div class="text-destructive mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>Use UPI ID Below.';
-                                      parent.appendChild(msg);
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <div className="text-center space-y-2 w-full">
-                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-black">Transfer to UPI ID</Label>
-                                <div className="flex items-center gap-2 bg-muted p-3 rounded-xl border-2 border-dashed border-primary/20 justify-between">
-                                  <code className="text-sm font-bold text-primary">{MY_UPI_ID}</code>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
-                                    navigator.clipboard.writeText(MY_UPI_ID);
-                                    toast({ title: "Copied!", description: "UPI ID copied." });
-                                  }}>
-                                    <Copy className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/10">
-                              <Label className="text-sm font-bold text-primary flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4" /> Enter Transaction ID (UTR)
-                              </Label>
-                              <Input 
-                                placeholder="12-digit UPI Ref Number" 
-                                value={transactionId}
-                                onChange={(e) => setTransactionId(e.target.value)}
-                                className="h-12 border-primary/30 font-mono text-center text-lg tracking-widest"
-                              />
-                              <p className="text-[10px] text-muted-foreground text-center">
-                                *Providing a fake ID will result in permanent shop ban.
-                              </p>
-                            </div>
 
-                            <Button className="w-full h-14 text-lg font-black shadow-lg" onClick={handleProcessPayment} disabled={isProcessingPayment || !transactionId}>
-                              {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Verifying...</> : "I Have Paid ₹99"}
-                            </Button>
+                          <Button className="w-full h-14 text-lg font-black shadow-lg" onClick={handleCashfreePayment} disabled={isProcessingPayment}>
+                            {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Initializing Gateway...</> : "Pay Now & Unlock Features"}
+                          </Button>
+
+                          <div className="flex flex-col items-center gap-4 border-t pt-4">
+                             <p className="text-[10px] text-muted-foreground uppercase font-bold">Manual UPI Alternate</p>
+                             <div className="relative h-32 w-32 border-2 rounded-lg overflow-hidden bg-white">
+                               <img src={MY_QR_CODE_URL} alt="Backup QR" className="h-full w-full object-contain p-1" />
+                             </div>
+                             <code className="text-[10px] bg-muted px-2 py-1 rounded">{MY_UPI_ID}</code>
                           </div>
-                        )}
+                        </div>
                       </DialogContent>
                     </Dialog>
                   </CardContent>
@@ -493,18 +452,18 @@ export default function DashboardPage() {
                 <Card className="bg-green-50 border-green-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-green-700 flex items-center gap-2 text-sm font-bold">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" /> Subscription Active
+                      <CheckCircle2 className="h-5 w-5 text-green-500" /> Premium Subscription Active
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-xs text-green-700 font-medium">
-                      Premium features are active until: <span className="font-bold underline">{new Date(businessData?.premiumUntil || "").toLocaleDateString()}</span>
+                      Your features are active until: <span className="font-bold underline">{new Date(businessData?.premiumUntil || "").toLocaleDateString()}</span>
                     </p>
                     <p className="text-[10px] text-green-600 italic">
-                      WhatsApp button is now visible to all customers.
+                      Your WhatsApp contact button is now visible to all customers.
                     </p>
                     <Button variant="outline" className="w-full mt-2 text-xs border-green-300 text-green-700 hover:bg-green-100 font-bold" onClick={() => setIsPaymentDialogOpen(true)}>
-                       Renew Early (Add 30 Days)
+                       Extend Subscription (₹99)
                     </Button>
                   </CardContent>
                 </Card>
