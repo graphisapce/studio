@@ -77,6 +77,7 @@ const MY_UPI_ID = "9821692147-2@ybl";
 /**
  * 2. QR Code URL:
  * Google Drive direct link set kar diya gaya hai.
+ * Link: https://drive.google.com/file/d/1QBn2Z0HBnQBfGv_fMtM4_lwWDbXQY1g2/view?usp=sharing
  */
 const MY_QR_CODE_URL = "https://drive.google.com/uc?export=view&id=1QBn2Z0HBnQBfGv_fMtM4_lwWDbXQY1g2"; 
 // ---------------------------------------------
@@ -523,7 +524,7 @@ export default function DashboardPage() {
 
                 <div className="space-y-2">
                   <Label>About Your Shop</Label>
-                  <Textarea className="min-h-[120px]" placeholder="Describe your shop..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} />
+                  <Input className="min-h-[120px]" placeholder="Describe your shop..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} />
                 </div>
                 
                 <div className="space-y-6 border-t pt-8">
