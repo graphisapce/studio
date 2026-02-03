@@ -1,75 +1,71 @@
 
 'use server';
 /**
- * @fileOverview AI Shopping Assistant flow for LocalVyapar.
+ * @fileOverview LocalVyapar Customer Support AI Agent.
  *
- * - searchAssistant - AI helps users find relevant shops/products.
+ * - supportAssistant - AI that handles user queries about the platform.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const SearchAssistantInputSchema = z.object({
-  query: z.string().describe('User search query for finding a shop or service.'),
-  categories: z.array(z.string()).describe('List of available business categories.'),
+const SupportAssistantInputSchema = z.object({
+  query: z.string().describe('User question about LocalVyapar or its services.'),
 });
-export type SearchAssistantInput = z.infer<typeof SearchAssistantInputSchema>;
+export type SupportAssistantInput = z.infer<typeof SupportAssistantInputSchema>;
 
-const SearchAssistantOutputSchema = z.object({
-  suggestion: z.string().describe('Helpful suggestion message from the AI.'),
-  recommendedCategories: z.array(z.string()).describe('Categories that match the user request.'),
-  searchKeywords: z.array(z.string()).describe('Keywords to use for filtering results.'),
+const SupportAssistantOutputSchema = z.object({
+  reply: z.string().describe('Helpful, friendly support message in Hinglish.'),
+  suggestedAction: z.string().optional().describe('A suggested next step for the user.'),
 });
-export type SearchAssistantOutput = z.infer<typeof SearchAssistantOutputSchema>;
+export type SupportAssistantOutput = z.infer<typeof SupportAssistantOutputSchema>;
 
-export async function searchAssistant(input: SearchAssistantInput): Promise<SearchAssistantOutput> {
-  // Check if API key exists in environment
+export async function supportAssistant(input: SupportAssistantInput): Promise<SupportAssistantOutput> {
   if (!process.env.GOOGLE_GENAI_API_KEY) {
-    throw new Error("API Key missing in .env file. Please add GOOGLE_GENAI_API_KEY.");
+    throw new Error("API Key missing. Support bot is currently offline.");
   }
   
-  return searchAssistantFlow(input);
+  return supportAssistantFlow(input);
 }
 
 const prompt = ai.definePrompt({
-  name: 'searchAssistantPrompt',
-  model: 'googleai/gemini-1.5-flash', // Explicitly using flash to avoid 404 errors
-  input: { schema: SearchAssistantInputSchema },
-  output: { schema: SearchAssistantOutputSchema },
-  prompt: `You are the LocalVyapar AI Shopping Assistant. 
-Your goal is to help users find the best local shops and services based on their query.
+  name: 'supportAssistantPrompt',
+  model: 'googleai/gemini-1.5-flash',
+  input: { schema: SupportAssistantInputSchema },
+  output: { schema: SupportAssistantOutputSchema },
+  prompt: `You are the LocalVyapar Customer Support Manager. 
+Your goal is to help users understand and use the LocalVyapar platform.
 
-Available categories: {{#each categories}}{{this}}, {{/each}}
+Knowledge Base:
+1. What is LocalVyapar?: A hyperlocal marketplace to find shops within 1km.
+2. For Customers: Users can find verified local shops, check reviews, and contact sellers.
+3. For Businesses: Owners can list products, track profile views, and use AI to write descriptions.
+4. Premium Features: Costs ₹99/month. Includes "Verified" badge, Top search ranking, and direct WhatsApp button.
+5. Location: The app asks for GPS permission to show the nearest shops first.
+6. Payments: Securely handled via Cashfree for premium activations.
 
-Analyze the user query: "{{{query}}}"
+Guidelines:
+- Always be polite and professional.
+- Use Hinglish (Hindi + English) to be friendly.
+- If a user asks about something unrelated to the app, gently bring them back to LocalVyapar services.
 
-1. Provide a friendly suggestion message.
-2. Select the most relevant categories from the available list.
-3. Provide 2-3 specific search keywords for better results.
-
-Response in Hindi/English mix (Hinglish) to be more friendly to Indian users.`,
+User Query: "{{{query}}}"`,
 });
 
-const searchAssistantFlow = ai.defineFlow(
+const supportAssistantFlow = ai.defineFlow(
   {
-    name: 'searchAssistantFlow',
-    inputSchema: SearchAssistantInputSchema,
-    outputSchema: SearchAssistantOutputSchema,
+    name: 'supportAssistantFlow',
+    inputSchema: SupportAssistantInputSchema,
+    outputSchema: SupportAssistantOutputSchema,
   },
   async input => {
     try {
       const { output } = await prompt(input);
-      if (!output) throw new Error("AI returned empty output");
+      if (!output) throw new Error("Support bot failed to respond.");
       return output;
     } catch (error: any) {
-      console.error("Genkit execution failed:", error);
-      
-      // Handle model access issues
-      if (error.message?.includes('404') || error.message?.includes('not found')) {
-        throw new Error("AI Model error. Please ensure your API key is correct and has access to Gemini 1.5 Flash.");
-      }
-      
-      throw new Error("AI generation failed: " + (error.message || "Internal GenAI Error"));
+      console.error("Genkit Support Error:", error);
+      throw new Error("Support system busy. Try again soon.");
     }
   }
 );
