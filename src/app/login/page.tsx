@@ -12,9 +12,10 @@ import {
   signInWithPopup,
   getAdditionalUserInfo,
   sendPasswordResetEmail,
+  GoogleAuthProvider,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { auth, googleProvider, db, isFirebaseConfigured } from "@/lib/firebase/clientApp";
+import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,7 +42,7 @@ import {
   RadioGroupItem,
 } from "@/components/ui/radio-group";
 import { Logo } from "@/components/logo";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { Label } from "@/components/ui/label";
 import {
@@ -76,6 +77,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const auth = useFirebaseAuth();
+  const db = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<"customer" | "business">("customer");
   
@@ -101,14 +104,6 @@ export default function LoginPage() {
   });
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
-    if (!isFirebaseConfigured) {
-      toast({
-        variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Please set up your Firebase credentials in .env.local.",
-      });
-      return;
-    }
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
@@ -121,21 +116,13 @@ export default function LoginPage() {
   }
 
   async function onSignupSubmit(values: z.infer<typeof signupSchema>) {
-    if (!isFirebaseConfigured) {
-      toast({
-        variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Please set up your Firebase credentials.",
-      });
-      return;
-    }
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
+      const newUser = userCredential.user;
 
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
+      await setDoc(doc(db, "users", newUser.uid), {
+        id: newUser.uid,
         name: values.name,
         email: values.email,
         phone: values.phone,
@@ -152,26 +139,19 @@ export default function LoginPage() {
   }
 
   async function handleGoogleSignIn() {
-    if (!isFirebaseConfigured) {
-      toast({
-        variant: "destructive",
-        title: "Firebase Not Configured",
-        description: "Please set up your Firebase credentials.",
-      });
-      return;
-    }
     setIsLoading(true);
     try {
+      const googleProvider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, googleProvider);
       const additionalUserInfo = getAdditionalUserInfo(result);
-      const user = result.user;
+      const newUser = result.user;
 
       if (additionalUserInfo?.isNewUser) {
-        await setDoc(doc(db, "users", user.uid), {
-            uid: user.uid,
-            name: user.displayName || 'New User',
-            email: user.email || '',
-            photoURL: user.photoURL || '',
+        await setDoc(doc(db, "users", newUser.uid), {
+            id: newUser.uid,
+            name: newUser.displayName || 'New User',
+            email: newUser.email || '',
+            photoURL: newUser.photoURL || '',
             role: role,
             createdAt: new Date().toISOString(),
         });
@@ -199,7 +179,12 @@ export default function LoginPage() {
     }
   }
 
-  if (authLoading && !user) return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  if (authLoading && !user) return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="text-muted-foreground">Checking authentication...</p>
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">

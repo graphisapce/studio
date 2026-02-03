@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db, isFirebaseConfigured } from "@/lib/firebase/clientApp";
+import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import type { UserProfile } from "@/lib/types";
 
 interface AuthContextType {
@@ -25,13 +25,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  const auth = useFirebaseAuth();
+  const db = useFirestore();
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-        setLoading(false);
-        return;
-    }
-
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
@@ -58,7 +56,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         setIsSyncing(false);
       }, (error) => {
-        console.error("Profile Sync Error:", error);
+        // This handles cases where profile doc is missing or permissions are not yet ready
+        console.warn("Profile synchronization warning:", error.message);
+        setUserProfile(null);
         setLoading(false);
         setIsSyncing(false);
       });
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       unsubscribeAuth();
       if (unsubscribeProfile) unsubscribeProfile();
     };
-  }, []);
+  }, [auth, db]);
 
   return (
     <AuthContext.Provider value={{ user, userProfile, loading, isSyncing }}>

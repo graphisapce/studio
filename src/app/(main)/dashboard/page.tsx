@@ -1,21 +1,19 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase/clientApp";
+import { collection, query, where, doc } from "firebase/firestore";
 import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  deleteDoc, 
-  doc,
-  updateDoc,
-  serverTimestamp
-} from "firebase/firestore";
+  useFirestore, 
+  useCollection, 
+  useDoc, 
+  useMemoFirebase,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+  setDocumentNonBlocking
+} from "@/firebase";
 import {
   Card,
   CardContent,
@@ -62,7 +60,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BusinessCategory } from "@/lib/types";
+import { BusinessCategory, Business, Product } from "@/lib/types";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -80,25 +78,26 @@ const indianStates = [
   "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
 ];
 
-interface DashboardProduct {
-  id: string;
-  title: string;
-  price: number;
-  description: string;
-  imageUrl: string;
-  businessId: string;
-}
-
 export default function DashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
   
-  const [products, setProducts] = useState<DashboardProduct[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  // Fetch business profile
+  const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
+  const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
+
+  // Fetch products
+  const productsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, "products"), where("businessId", "==", user.uid)) : null, 
+    [firestore, user]
+  );
+  const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
 
   // Form states for Product
   const [newProduct, setNewProduct] = useState({
@@ -114,7 +113,7 @@ export default function DashboardPage() {
     shopCategory: "" as BusinessCategory | "",
     shopDescription: "",
     shopContact: "",
-    shopImageUrls: [] as string[]
+    shopImageUrl: ""
   });
 
   // Address parts state
@@ -128,17 +127,17 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    if (userProfile) {
+    if (businessData) {
       setShopProfile({
-        shopName: userProfile.shopName || "",
-        shopCategory: userProfile.shopCategory || "",
-        shopDescription: userProfile.shopDescription || "",
-        shopContact: userProfile.shopContact || "",
-        shopImageUrls: userProfile.shopImageUrls || []
+        shopName: businessData.shopName || "",
+        shopCategory: businessData.category || "",
+        shopDescription: businessData.description || "",
+        shopContact: businessData.contactNumber || "",
+        shopImageUrl: businessData.imageUrl || ""
       });
 
-      if (userProfile.shopAddress) {
-        const parts = userProfile.shopAddress.split(", ").map(p => p.trim());
+      if (businessData.address) {
+        const parts = businessData.address.split(", ").map(p => p.trim());
         if (parts.length >= 4) {
           setAddressParts({
             street: parts[0] || "",
@@ -146,12 +145,12 @@ export default function DashboardPage() {
             city: parts[2] || "",
             state: parts[3] || "",
             region: "India",
-            pincode: userProfile.shopAddress.split("-").pop()?.trim() || ""
+            pincode: businessData.address.split("-").pop()?.trim() || ""
           });
         }
       }
     }
-  }, [userProfile]);
+  }, [businessData]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -162,29 +161,6 @@ export default function DashboardPage() {
       }
     }
   }, [user, userProfile, authLoading, router]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(
-      collection(db, "products"),
-      where("businessId", "==", user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const productData: DashboardProduct[] = [];
-      snapshot.forEach((doc) => {
-        productData.push({ id: doc.id, ...doc.data() } as DashboardProduct);
-      });
-      setProducts(productData);
-      setLoadingProducts(false);
-    }, (error) => {
-      console.error("Error fetching products:", error);
-      setLoadingProducts(false);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
@@ -211,33 +187,27 @@ export default function DashboardPage() {
     }
 
     setIsSubmittingProduct(true);
-    try {
-      await addDoc(collection(db, "products"), {
-        businessId: user.uid,
-        title: newProduct.title,
-        price: parseFloat(newProduct.price),
-        description: newProduct.description,
-        imageUrl: newProduct.imageUrl,
-        createdAt: serverTimestamp()
-      });
-      toast({ title: "Success", description: "Product added successfully!" });
-      setNewProduct({ title: "", price: "", description: "", imageUrl: "" });
-      setIsProductDialogOpen(false);
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to add product." });
-    } finally {
-      setIsSubmittingProduct(false);
-    }
+    const colRef = collection(firestore, "products");
+    addDocumentNonBlocking(colRef, {
+      businessId: user.uid,
+      title: newProduct.title,
+      price: parseFloat(newProduct.price),
+      description: newProduct.description,
+      imageUrl: newProduct.imageUrl,
+      imageHint: 'product'
+    });
+    
+    toast({ title: "Success", description: "Product listing initiated!" });
+    setNewProduct({ title: "", price: "", description: "", imageUrl: "" });
+    setIsProductDialogOpen(false);
+    setIsSubmittingProduct(false);
   };
 
-  const handleDeleteProduct = async (id: string) => {
+  const handleDeleteProduct = (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
-    try {
-      await deleteDoc(doc(db, "products", id));
-      toast({ title: "Deleted", description: "Product removed successfully." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to delete product." });
-    }
+    const docRef = doc(firestore, "products", id);
+    deleteDocumentNonBlocking(docRef);
+    toast({ title: "Deleted", description: "Product removal initiated." });
   };
 
   const handleUpdateShopProfile = async (e: React.FormEvent) => {
@@ -247,39 +217,26 @@ export default function DashboardPage() {
     const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
 
     setIsUpdatingProfile(true);
-    try {
-      await updateDoc(doc(db, "users", user.uid), {
-        shopName: shopProfile.shopName,
-        shopAddress: fullAddress,
-        shopCategory: shopProfile.shopCategory,
-        shopDescription: shopProfile.shopDescription,
-        shopContact: shopProfile.shopContact,
-        shopImageUrls: shopProfile.shopImageUrls,
-        updatedAt: serverTimestamp()
-      });
-      toast({ title: "Profile Updated", description: "Your shop details have been saved." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to update profile." });
-    } finally {
-      setIsUpdatingProfile(false);
-    }
+    
+    const businessDocRef = doc(firestore, "businesses", user.uid);
+    setDocumentNonBlocking(businessDocRef, {
+      id: user.uid,
+      ownerId: user.uid,
+      shopName: shopProfile.shopName,
+      address: fullAddress,
+      category: shopProfile.shopCategory,
+      description: shopProfile.shopDescription,
+      contactNumber: shopProfile.shopContact,
+      whatsappLink: `https://wa.me/${shopProfile.shopContact}`,
+      imageUrl: shopProfile.shopImageUrl,
+      imageHint: 'shop'
+    }, { merge: true });
+
+    toast({ title: "Profile Updated", description: "Your shop details are being saved." });
+    setIsUpdatingProfile(false);
   };
 
-  const handleAddShopPhoto = (base64: string) => {
-    setShopProfile(prev => ({
-      ...prev,
-      shopImageUrls: [...prev.shopImageUrls, base64]
-    }));
-  };
-
-  const handleRemoveShopPhoto = (index: number) => {
-    setShopProfile(prev => ({
-      ...prev,
-      shopImageUrls: prev.shopImageUrls.filter((_, i) => i !== index)
-    }));
-  };
-
-  if (authLoading || (loadingProducts && user)) {
+  if (authLoading || loadingBusiness || loadingProducts) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -294,7 +251,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl md:text-4xl font-bold font-headline text-navy dark:text-white flex items-center gap-2">
             <Store className="h-8 w-8 text-primary" />
-            {userProfile?.shopName || "My Business"}
+            {businessData?.shopName || "My Business"}
           </h1>
           <p className="text-muted-foreground mt-1">Manage your digital storefront and catalog</p>
         </div>
@@ -382,7 +339,7 @@ export default function DashboardPage() {
                   <CardDescription>Live items visible to customers.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {products.length === 0 ? (
+                  {!products || products.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl">
                       <Package className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
                       <h3 className="text-lg font-semibold">No items found</h3>
@@ -411,21 +368,6 @@ export default function DashboardPage() {
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="space-y-6">
-              <Card className="bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Shop Gallery</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-2">
-                  {shopProfile.shopImageUrls.length > 0 ? shopProfile.shopImageUrls.map((url, i) => (
-                    <div key={i} className="relative aspect-square rounded-md overflow-hidden border">
-                      <Image src={url} alt="Shop" fill className="object-cover" />
-                    </div>
-                  )) : <p className="col-span-2 text-xs text-muted-foreground italic text-center py-4">No original photos added.</p>}
                 </CardContent>
               </Card>
             </div>
@@ -549,30 +491,30 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-4 border-t pt-6">
-                  <Label className="text-lg font-semibold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Original Shop Photos</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {shopProfile.shopImageUrls.map((url, index) => (
-                      <div key={index} className="relative aspect-square rounded-md overflow-hidden border group">
-                        <Image src={url} alt={`Shop ${index}`} fill className="object-cover" />
+                  <Label className="text-lg font-semibold flex items-center gap-2"><ImageIcon className="h-5 w-5 text-primary" /> Shop Photo</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {shopProfile.shopImageUrl && (
+                      <div className="relative aspect-video rounded-md overflow-hidden border group">
+                        <Image src={shopProfile.shopImageUrl} alt="Shop" fill className="object-cover" />
                         <button 
                           type="button" 
                           className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" 
-                          onClick={() => handleRemoveShopPhoto(index)}
+                          onClick={() => setShopProfile(prev => ({ ...prev, shopImageUrl: "" }))}
                         >
                           <X className="h-3 w-3" />
                         </button>
                       </div>
-                    ))}
-                    <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors border-primary/30">
-                      <div className="flex flex-col items-center justify-center p-2 text-center">
-                        <Upload className="w-6 h-6 mb-1 text-primary" />
-                        <p className="text-[10px] text-muted-foreground font-medium">Add Photo</p>
+                    )}
+                    <label className="flex flex-col items-center justify-center aspect-video border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors border-primary/30">
+                      <div className="flex flex-col items-center justify-center p-4 text-center">
+                        <Upload className="w-8 h-8 mb-2 text-primary" />
+                        <p className="text-sm text-muted-foreground font-medium">Upload Shop Photo</p>
                       </div>
                       <input 
                         type="file" 
                         className="hidden" 
                         accept="image/*" 
-                        onChange={(e) => handleFileChange(e, (base64) => handleAddShopPhoto(base64))} 
+                        onChange={(e) => handleFileChange(e, (base64) => setShopProfile(prev => ({ ...prev, shopImageUrl: base64 })))} 
                       />
                     </label>
                   </div>

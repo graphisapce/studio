@@ -1,17 +1,17 @@
-
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { db } from "@/lib/firebase/clientApp";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { useState, useMemo } from "react";
+import { collection } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { mockBusinesses } from "@/lib/data";
-import type { Business, BusinessCategory, UserProfile } from "@/lib/types";
+import type { Business, BusinessCategory } from "@/lib/types";
 import { getDistanceFromLatLonInKm } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPinOff, LocateFixed, Loader2 } from "lucide-react";
+import { Search, MapPinOff, LocateFixed } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect } from "react";
 
 const categories: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -22,41 +22,17 @@ const categories: BusinessCategory[] = [
 export function BusinessGrid() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
-  const [realBusinesses, setRealBusinesses] = useState<Business[]>([]);
-  const [loadingRealData, setLoadingRealData] = useState(true);
+  const firestore = useFirestore();
+
+  // Memoize the collection reference
+  const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
+  const { data: realBusinesses, isLoading: loadingRealData } = useCollection<Business>(businessesRef);
 
   // Location state
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
 
   useEffect(() => {
-    // Fetch real businesses from Firestore
-    const q = query(collection(db, "users"), where("role", "==", "business"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const businesses: Business[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data() as UserProfile;
-        if (data.shopName) {
-          businesses.push({
-            id: data.uid,
-            ownerId: data.uid,
-            shopName: data.shopName,
-            category: data.shopCategory || 'Others',
-            address: data.shopAddress || 'Address not set',
-            contactNumber: data.shopContact || '',
-            whatsappLink: data.shopContact ? `https://wa.me/${data.shopContact}` : '',
-            imageUrl: (data.shopImageUrls && data.shopImageUrls.length > 0) ? data.shopImageUrls[0] : 'https://picsum.photos/seed/shop/600/400',
-            imageHint: 'shop',
-            latitude: 0,
-            longitude: 0
-          });
-        }
-      });
-      setRealBusinesses(businesses);
-      setLoadingRealData(false);
-    });
-
-    // Fetch geolocation
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -67,13 +43,16 @@ export function BusinessGrid() {
         }
       );
     }
-
-    return () => unsubscribe();
   }, []);
 
   const filteredBusinesses = useMemo(() => {
     // Combine real data and mock data (real data first)
-    let businesses = [...realBusinesses, ...mockBusinesses];
+    let businesses: Business[] = realBusinesses ? [...realBusinesses] : [];
+    
+    // Add mock data if needed or for initial state
+    if (businesses.length === 0 && !loadingRealData) {
+      businesses = [...mockBusinesses];
+    }
 
     if (userLocation && isDistanceFilterActive) {
       businesses = businesses.filter((business) => {
@@ -93,7 +72,7 @@ export function BusinessGrid() {
       const matchesSearch = business.shopName.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [searchTerm, selectedCategory, userLocation, isDistanceFilterActive, realBusinesses]);
+  }, [searchTerm, selectedCategory, userLocation, isDistanceFilterActive, realBusinesses, loadingRealData]);
 
   const toggleCategory = (category: BusinessCategory) => {
     setSelectedCategory(prev => (prev === category ? null : category));

@@ -1,4 +1,3 @@
-
 export type BusinessCategory = 
   | 'Food' 
   | 'Groceries' 
@@ -29,8 +28,9 @@ export interface Business {
   whatsappLink: string;
   imageUrl: string;
   imageHint: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
 }
 
 export interface Product {
@@ -44,17 +44,11 @@ export interface Product {
 }
 
 export interface UserProfile {
-  uid: string;
+  id: string;
   name: string;
   email: string;
   phone?: string;
   photoURL?: string;
   role: 'customer' | 'business';
-  shopName?: string;
-  shopAddress?: string;
-  shopCategory?: BusinessCategory;
-  shopDescription?: string;
-  shopContact?: string;
-  shopImageUrls?: string[];
   createdAt: string;
 }
