@@ -1,19 +1,19 @@
 
 "use client";
 
+import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { doc, collection, query, where } from "firebase/firestore";
-import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { doc, collection, query, where, increment } from "firebase/firestore";
+import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Phone, MessageCircle, Loader2, Store, Lock, Crown } from 'lucide-react';
+import { Phone, MessageCircle, Loader2, Store, Lock, Crown, Eye } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
 import type { Business, Product } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
 import { isBusinessPremium } from '@/lib/utils';
-import { useMemo } from 'react';
 
 export default function BusinessDetailPage() {
   const params = useParams();
@@ -28,6 +28,16 @@ export default function BusinessDetailPage() {
     [firestore, id]
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
+
+  // Increment view count on mount
+  useEffect(() => {
+    if (id && firestore) {
+      const docRef = doc(firestore, "businesses", id);
+      updateDocumentNonBlocking(docRef, {
+        views: increment(1)
+      });
+    }
+  }, [id, firestore]);
 
   const approvedProducts = useMemo(() => {
     return products?.filter(p => p.status === 'approved') || [];
@@ -82,7 +92,12 @@ export default function BusinessDetailPage() {
                 </Badge>
               )}
             </div>
-            <p className="text-lg text-white/90 mt-1">{business.address}</p>
+            <p className="text-lg text-white/90 mt-1 flex items-center gap-2">
+              {business.address}
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded flex items-center gap-1">
+                <Eye className="h-3 w-3" /> {business.views || 0} views
+              </span>
+            </p>
           </div>
         </div>
       </header>

@@ -34,9 +34,10 @@ import {
   CheckCircle2,
   CalendarDays,
   ShieldCheck,
-  AlertCircle,
   Clock,
-  XCircle
+  XCircle,
+  Eye,
+  TrendingUp
 } from "lucide-react";
 import {
   Dialog,
@@ -258,11 +259,6 @@ export default function DashboardPage() {
                 <Crown className="h-3 w-3" /> Premium Active
               </Badge>
             )}
-            {businessData?.premiumUntil && (
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
-                <CalendarDays className="h-3 w-3" /> Expires: {new Date(businessData.premiumUntil).toLocaleDateString()}
-              </span>
-            )}
           </div>
         </div>
 
@@ -305,6 +301,44 @@ export default function DashboardPage() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Eye className="h-4 w-4 text-blue-500" /> Profile Views
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-black">{businessData?.views || 0}</p>
+            <p className="text-[10px] text-muted-foreground uppercase mt-1">Total visits from customers</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50/50 border-green-200/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500" /> Active Products
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-black">{products?.filter(p => p.status === 'approved').length || 0}</p>
+            <p className="text-[10px] text-muted-foreground uppercase mt-1">Live in marketplace</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-50/50 border-purple-200/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-purple-500" /> Subscription
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+             <p className="text-xl font-bold">{hasPremium ? "Premium Active" : "Basic Free"}</p>
+             <p className="text-[10px] text-muted-foreground uppercase mt-1">
+               {businessData?.premiumUntil ? `Expires: ${new Date(businessData.premiumUntil).toLocaleDateString()}` : "Upgrade for more visibility"}
+             </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="listings" className="w-full">
@@ -424,7 +458,7 @@ export default function DashboardPage() {
                 <Card className="bg-green-50 border-green-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-green-700 flex items-center gap-2 text-sm font-bold">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" /> Premium Subscription Active
+                      <CheckCircle2 className="h-5 w-5 text-green-500" /> Premium Active
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">

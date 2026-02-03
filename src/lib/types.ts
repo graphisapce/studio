@@ -36,6 +36,7 @@ export interface Business {
   premiumUntil?: string | null;
   lastTransactionId?: string;
   status?: 'pending' | 'approved' | 'rejected';
+  views?: number;
 }
 
 export interface Product {
