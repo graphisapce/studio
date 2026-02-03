@@ -1,22 +1,15 @@
-
 'use server';
 
 /**
  * Server Action to create a Cashfree Order.
- * In production, ensure CASHFREE_APP_ID and CASHFREE_SECRET_KEY are in .env.local
+ * These keys MUST be set in .env.local for the gateway to work.
  */
 export async function createCashfreeOrder(userId: string, userEmail: string, userPhone: string) {
   const appId = process.env.CASHFREE_APP_ID;
   const secretKey = process.env.CASHFREE_SECRET_KEY;
 
-  // For simulation if keys are missing
   if (!appId || !secretKey) {
-    console.warn("Cashfree keys missing. Returning simulated order for demo.");
-    return {
-      simulated: true,
-      payment_session_id: "simulated_session_id_" + Date.now(),
-      order_id: "order_" + Date.now(),
-    };
+    throw new Error("Payment Gateway configuration missing. Please contact administrator.");
   }
 
   try {
@@ -43,10 +36,13 @@ export async function createCashfreeOrder(userId: string, userEmail: string, use
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to create order");
+    }
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating Cashfree order:", error);
-    throw new Error("Failed to initialize payment.");
+    throw new Error(error.message || "Failed to initialize payment.");
   }
 }
 
@@ -58,9 +54,7 @@ export async function verifyCashfreeOrder(orderId: string) {
   const secretKey = process.env.CASHFREE_SECRET_KEY;
 
   if (!appId || !secretKey) {
-    // If simulated, return success for demo
-    if (orderId.startsWith("order_")) return { order_status: "PAID" };
-    return { order_status: "FAILED" };
+    throw new Error("Payment Gateway configuration missing.");
   }
 
   try {

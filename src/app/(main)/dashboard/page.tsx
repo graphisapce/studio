@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -35,14 +34,9 @@ import {
   Crown,
   CreditCard,
   CheckCircle2,
-  QrCode,
-  Smartphone,
   CalendarDays,
-  Info,
-  Copy,
-  AlertCircle,
-  Clock,
-  ShieldCheck
+  ShieldCheck,
+  AlertCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -67,16 +61,10 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/badge";
 import { isBusinessPremium } from "@/lib/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/alert-ui";
 import { createCashfreeOrder, verifyCashfreeOrder } from "@/app/actions/payment-actions";
 import { load } from "@cashfreepayments/cashfree-js";
-
-// --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
-const MY_UPI_ID = "9821692147-2@ybl"; 
-const MY_QR_CODE_URL = "https://i.ibb.co/B5DB6Vzn/qr-code.png"; 
-// ---------------------------------------------
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -205,32 +193,15 @@ export default function DashboardPage() {
     setIsUpdatingProfile(false);
   };
 
-  /**
-   * Cashfree Payment Integration
-   */
   const handleCashfreePayment = async () => {
     if (!user || !userProfile) return;
     setIsProcessingPayment(true);
 
     try {
-      // 1. Create order on server
       const orderData = await createCashfreeOrder(user.uid, user.email || "", userProfile.phone || "");
       
-      if (orderData.simulated) {
-        // FOR DEMO: Simulate successful payment
-        setTimeout(() => {
-          unlockPremiumFeatures();
-          setIsProcessingPayment(false);
-          setIsPaymentDialogOpen(false);
-          toast({ title: "Demo Success", description: "Premium Unlocked! (Simulation Mode)" });
-        }, 1500);
-        return;
-      }
-
-      // 2. Initialize SDK
-      const cashfree = await load({ mode: "sandbox" }); // or "production"
+      const cashfree = await load({ mode: "sandbox" }); 
       
-      // 3. Open Checkout
       const result = await cashfree.checkout({
         paymentSessionId: orderData.payment_session_id,
         returnUrl: `${window.location.origin}/dashboard`,
@@ -238,14 +209,12 @@ export default function DashboardPage() {
 
       if (result.error) {
         toast({ variant: "destructive", title: "Payment Error", description: result.error.message });
-      } else if (result.redirect) {
-        // Handled by returnUrl
       } else {
-        // Check Status
         const status = await verifyCashfreeOrder(orderData.order_id);
         if (status.order_status === "PAID") {
           unlockPremiumFeatures();
           toast({ title: "Success", description: "Payment verified. Welcome to Premium!" });
+          setIsPaymentDialogOpen(false);
         }
       }
     } catch (error: any) {
@@ -285,11 +254,11 @@ export default function DashboardPage() {
           </h1>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-muted-foreground">Manage your digital storefront</p>
-            {hasPremium ? (
-              <Badge className="bg-yellow-500 flex gap-1 animate-pulse">
+            {hasPremium && (
+              <Badge className="bg-yellow-500 flex gap-1">
                 <Crown className="h-3 w-3" /> Premium Active
               </Badge>
-            ) : null}
+            )}
             {businessData?.premiumUntil && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
                 <CalendarDays className="h-3 w-3" /> Expires: {new Date(businessData.premiumUntil).toLocaleDateString()}
@@ -409,40 +378,36 @@ export default function DashboardPage() {
                       <li className="flex items-center gap-2">✅ Direct WhatsApp Button</li>
                       <li className="flex items-center gap-2">✅ Premium Verified Badge</li>
                       <li className="flex items-center gap-2">✅ Top Ranking in Search</li>
-                      <li className="flex items-center gap-2">✅ Secure Online Payment</li>
+                      <li className="flex items-center gap-2">✅ Automated Online Payment</li>
                     </ul>
                     <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
                       <DialogTrigger asChild>
                         <Button className="w-full bg-yellow-600 hover:bg-yellow-700 font-bold h-12 shadow-md">
-                          Upgrade with Cashfree
+                          Get Started Now
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
-                            <ShieldCheck className="h-5 w-5 text-primary" /> Automatic Activation
+                            <ShieldCheck className="h-5 w-5 text-primary" /> Secure Activation
                           </DialogTitle>
-                          <DialogDescription>Your premium features will unlock instantly after successful payment.</DialogDescription>
+                          <DialogDescription>Unlock premium features instantly through our secure gateway.</DialogDescription>
                         </DialogHeader>
                         
                         <div className="space-y-6 py-4">
                           <div className="bg-muted p-4 rounded-xl border-2 border-dashed text-center">
                             <p className="text-sm font-bold">Subscription Plan</p>
                             <p className="text-2xl font-black text-primary">₹99.00</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Valid for 30 Days</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">30 Days Validity</p>
                           </div>
 
                           <Button className="w-full h-14 text-lg font-black shadow-lg" onClick={handleCashfreePayment} disabled={isProcessingPayment}>
-                            {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Initializing Gateway...</> : "Pay Now & Unlock Features"}
+                            {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting...</> : "Pay Securely with Cashfree"}
                           </Button>
-
-                          <div className="flex flex-col items-center gap-4 border-t pt-4">
-                             <p className="text-[10px] text-muted-foreground uppercase font-bold">Manual UPI Alternate</p>
-                             <div className="relative h-32 w-32 border-2 rounded-lg overflow-hidden bg-white">
-                               <img src={MY_QR_CODE_URL} alt="Backup QR" className="h-full w-full object-contain p-1" />
-                             </div>
-                             <code className="text-[10px] bg-muted px-2 py-1 rounded">{MY_UPI_ID}</code>
-                          </div>
+                          
+                          <p className="text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                            <AlertCircle className="h-3 w-3" /> No manual verification needed.
+                          </p>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -457,10 +422,10 @@ export default function DashboardPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-xs text-green-700 font-medium">
-                      Your features are active until: <span className="font-bold underline">{new Date(businessData?.premiumUntil || "").toLocaleDateString()}</span>
+                      Active until: <span className="font-bold underline">{new Date(businessData?.premiumUntil || "").toLocaleDateString()}</span>
                     </p>
                     <p className="text-[10px] text-green-600 italic">
-                      Your WhatsApp contact button is now visible to all customers.
+                      Your business stands out with premium features.
                     </p>
                     <Button variant="outline" className="w-full mt-2 text-xs border-green-300 text-green-700 hover:bg-green-100 font-bold" onClick={() => setIsPaymentDialogOpen(true)}>
                        Extend Subscription (₹99)
