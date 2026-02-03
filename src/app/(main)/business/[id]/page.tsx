@@ -7,7 +7,25 @@ import { doc, collection, query, where, increment, addDoc } from "firebase/fires
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Phone, MessageCircle, Loader2, Store, Lock, Crown, Eye, Share2, Star, MapPin, Clock, ShieldCheck, CreditCard, Zap } from 'lucide-react';
+import { 
+  Phone, 
+  MessageCircle, 
+  Loader2, 
+  Store, 
+  Lock, 
+  Crown, 
+  Eye, 
+  Share2, 
+  Star, 
+  MapPin, 
+  Clock, 
+  ShieldCheck, 
+  CreditCard, 
+  Zap,
+  Instagram,
+  Facebook,
+  QrCode
+} from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
 import type { Business, Product, Review } from "@/lib/types";
@@ -17,6 +35,14 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function BusinessDetailPage() {
   const params = useParams();
@@ -134,6 +160,10 @@ export default function BusinessDetailPage() {
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground font-medium">
                 <Badge variant="secondary">{business.category}</Badge>
                 <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {business.views || 0} views</span>
+                <div className="flex gap-2">
+                  {business.instagramUrl && <a href={business.instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram className="h-4 w-4 text-pink-600" /></a>}
+                  {business.facebookUrl && <a href={business.facebookUrl} target="_blank" rel="noopener noreferrer"><Facebook className="h-4 w-4 text-blue-600" /></a>}
+                </div>
               </div>
            </div>
         </div>
@@ -161,10 +191,35 @@ export default function BusinessDetailPage() {
                 <div className="flex flex-col gap-3 pt-4 border-t">
                   <Button asChild className="w-full h-11"><a href={`tel:${business.contactNumber}`}><Phone className="mr-2 h-4 w-4" /> Call Shop</a></Button>
                   
-                  {hasPremium && business.upiId && (
-                    <Button onClick={handlePayUPI} className="w-full h-11 bg-blue-600 hover:bg-blue-700 shadow-md">
-                      <CreditCard className="mr-2 h-4 w-4" /> Pay via UPI
-                    </Button>
+                  {hasPremium && (business.upiId || business.paymentQrUrl) && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 shadow-md">
+                          <CreditCard className="mr-2 h-4 w-4" /> Pay via UPI/QR
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-xs text-center">
+                        <DialogHeader>
+                          <DialogTitle>Make Payment</DialogTitle>
+                          <DialogDescription>Pay directly to the shop owner.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6 py-4">
+                          {business.paymentQrUrl && (
+                            <div className="relative w-full aspect-square border-2 border-dashed rounded-xl overflow-hidden">
+                              <Image src={business.paymentQrUrl} alt="Payment QR" fill className="object-contain p-2" />
+                            </div>
+                          )}
+                          {business.upiId && (
+                            <div className="space-y-3">
+                              <p className="text-xs font-bold text-muted-foreground uppercase">UPI ID: {business.upiId}</p>
+                              <Button onClick={handlePayUPI} className="w-full h-12 bg-primary">
+                                Pay to UPI ID
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   )}
 
                   {hasPremium ? (

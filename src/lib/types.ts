@@ -44,6 +44,9 @@ export interface Business {
   openingTime?: string; // Format: "09:00"
   closingTime?: string; // Format: "21:00"
   upiId?: string; // For direct payments
+  paymentQrUrl?: string; // Uploaded QR Code image
+  instagramUrl?: string;
+  facebookUrl?: string;
   flashDeal?: string; // Quick announcement/offer
   flashDealExpiry?: string;
 }

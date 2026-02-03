@@ -45,7 +45,11 @@ import {
   QrCode,
   CreditCard,
   Zap,
-  Download
+  Download,
+  Instagram,
+  Facebook,
+  Share2,
+  Upload
 } from "lucide-react";
 import {
   Dialog,
@@ -121,7 +125,10 @@ export default function DashboardPage() {
     openingTime: "09:00",
     closingTime: "21:00",
     upiId: "",
-    flashDeal: ""
+    paymentQrUrl: "",
+    flashDeal: "",
+    instagramUrl: "",
+    facebookUrl: ""
   });
   const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
 
@@ -139,7 +146,10 @@ export default function DashboardPage() {
         openingTime: businessData.openingTime || "09:00",
         closingTime: businessData.closingTime || "21:00",
         upiId: businessData.upiId || "",
-        flashDeal: businessData.flashDeal || ""
+        paymentQrUrl: businessData.paymentQrUrl || "",
+        flashDeal: businessData.flashDeal || "",
+        instagramUrl: businessData.instagramUrl || "",
+        facebookUrl: businessData.facebookUrl || ""
       });
 
       if (businessData.address) {
@@ -214,8 +224,8 @@ export default function DashboardPage() {
     setIsSubmittingProduct(false);
   };
 
-  const handleUpdateShopProfile = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdateShopProfile = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!user) return;
     setIsUpdatingProfile(true);
     const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
@@ -233,12 +243,15 @@ export default function DashboardPage() {
       openingTime: shopProfile.openingTime,
       closingTime: shopProfile.closingTime,
       upiId: shopProfile.upiId,
+      paymentQrUrl: shopProfile.paymentQrUrl,
       flashDeal: shopProfile.flashDeal,
+      instagramUrl: shopProfile.instagramUrl,
+      facebookUrl: shopProfile.facebookUrl,
       isPaid: businessData?.isPaid || false,
       premiumUntil: businessData?.premiumUntil || null,
       premiumStatus: businessData?.premiumStatus || 'none'
     }, { merge: true });
-    toast({ title: "Updated", description: "Profile saved." });
+    toast({ title: "Updated", description: "Shop details saved successfully." });
     setIsUpdatingProfile(false);
   };
 
@@ -443,27 +456,56 @@ export default function DashboardPage() {
                     <Label>Flash Deal Text (Short & Catchy)</Label>
                     <Input placeholder="e.g. 20% Discount on Pizza today!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} />
                   </div>
-                  <Button className="w-full" onClick={handleUpdateShopProfile}>Update Live Offer</Button>
+                  <Button className="w-full" onClick={() => handleUpdateShopProfile()}>Update Live Offer</Button>
                 </CardContent>
               </Card>
 
               <Card className="border-blue-200 bg-blue-50/30">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-blue-500" /> Direct UPI Payment</CardTitle>
-                  <CardDescription>Enable customers to pay you directly via UPI.</CardDescription>
+                  <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-blue-500" /> Direct UPI Payment & QR</CardTitle>
+                  <CardDescription>Enable customers to pay you directly via UPI or QR.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>Your UPI ID (VPA)</Label>
                     <Input placeholder="e.g. name@okaxis" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Payment QR Image (GPay/PhonePe)</Label>
+                    {shopProfile.paymentQrUrl && (
+                      <div className="relative w-32 h-32 mb-2 border rounded-lg overflow-hidden">
+                        <Image src={shopProfile.paymentQrUrl} alt="Payment QR" fill className="object-contain" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setShopProfile({...shopProfile, paymentQrUrl: b}))} />
+                    </div>
+                  </div>
                   {hasPremium ? (
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleUpdateShopProfile}>Save UPI Details</Button>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateShopProfile()}>Save Payment Details</Button>
                   ) : (
                     <div className="p-4 bg-muted rounded-lg text-center opacity-70">
-                       <p className="text-xs font-bold text-muted-foreground flex items-center justify-center gap-2"><Crown className="h-3 w-3" /> UPI Payment is a Premium Feature</p>
+                       <p className="text-xs font-bold text-muted-foreground flex items-center justify-center gap-2"><Crown className="h-3 w-3" /> Payment Tools are Premium Features</p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card className="md:col-span-2 border-purple-200 bg-purple-50/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-purple-600" /> Social Media & Links</CardTitle>
+                  <CardDescription>Boost your trust by linking your social profiles.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Instagram className="h-4 w-4 text-pink-600" /> Instagram Link</Label>
+                    <Input placeholder="https://instagram.com/yourshop" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Facebook className="h-4 w-4 text-blue-600" /> Facebook Link</Label>
+                    <Input placeholder="https://facebook.com/yourshop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
+                  </div>
+                  <Button className="sm:col-span-2 w-full bg-purple-600 hover:bg-purple-700" onClick={() => handleUpdateShopProfile()}>Save Social Profiles</Button>
                 </CardContent>
               </Card>
            </div>

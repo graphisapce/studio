@@ -23,7 +23,10 @@
         "views": { "type": "number" },
         "isPaid": { "type": "boolean" },
         "imageUrl": { "type": "string", "description": "Shop Banner image" },
-        "logoUrl": { "type": "string", "description": "Shop Logo image" }
+        "logoUrl": { "type": "string", "description": "Shop Logo image" },
+        "paymentQrUrl": { "type": "string", "description": "Payment QR Code Image" },
+        "instagramUrl": { "type": "string" },
+        "facebookUrl": { "type": "string" }
       }
     },
     "Review": {
