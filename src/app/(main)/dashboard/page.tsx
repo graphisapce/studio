@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -12,7 +11,8 @@ import {
   useMemoFirebase,
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
-  setDocumentNonBlocking
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking
 } from "@/firebase";
 import {
   Card,
@@ -29,27 +29,22 @@ import {
   Trash2, 
   Package, 
   Store, 
-  MapPin,
-  Crown,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Eye,
-  TrendingUp,
-  Sparkles,
-  QrCode,
-  CreditCard,
-  Zap,
-  Download,
-  Instagram,
-  Facebook,
+  Crown, 
+  CheckCircle2, 
+  Clock, 
+  XCircle, 
+  Eye, 
+  Sparkles, 
+  QrCode, 
+  CreditCard, 
+  Zap, 
+  Printer, 
+  History, 
+  PhoneCall, 
+  MessageCircle, 
   Share2,
-  PhoneCall,
-  MessageCircle,
-  BarChart4,
-  Printer,
-  History,
-  Phone
+  Tag,
+  Rocket
 } from "lucide-react";
 import {
   Dialog,
@@ -72,26 +67,18 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/tabs-ui"; // Using customized tabs for better mobile UI
 import { BusinessCategory, Business, Product } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
+import { generateSocialCaption } from "@/ai/flows/social-caption-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
   'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
   'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
-];
-
-const indianStates = [
-  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
-  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", 
-  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", 
-  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
-  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-  "Delhi", "Jammu and Kashmir", "Ladakh", "Puducherry"
 ];
 
 export default function DashboardPage() {
@@ -104,6 +91,8 @@ export default function DashboardPage() {
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
+  const [generatedCaption, setGeneratedCaption] = useState("");
   
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
@@ -114,7 +103,7 @@ export default function DashboardPage() {
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
 
-  const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "" });
+  const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "", badge: "" });
   const [shopProfile, setShopProfile] = useState({ 
     shopName: "", 
     shopCategory: "" as BusinessCategory | "", 
@@ -130,7 +119,6 @@ export default function DashboardPage() {
     instagramUrl: "",
     facebookUrl: ""
   });
-  const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
 
   const hasPremium = isBusinessPremium(businessData);
 
@@ -151,20 +139,6 @@ export default function DashboardPage() {
         instagramUrl: businessData.instagramUrl || "",
         facebookUrl: businessData.facebookUrl || ""
       });
-
-      if (businessData.address) {
-        const parts = businessData.address.split(", ").map(p => p.trim());
-        if (parts.length >= 5) {
-          setAddressParts({
-            street: parts[0] || "",
-            landmark: parts[1] || "",
-            city: parts[2] || "",
-            state: parts[3] || "",
-            region: "India",
-            pincode: businessData.address.split("-").pop()?.trim() || ""
-          });
-        }
-      }
     }
   }, [businessData]);
 
@@ -174,24 +148,6 @@ export default function DashboardPage() {
       else if (userProfile && userProfile.role !== "business") router.push("/");
     }
   }, [user, userProfile, authLoading, router]);
-
-  const activities = useMemo(() => {
-    if (!businessData) return [];
-    const list = [];
-    if (businessData.views) list.push({ icon: <Eye className="h-4 w-4" />, text: `${businessData.views} logon ne shop profile dekhi.`, time: 'Hamesha updated' });
-    if (businessData.callCount) list.push({ icon: <Phone className="h-4 w-4" />, text: `${businessData.callCount} logon ne call button dabaya.`, time: 'Real-time Lead' });
-    if (businessData.whatsappCount) list.push({ icon: <MessageCircle className="h-4 w-4" />, text: `${businessData.whatsappCount} logon ne WhatsApp enquire kiya.`, time: 'Potential Sale' });
-    return list;
-  }, [businessData]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => callback(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleAIDescription = async () => {
     if (!newProduct.title) {
@@ -213,6 +169,23 @@ export default function DashboardPage() {
     }
   };
 
+  const handleGenerateCaption = async (product: Product) => {
+    setIsGeneratingCaption(true);
+    try {
+      const res = await generateSocialCaption({
+        shopName: businessData?.shopName || "Our Shop",
+        productName: product.title,
+        price: product.price,
+        category: businessData?.category || "General"
+      });
+      setGeneratedCaption(res.caption);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "AI Error", description: "Caption generate nahi ho paya." });
+    } finally {
+      setIsGeneratingCaption(false);
+    }
+  };
+
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -225,24 +198,29 @@ export default function DashboardPage() {
       imageUrl: newProduct.imageUrl || "",
       imageHint: 'product',
       status: 'pending',
+      badge: newProduct.badge || null,
       createdAt: new Date().toISOString()
     });
-    toast({ title: "Product Submitted", description: "Your item is pending admin approval." });
-    setNewProduct({ title: "", price: "", description: "", imageUrl: "" });
+    toast({ title: "Product Submitted", description: "Admin approval ke liye bheja gaya hai." });
+    setNewProduct({ title: "", price: "", description: "", imageUrl: "", badge: "" });
     setIsProductDialogOpen(false);
     setIsSubmittingProduct(false);
+  };
+
+  const handleUpdateProductBadge = (productId: string, badge: any) => {
+    const productRef = doc(firestore, "products", productId);
+    updateDocumentNonBlocking(productRef, { badge });
+    toast({ title: "Badge Updated", description: "Product highlight badal diya gaya hai." });
   };
 
   const handleUpdateShopProfile = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!user) return;
     setIsUpdatingProfile(true);
-    const fullAddress = `${addressParts.street}, ${addressParts.landmark}, ${addressParts.city}, ${addressParts.state}, ${addressParts.region} - ${addressParts.pincode}`;
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
       shopName: shopProfile.shopName,
-      address: fullAddress,
       category: shopProfile.shopCategory,
       description: shopProfile.shopDescription,
       contactNumber: shopProfile.shopContact,
@@ -256,16 +234,14 @@ export default function DashboardPage() {
       flashDeal: shopProfile.flashDeal,
       instagramUrl: shopProfile.instagramUrl,
       facebookUrl: shopProfile.facebookUrl,
-      isPaid: businessData?.isPaid || false,
-      premiumUntil: businessData?.premiumUntil || null,
-      premiumStatus: businessData?.premiumStatus || 'none'
     }, { merge: true });
     toast({ title: "Updated", description: "Shop details saved successfully." });
     setIsUpdatingProfile(false);
   };
 
-  const printShopFlyer = () => {
-    window.print();
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: "WhatsApp status par paste karein." });
   };
 
   if (authLoading || loadingBusiness || loadingProducts) {
@@ -279,276 +255,190 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Printable Flyer Template (Hidden from screen) */}
-      <div className="hidden print:block p-8 bg-white border-8 border-primary rounded-3xl text-center font-headline">
-        <h1 className="text-6xl font-black mb-4 text-primary">LocalVyapar</h1>
-        <h2 className="text-4xl font-bold mb-8">Scan & Shop at <span className="underline">{businessData?.shopName}</span></h2>
-        <div className="flex justify-center mb-8">
-          <Image 
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} 
-            alt="Shop QR" 
-            width={300} 
-            height={300} 
-            className="border-4 border-black p-2"
-          />
-        </div>
-        <p className="text-2xl font-bold mb-4">View our Menu, Inventory & Offers directly on your phone!</p>
-        <div className="flex justify-center gap-8 items-center mt-12">
-          {businessData?.isVerified && <div className="flex items-center gap-2 text-blue-600"><CheckCircle2 className="h-8 w-8" /> <span className="text-xl font-bold">Verified Shop</span></div>}
-          <div className="bg-primary text-white px-6 py-2 rounded-full text-xl font-bold">Powered by LocalVyapar</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 print:hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
            <Avatar className="h-16 w-16 border-2 border-primary">
              <AvatarImage src={businessData?.logoUrl} />
              <AvatarFallback className="bg-primary/10 text-primary"><Store className="h-8 w-8" /></AvatarFallback>
            </Avatar>
            <div>
-             <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-               {businessData?.shopName || "My Business"}
-             </h1>
-             <div className="flex flex-wrap items-center gap-2 mt-1">
-               <p className="text-muted-foreground text-sm">Manage your digital storefront</p>
-               {hasPremium && (
-                 <Badge className="bg-yellow-500 flex gap-1 text-[10px]">
-                   <Crown className="h-3 w-3" /> Premium Active
-                 </Badge>
-               )}
+             <h1 className="text-3xl font-bold font-headline">{businessData?.shopName || "My Business"}</h1>
+             <div className="flex items-center gap-2 mt-1">
+               <Badge variant="outline" className="text-[10px] uppercase">{businessData?.category}</Badge>
+               {hasPremium && <Badge className="bg-yellow-500 text-[10px]"><Crown className="h-3 w-3 mr-1" /> Premium</Badge>}
              </div>
            </div>
         </div>
-
         <div className="flex gap-2">
-           <Button variant="outline" className="border-primary text-primary" onClick={printShopFlyer}>
-             <Printer className="mr-2 h-4 w-4" /> Print Flyer
-           </Button>
-
+           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Flyer</Button>
            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-5 w-5" /> Add New Item
-              </Button>
-            </DialogTrigger>
+            <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-5 w-5" /> Add Product</Button></DialogTrigger>
             <DialogContent>
-              <form onSubmit={handleAddProduct}>
-                <DialogHeader>
-                  <DialogTitle>Add New Product</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Item Name</Label>
-                    <Input id="title" required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} placeholder="e.g. Special Thali" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input id="price" type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="desc">Description</Label>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px] text-primary hover:bg-primary/10" onClick={handleAIDescription} disabled={isGeneratingAI}>
-                        {isGeneratingAI ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                        AI Write
-                      </Button>
+              <form onSubmit={handleAddProduct} className="space-y-4">
+                <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
+                <div className="grid gap-4">
+                  <div className="space-y-2"><Label>Item Name</Label><Input required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} /></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
+                    <div className="space-y-2">
+                      <Label>Highlight</Label>
+                      <Select value={newProduct.badge} onValueChange={(v) => setNewProduct({ ...newProduct, badge: v })}>
+                        <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="best-seller">Best Seller</SelectItem>
+                          <SelectItem value="new">New Arrival</SelectItem>
+                          <SelectItem value="limited">Limited</SelectItem>
+                          <SelectItem value="sale">On Sale</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Textarea id="desc" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} placeholder="Tell customers about your item..." />
                   </div>
-                  <div className="grid gap-2">
-                    <Label>Product Image</Label>
-                    <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, (b) => setNewProduct({ ...newProduct, imageUrl: b }))} />
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center"><Label>Description</Label><Button type="button" variant="ghost" size="sm" className="text-primary h-6 text-xs" onClick={handleAIDescription} disabled={isGeneratingAI}><Sparkles className="h-3 w-3 mr-1" /> AI Write</Button></div>
+                    <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isSubmittingProduct} className="w-full">
-                    {isSubmittingProduct ? "Publishing..." : "Submit for Approval"}
-                  </Button>
-                </DialogFooter>
+                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit for Approval</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 print:hidden">
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><Eye className="h-3 w-3" /> Profile Views</CardTitle></CardHeader>
-          <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.views || 0}</p></CardContent>
-        </Card>
-        <Card className="bg-green-50/50 border-green-200/50">
-          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><PhoneCall className="h-3 w-3" /> Phone Leads</CardTitle></CardHeader>
-          <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.callCount || 0}</p></CardContent>
-        </Card>
-        <Card className="bg-blue-50/50 border-blue-200/50">
-          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><MessageCircle className="h-3 w-3" /> WhatsApp Leads</CardTitle></CardHeader>
-          <CardContent className="p-4 pt-0"><p className="text-2xl font-black">{businessData?.whatsappCount || 0}</p></CardContent>
-        </Card>
-        <Card className="bg-yellow-50/50 border-yellow-200/50">
-          <CardHeader className="p-4 pb-2"><CardTitle className="text-xs font-bold flex items-center gap-2"><Zap className="h-3 w-3" /> Active Offer</CardTitle></CardHeader>
-          <CardContent className="p-4 pt-0"><p className="text-lg font-bold truncate">{businessData?.flashDeal || "None"}</p></CardContent>
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-8 print:hidden">
+      <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <Tabs defaultValue="listings" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="listings">Your Listings</TabsTrigger>
-              <TabsTrigger value="growth">Marketing Tools</TabsTrigger>
-              <TabsTrigger value="profile">Shop Settings</TabsTrigger>
-            </TabsList>
+           <Tabs defaultValue="inventory">
+             <div className="flex items-center justify-between mb-4 border-b">
+               <TabsList className="bg-transparent gap-4">
+                 <TabsTrigger value="inventory" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Inventory</TabsTrigger>
+                 <TabsTrigger value="marketing" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Marketing</TabsTrigger>
+                 <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Settings</TabsTrigger>
+               </TabsList>
+             </div>
 
-            <TabsContent value="listings">
-              <Card>
-                <CardHeader><CardTitle>Inventory</CardTitle></CardHeader>
-                <CardContent>
-                  {!products || products.length === 0 ? (
-                    <div className="text-center py-20 border-2 border-dashed rounded-xl">
-                      <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <p>No items found. Start by adding your first product.</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-6 sm:grid-cols-2">
-                      {products.map((p) => (
-                        <Card key={p.id} className="overflow-hidden group relative">
-                          <div className="absolute top-2 left-2 z-10">
-                            {p.status === 'approved' ? (
-                              <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge>
-                            ) : p.status === 'rejected' ? (
-                              <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
-                                <Clock className="h-3 w-3 mr-1" /> Pending
-                              </Badge>
-                            )}
+             <TabsContent value="inventory" className="space-y-6">
+                {!products || products.length === 0 ? (
+                  <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50"><Package className="h-12 w-12 mx-auto mb-4" /><p>Koi items nahi hain. Pehla product add karein!</p></div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {products.map((p) => (
+                      <Card key={p.id} className="overflow-hidden group">
+                        <div className="relative aspect-video bg-muted">
+                          <Image src={p.imageUrl || `https://picsum.photos/seed/p-${p.id}/400/300`} alt={p.title} fill className="object-cover" />
+                          <div className="absolute top-2 left-2 flex gap-1">
+                             {p.status === 'approved' ? <Badge className="bg-green-500">Live</Badge> : <Badge variant="secondary">Pending</Badge>}
+                             {p.badge && <Badge className="bg-primary">{p.badge.toUpperCase()}</Badge>}
                           </div>
-                          <div className="relative aspect-video bg-muted">
-                            <Image src={p.imageUrl || `https://picsum.photos/seed/prod-${p.id}/400/300`} alt={p.title} fill className="object-cover" />
-                          </div>
-                          <CardHeader className="p-4 pb-2">
-                            <div className="flex justify-between font-bold">
-                              <span>{p.title}</span>
-                              <span className="text-primary">₹{p.price}</span>
+                        </div>
+                        <CardHeader className="p-4 pb-0"><div className="flex justify-between font-bold"><span>{p.title}</span><span className="text-primary">₹{p.price}</span></div></CardHeader>
+                        <CardContent className="p-4 py-2 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground font-bold">Highlight:</span>
+                            <div className="flex gap-1">
+                              {['best-seller', 'new', 'limited', 'sale'].map(b => (
+                                <button key={b} onClick={() => handleUpdateProductBadge(p.id, b === p.badge ? null : b)} className={`px-2 py-0.5 rounded-full text-[8px] font-bold border ${p.badge === b ? 'bg-primary text-white border-primary' : 'bg-transparent border-muted-foreground/30 text-muted-foreground'}`}>{b.replace('-', ' ')}</button>
+                              ))}
                             </div>
-                          </CardHeader>
-                          <CardFooter className="p-4 pt-0">
-                            <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                          </div>
+                          <Dialog>
+                            <DialogTrigger asChild><Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleGenerateCaption(p)}><Share2 className="h-3 w-3 mr-2" /> Share on Social Media</Button></DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader><DialogTitle>WhatsApp / Instagram Caption</DialogTitle><DialogDescription>Dukan ko promote karne ke liye AI ne yeh likha hai:</DialogDescription></DialogHeader>
+                              <div className="space-y-4 py-4">
+                                {isGeneratingCaption ? <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : (
+                                  <div className="p-4 bg-muted rounded-xl text-sm italic leading-relaxed whitespace-pre-wrap">{generatedCaption || "Generating..."}</div>
+                                )}
+                              </div>
+                              <DialogFooter><Button onClick={() => copyToClipboard(generatedCaption)} className="w-full"><Rocket className="mr-2 h-4 w-4" /> Copy & Post</Button></DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </CardContent>
+                        <CardFooter className="p-4 pt-0">
+                          <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+             </TabsContent>
 
-            <TabsContent value="growth">
-               <div className="grid sm:grid-cols-2 gap-6">
+             <TabsContent value="marketing" className="space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
                   <Card className="border-primary/20 bg-primary/5">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Input placeholder="e.g. 20% Discount today!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} />
-                      <Button className="w-full" size="sm" onClick={() => handleUpdateShopProfile()}>Update Live Offer</Button>
-                    </CardContent>
+                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
+                    <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate Offer</Button></CardContent>
                   </Card>
-
-                  <Card className="border-blue-200 bg-blue-50/30">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm"><CreditCard className="h-4 w-4 text-blue-500" /> UPI Pay</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Input placeholder="name@okaxis" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
-                      {hasPremium ? <Button className="w-full bg-blue-600" size="sm" onClick={() => handleUpdateShopProfile()}>Save UPI</Button> : <Badge variant="secondary" className="w-full text-center">Premium Only</Badge>}
-                    </CardContent>
+                  <Card className="border-blue-200 bg-blue-50/20">
+                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> UPI ID</CardTitle></CardHeader>
+                    <CardContent className="space-y-4"><Input placeholder="name@upi" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} /><Button size="sm" variant="outline" className="w-full border-blue-500 text-blue-600" onClick={() => handleUpdateShopProfile()}>Save Payment ID</Button></CardContent>
                   </Card>
+                </div>
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">Digital Marketing Kit</CardTitle><CardDescription>Dukan ko promote karne ke liye naye tools.</CardDescription></CardHeader>
+                  <CardContent className="grid sm:grid-cols-3 gap-6">
+                     <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30">
+                        <QrCode className="h-10 w-10 text-primary mb-3" />
+                        <p className="text-xs font-bold mb-2">Shop Profile QR</p>
+                        <Button variant="secondary" size="sm" className="w-full" onClick={() => window.print()}>Print QR</Button>
+                     </div>
+                     <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30">
+                        <Share2 className="h-10 w-10 text-purple-600 mb-3" />
+                        <p className="text-xs font-bold mb-2">WhatsApp Status</p>
+                        <Button variant="secondary" size="sm" className="w-full" onClick={() => copyToClipboard(`Swagat hai hamari dukan ${shopProfile.shopName} par! LocalVyapar par hamari products dekhein: ${window.location.origin}/business/${user?.uid}`)}>Copy Status</Button>
+                     </div>
+                     <div className="flex flex-col items-center p-4 border rounded-xl bg-muted/30 opacity-50">
+                        <Rocket className="h-10 w-10 text-orange-600 mb-3" />
+                        <p className="text-xs font-bold mb-2">Ads Manager</p>
+                        <Badge variant="outline">Coming Soon</Badge>
+                     </div>
+                  </CardContent>
+                </Card>
+             </TabsContent>
 
-                  <Card className="sm:col-span-2 border-purple-200 bg-purple-50/30">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm"><Share2 className="h-4 w-4 text-purple-600" /> Social Links</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4">
-                      <Input placeholder="Instagram Link" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
-                      <Input placeholder="Facebook Link" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
-                      <Button className="col-span-2 w-full bg-purple-600" size="sm" onClick={() => handleUpdateShopProfile()}>Save Socials</Button>
-                    </CardContent>
-                  </Card>
-               </div>
-            </TabsContent>
-
-            <TabsContent value="profile">
-              <Card>
-                <CardHeader><CardTitle>Shop Profile</CardTitle></CardHeader>
-                <CardContent>
-                  <form onSubmit={handleUpdateShopProfile} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
-                      <div className="space-y-2">
-                        <Label>Category</Label>
-                        <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                        </Select>
+             <TabsContent value="settings">
+               <Card>
+                 <CardContent className="pt-6">
+                    <form onSubmit={handleUpdateShopProfile} className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
+                        <div className="space-y-2">
+                          <Label>Category</Label>
+                          <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                        </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label>Contact</Label><Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} /></div>
-                      <div className="space-y-2"><Label>Pincode</Label><Input value={addressParts.pincode} onChange={(e) => setAddressParts({...addressParts, pincode: e.target.value})} /></div>
-                    </div>
-                    <Textarea placeholder="Shop Description..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} />
-                    <Button type="submit" className="w-full" disabled={isUpdatingProfile}>{isUpdatingProfile ? "Saving..." : "Save Shop Settings"}</Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Opening Time</Label><Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} /></div>
+                        <div className="space-y-2"><Label>Closing Time</Label><Input type="time" value={shopProfile.closingTime} onChange={(e) => setShopProfile({...shopProfile, closingTime: e.target.value})} /></div>
+                      </div>
+                      <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} placeholder="Dukan ke bare mein batayein..." /></div>
+                      <Button type="submit" className="w-full" disabled={isUpdatingProfile}>{isUpdatingProfile ? "Saving..." : "Update Shop Profile"}</Button>
+                    </form>
+                 </CardContent>
+               </Card>
+             </TabsContent>
+           </Tabs>
         </div>
 
         <div className="space-y-8">
-           <Card className="border-primary/20">
-             <CardHeader className="pb-2">
-               <CardTitle className="text-sm font-bold flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Recent Activity</CardTitle>
-               <CardDescription className="text-[10px]">Real-time customer interactions</CardDescription>
-             </CardHeader>
-             <CardContent>
-               <div className="space-y-4">
-                 {activities.length > 0 ? activities.map((act, i) => (
-                   <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50 border border-border/50">
-                     <div className="p-2 bg-white rounded-full text-primary shadow-sm">{act.icon}</div>
-                     <div>
-                       <p className="text-xs font-medium leading-tight">{act.text}</p>
-                       <p className="text-[10px] text-muted-foreground mt-1">{act.time}</p>
-                     </div>
-                   </div>
-                 )) : (
-                   <div className="text-center py-10 opacity-50">Abhi tak koi activity nahi hui.</div>
-                 )}
-               </div>
+           <Card className="border-primary/20 bg-primary/5">
+             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Live Insights</CardTitle></CardHeader>
+             <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="bg-white p-3 rounded-lg shadow-sm border"><p className="text-[10px] uppercase font-bold text-muted-foreground">Views</p><p className="text-xl font-black">{businessData?.views || 0}</p></div>
+                   <div className="bg-white p-3 rounded-lg shadow-sm border"><p className="text-[10px] uppercase font-bold text-muted-foreground">Leads</p><p className="text-xl font-black">{(businessData?.callCount || 0) + (businessData?.whatsappCount || 0)}</p></div>
+                </div>
+                <div className="p-3 bg-white rounded-lg border text-xs"><p className="font-bold flex items-center gap-2 mb-2"><CheckCircle2 className="h-3 w-3 text-green-500" /> Platform Strength</p><div className="w-full bg-muted h-1 rounded-full overflow-hidden"><div className="bg-green-500 h-full" style={{ width: `${Math.min(((products?.length || 0) * 10) + 20, 100)}%` }} /></div><p className="mt-2 text-[10px] text-muted-foreground">Zyada products dalne se customers badhte hain.</p></div>
              </CardContent>
            </Card>
 
-           <Card className="bg-gradient-to-br from-primary to-blue-600 text-white border-none">
-             <CardHeader>
-               <CardTitle className="text-sm font-bold flex items-center gap-2"><QrCode className="h-4 w-4" /> Marketing Kit</CardTitle>
-               <CardDescription className="text-white/70 text-[10px]">Apni dukan ko promote karein!</CardDescription>
-             </CardHeader>
+           <Card className="bg-gradient-to-br from-primary to-blue-600 text-white border-none shadow-xl">
+             <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4" /> Marketing Kit</CardTitle><CardDescription className="text-white/70 text-[10px]">Apni dukan ki pehchan banayein.</CardDescription></CardHeader>
              <CardContent className="space-y-4">
-               <div className="p-4 bg-white rounded-xl shadow-lg flex justify-center">
-                 <Image 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} 
-                    alt="Shop QR" 
-                    width={150} 
-                    height={150} 
-                 />
+               <div className="aspect-square bg-white rounded-xl flex items-center justify-center p-4">
+                 <Image src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/business/' + user?.uid)}`} alt="QR Code" width={200} height={200} />
                </div>
-               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={printShopFlyer}>
-                 <Printer className="mr-2 h-4 w-4" /> Print Shop Flyer
-               </Button>
-               <p className="text-[10px] text-center opacity-80 italic">Tip: Ise print karke shop ke bahar lagayein!</p>
+               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={() => window.print()}><Printer className="h-4 w-4 mr-2" /> Print Marketing Flyer</Button>
+               <p className="text-[10px] italic text-center opacity-80">Tip: Ise scan karte hi customers dukan dekh payenge.</p>
              </CardContent>
            </Card>
         </div>

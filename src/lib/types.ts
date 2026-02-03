@@ -62,6 +62,7 @@ export interface Product {
   imageUrl: string;
   imageHint: string;
   status: 'pending' | 'approved' | 'rejected';
+  badge?: 'best-seller' | 'new' | 'limited' | 'sale'; // NEW: Product Highlight Badges
   createdAt?: string;
 }
 
