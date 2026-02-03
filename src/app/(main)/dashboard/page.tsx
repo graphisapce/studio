@@ -68,9 +68,16 @@ import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 
 // --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
-// 1. Apni UPI ID yahan dalein
+/**
+ * 1. Apni UPI ID yahan dalein (Example: yourname@upi)
+ */
 const MY_UPI_ID = "9876543210@paytm"; 
-// 2. Apne QR Code ki image ko 'public/qr-code.png' naam se save karein
+
+/**
+ * 2. QR Code Instruction:
+ * Agar aapne 'public' folder mein 'qr-code.png' rakha hai, toh niche wala path sahi hai.
+ * Agar aap online link use karna chahte hain, toh pura URL yahan paste karein.
+ */
 const MY_QR_CODE_URL = "/qr-code.png"; 
 // ---------------------------------------------
 
@@ -246,13 +253,13 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <p className="text-muted-foreground">Manage your digital storefront</p>
             {hasPremium && (
-              <Badge className="bg-yellow-500 flex gap-1">
+              <Badge className="bg-yellow-500 flex gap-1 animate-pulse">
                 <Crown className="h-3 w-3" /> Premium Active
               </Badge>
             )}
             {businessData?.premiumUntil && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
-                <CalendarDays className="h-3 w-3" /> Expiry: {new Date(businessData.premiumUntil).toLocaleDateString()}
+                <CalendarDays className="h-3 w-3" /> Valid Until: {new Date(businessData.premiumUntil).toLocaleDateString()}
               </span>
             )}
           </div>
@@ -321,7 +328,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="grid gap-6 sm:grid-cols-2">
                       {products.map((p) => (
-                        <Card key={p.id} className="overflow-hidden">
+                        <Card key={p.id} className="overflow-hidden group">
                           <div className="relative aspect-video">
                             <Image src={p.imageUrl} alt={p.title} fill className="object-cover" />
                           </div>
@@ -332,7 +339,7 @@ export default function DashboardPage() {
                             </div>
                           </CardHeader>
                           <CardFooter className="p-4 pt-0">
-                            <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
+                            <Button variant="destructive" size="sm" className="w-full opacity-80 group-hover:opacity-100 transition-opacity" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}>
                               <Trash2 className="h-4 w-4 mr-2" /> Delete Item
                             </Button>
                           </CardFooter>
@@ -346,42 +353,45 @@ export default function DashboardPage() {
             
             <div className="lg:col-span-1">
               {!hasPremium ? (
-                <Card className="border-yellow-200 bg-yellow-50/50">
+                <Card className="border-yellow-200 bg-yellow-50/50 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-2 opacity-10">
+                    <Crown className="h-20 w-20 rotate-12" />
+                  </div>
                   <CardHeader>
                     <CardTitle className="text-yellow-700 flex gap-2 items-center">
                       <Crown className="text-yellow-500" /> Unlock Premium
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 relative z-10">
                     <div className="bg-white p-4 rounded-lg border border-yellow-100 shadow-sm text-center">
-                       <p className="text-2xl font-bold text-primary">₹99</p>
-                       <p className="text-xs text-muted-foreground">Monthly Subscription</p>
+                       <p className="text-3xl font-bold text-primary">₹99</p>
+                       <p className="text-xs text-muted-foreground font-bold">PER MONTH</p>
                     </div>
                     <ul className="space-y-3 text-sm text-yellow-800">
-                      <li className="flex items-center gap-2">✅ Direct WhatsApp Contact</li>
-                      <li className="flex items-center gap-2">✅ Verified Premium Badge</li>
-                      <li className="flex items-center gap-2">✅ Boosted Shop Visibility</li>
-                      <li className="flex items-center gap-2">✅ Priority Support</li>
+                      <li className="flex items-center gap-2">✅ Direct WhatsApp Button</li>
+                      <li className="flex items-center gap-2">✅ Premium Verified Badge</li>
+                      <li className="flex items-center gap-2">✅ Top Ranking in Search</li>
+                      <li className="flex items-center gap-2">✅ Shop Analytics</li>
                     </ul>
                     <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button className="w-full bg-yellow-600 hover:bg-yellow-700 font-bold h-12">
-                          Buy Premium Plan
+                        <Button className="w-full bg-yellow-600 hover:bg-yellow-700 font-bold h-12 shadow-md">
+                          Buy Premium Subscription
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5" /> Monthly Subscription
+                            <CreditCard className="h-5 w-5" /> 30-Day Subscription
                           </DialogTitle>
-                          <DialogDescription>Get 30 days of premium benefits for ₹99.</DialogDescription>
+                          <DialogDescription>Pay ₹99 to activate premium features for 1 month.</DialogDescription>
                         </DialogHeader>
                         
                         {paymentSuccess ? (
                           <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
                             <CheckCircle2 className="h-16 w-16 text-green-500 animate-bounce" />
-                            <h3 className="text-2xl font-bold">Payment Received!</h3>
-                            <p className="text-muted-foreground">Activating your premium features...</p>
+                            <h3 className="text-2xl font-bold">Payment Verified!</h3>
+                            <p className="text-muted-foreground">Premium features are now active.</p>
                           </div>
                         ) : (
                           <Tabs defaultValue="upi" className="w-full mt-4">
@@ -396,20 +406,27 @@ export default function DashboardPage() {
                             
                             <TabsContent value="upi" className="space-y-6 py-4">
                               <div className="flex flex-col items-center justify-center space-y-4">
-                                <p className="text-sm text-center text-muted-foreground font-medium">Scan QR to pay ₹99</p>
-                                <div className="relative h-56 w-56 border-8 border-primary/5 rounded-2xl overflow-hidden p-2 bg-white shadow-inner">
+                                <div className="text-center">
+                                  <p className="text-sm font-bold text-muted-foreground">Scan QR & Pay ₹99</p>
+                                  <p className="text-[10px] text-primary italic">Note: Place 'qr-code.png' in 'public' folder</p>
+                                </div>
+                                <div className="relative h-60 w-60 border-8 border-primary/5 rounded-2xl overflow-hidden p-2 bg-white shadow-xl flex items-center justify-center">
                                   <Image 
                                     src={MY_QR_CODE_URL} 
                                     alt="UPI QR Code" 
                                     fill 
                                     className="object-contain" 
+                                    priority
                                   />
+                                  <div className="absolute inset-0 bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                    <p className="text-[10px] bg-white px-2 py-1 rounded shadow">Your QR Image Here</p>
+                                  </div>
                                 </div>
                                 <div className="text-center space-y-2 w-full">
-                                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Or pay via UPI ID</Label>
-                                  <div className="flex items-center gap-2 bg-muted p-2.5 rounded-lg border justify-between">
+                                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-black">Or Use UPI ID</Label>
+                                  <div className="flex items-center gap-2 bg-muted p-3 rounded-xl border-2 border-dashed border-primary/20 justify-between">
                                     <code className="text-sm font-bold text-primary">{MY_UPI_ID}</code>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => {
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10" onClick={() => {
                                       navigator.clipboard.writeText(MY_UPI_ID);
                                       toast({ title: "Copied!", description: "UPI ID copied to clipboard." });
                                     }}>
@@ -418,12 +435,12 @@ export default function DashboardPage() {
                                   </div>
                                 </div>
                               </div>
-                              <Button className="w-full h-14 text-lg font-bold" onClick={handleProcessPayment} disabled={isProcessingPayment}>
+                              <Button className="w-full h-14 text-lg font-black shadow-lg" onClick={handleProcessPayment} disabled={isProcessingPayment}>
                                 {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Verifying Payment...</> : "I Have Paid ₹99"}
                               </Button>
                               <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-blue-50 p-2.5 rounded-md border border-blue-100">
                                 <Info className="h-3.5 w-3.5 text-blue-500" />
-                                <span>Note: System will verify your payment automatically in 1-2 seconds.</span>
+                                <span>Subscription will be activated automatically after verification.</span>
                               </div>
                             </TabsContent>
 
@@ -436,7 +453,7 @@ export default function DashboardPage() {
                                 <div className="space-y-2"><Label>Expiry</Label><Input placeholder="MM/YY" /></div>
                                 <div className="space-y-2"><Label>CVC</Label><Input placeholder="123" type="password" /></div>
                               </div>
-                              <Button className="w-full h-12" onClick={handleProcessPayment} disabled={isProcessingPayment}>
+                              <Button className="w-full h-12 font-bold" onClick={handleProcessPayment} disabled={isProcessingPayment}>
                                 {isProcessingPayment ? "Processing..." : "Pay ₹99 Securely"}
                               </Button>
                             </TabsContent>
@@ -447,21 +464,21 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-green-50 border-green-200">
+                <Card className="bg-green-50 border-green-200 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-green-700 flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-5 w-5" /> Subscription Active
+                    <CardTitle className="text-green-700 flex items-center gap-2 text-sm font-bold">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" /> Subscription Active
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-xs text-green-600 font-medium">
-                      Your premium features are active until {new Date(businessData?.premiumUntil || "").toLocaleDateString()}.
+                  <CardContent className="space-y-3">
+                    <p className="text-xs text-green-700 font-medium">
+                      Premium features are active until: <span className="font-bold underline">{new Date(businessData?.premiumUntil || "").toLocaleDateString()}</span>
                     </p>
-                    <p className="text-[10px] text-green-500">
-                      WhatsApp button and Premium Badge are now visible on your profile.
+                    <p className="text-[10px] text-green-600 italic">
+                      WhatsApp button is now visible to all customers.
                     </p>
-                    <Button variant="outline" className="w-full mt-2 text-xs border-green-300 text-green-700 hover:bg-green-100" onClick={() => setIsPaymentDialogOpen(true)}>
-                       Renew Subscription
+                    <Button variant="outline" className="w-full mt-2 text-xs border-green-300 text-green-700 hover:bg-green-100 font-bold" onClick={() => setIsPaymentDialogOpen(true)}>
+                       Renew Early (Add 30 Days)
                     </Button>
                   </CardContent>
                 </Card>
@@ -471,10 +488,10 @@ export default function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="profile">
-          <Card className="max-w-4xl mx-auto">
+          <Card className="max-w-4xl mx-auto shadow-sm">
             <CardHeader>
               <CardTitle>Shop Profile Settings</CardTitle>
-              <CardDescription>Update your shop information and contact details.</CardDescription>
+              <CardDescription>Update your digital storefront information.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdateShopProfile} className="space-y-8">
@@ -493,14 +510,14 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>WhatsApp / Contact Number</Label>
-                  <Input placeholder="e.g. 9876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} />
-                  <p className="text-[10px] text-muted-foreground">Customers will be able to contact you via this number.</p>
+                  <Label>WhatsApp Number (With Country Code, e.g. 919876543210)</Label>
+                  <Input placeholder="e.g. 919876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} />
+                  <p className="text-[10px] text-muted-foreground font-medium">Customers will be redirected to WhatsApp using this number.</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label>About Your Shop</Label>
-                  <Textarea className="min-h-[120px]" placeholder="Describe your products, services, and specialization..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} />
+                  <Textarea className="min-h-[120px]" placeholder="Describe your shop..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} />
                 </div>
                 
                 <div className="space-y-6 border-t pt-8">
@@ -524,7 +541,7 @@ export default function DashboardPage() {
                   <Label className="text-lg">Shop Banner Image</Label>
                   <div className="flex flex-col gap-4">
                     {shopProfile.shopImageUrl && (
-                      <div className="relative h-40 w-full rounded-lg overflow-hidden border">
+                      <div className="relative h-48 w-full rounded-xl overflow-hidden border-2 shadow-inner">
                         <Image src={shopProfile.shopImageUrl} alt="Preview" fill className="object-cover" />
                       </div>
                     )}
@@ -532,8 +549,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full h-14 text-lg font-bold" disabled={isUpdatingProfile}>
-                  {isUpdatingProfile ? <><Loader2 className="animate-spin mr-2" /> Saving...</> : "Save All Settings"}
+                <Button type="submit" className="w-full h-14 text-lg font-black shadow-lg" disabled={isUpdatingProfile}>
+                  {isUpdatingProfile ? <><Loader2 className="animate-spin mr-2" /> Saving Changes...</> : "Save All Shop Settings"}
                 </Button>
               </form>
             </CardContent>
