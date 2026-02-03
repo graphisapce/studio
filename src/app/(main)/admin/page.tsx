@@ -36,7 +36,8 @@ import {
   ExternalLink,
   ThumbsUp,
   ThumbsDown,
-  UserCog
+  UserCog,
+  Eye
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -280,9 +289,10 @@ export default function AdminDashboardPage() {
                   {businesses?.map((b) => (
                     <TableRow key={b.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/business/${b.id}`} className="hover:underline flex items-center gap-2">
-                          {b.shopName} <ExternalLink className="h-3 w-3 opacity-50" />
-                        </Link>
+                        <div className="flex flex-col">
+                          <span className="font-bold">{b.shopName}</span>
+                          <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{b.address}</span>
+                        </div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{b.category}</Badge></TableCell>
                       <TableCell>
@@ -293,6 +303,11 @@ export default function AdminDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/business/${b.id}`} target="_blank">
+                             <Eye className="h-4 w-4 mr-1" /> Inspect
+                          </Link>
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -385,6 +400,7 @@ export default function AdminDashboardPage() {
                     <TableHead>Product</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Shop Owner ID</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -398,6 +414,7 @@ export default function AdminDashboardPage() {
                           {p.status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground">{p.businessId}</TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="destructive" 
