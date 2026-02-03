@@ -29,13 +29,14 @@ import {
   Trash2, 
   Package, 
   Store, 
-  Phone,
   MapPin,
   Crown,
   CheckCircle2,
   CalendarDays,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Clock,
+  XCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -92,11 +93,9 @@ export default function DashboardPage() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
-  // Fetch business profile
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
 
-  // Fetch products
   const productsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, "products"), where("businessId", "==", user.uid)) : null, 
     [firestore, user]
@@ -161,9 +160,11 @@ export default function DashboardPage() {
       price: parseFloat(newProduct.price),
       description: newProduct.description,
       imageUrl: newProduct.imageUrl || "",
-      imageHint: 'product'
+      imageHint: 'product',
+      status: 'pending',
+      createdAt: new Date().toISOString()
     });
-    toast({ title: "Success", description: "Product added!" });
+    toast({ title: "Product Submitted", description: "Your item is pending admin approval." });
     setNewProduct({ title: "", price: "", description: "", imageUrl: "" });
     setIsProductDialogOpen(false);
     setIsSubmittingProduct(false);
@@ -198,7 +199,6 @@ export default function DashboardPage() {
 
     try {
       const orderData = await createCashfreeOrder(user.uid, user.email || "", userProfile.phone || "");
-      
       const cashfree = await load({ mode: "sandbox" }); 
       
       const result = await cashfree.checkout({
@@ -298,7 +298,7 @@ export default function DashboardPage() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isSubmittingProduct} className="w-full">
-                    {isSubmittingProduct ? "Publishing..." : "Publish Product"}
+                    {isSubmittingProduct ? "Publishing..." : "Submit for Approval"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -332,8 +332,20 @@ export default function DashboardPage() {
                         const prodImg = (typeof p.imageUrl === 'string' && p.imageUrl.trim() !== "")
                           ? p.imageUrl 
                           : `https://picsum.photos/seed/prod-${p.id}/400/300`;
+                        
                         return (
-                          <Card key={p.id} className="overflow-hidden group">
+                          <Card key={p.id} className="overflow-hidden group relative">
+                            <div className="absolute top-2 left-2 z-10">
+                              {p.status === 'approved' ? (
+                                <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge>
+                              ) : p.status === 'rejected' ? (
+                                <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 border-yellow-200">
+                                  <Clock className="h-3 w-3 mr-1" /> Pending Approval
+                                </Badge>
+                              )}
+                            </div>
                             <div className="relative aspect-video bg-muted">
                               <Image src={prodImg} alt={p.title} fill className="object-cover" />
                             </div>
@@ -403,10 +415,6 @@ export default function DashboardPage() {
                           <Button className="w-full h-14 text-lg font-black shadow-lg" onClick={handleCashfreePayment} disabled={isProcessingPayment}>
                             {isProcessingPayment ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting...</> : "Pay Securely with Cashfree"}
                           </Button>
-                          
-                          <p className="text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1">
-                            <AlertCircle className="h-3 w-3" /> No manual verification needed.
-                          </p>
                         </div>
                       </DialogContent>
                     </Dialog>

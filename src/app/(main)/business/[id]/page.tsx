@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -12,22 +13,25 @@ import { Watermark } from '@/components/watermark';
 import type { Business, Product } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
 import { isBusinessPremium } from '@/lib/utils';
+import { useMemo } from 'react';
 
 export default function BusinessDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const firestore = useFirestore();
 
-  // Fetch business from businesses collection
   const businessRef = useMemoFirebase(() => id ? doc(firestore, "businesses", id) : null, [firestore, id]);
   const { data: business, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
 
-  // Fetch products
   const productsQuery = useMemoFirebase(() => 
     id ? query(collection(firestore, "products"), where("businessId", "==", id)) : null, 
     [firestore, id]
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
+
+  const approvedProducts = useMemo(() => {
+    return products?.filter(p => p.status === 'approved') || [];
+  }, [products]);
 
   if (loadingBusiness || loadingProducts) {
     return (
@@ -125,17 +129,17 @@ export default function BusinessDetailPage() {
           <div className="md:col-span-2">
             <h2 className="text-2xl font-bold mb-6 font-headline flex items-center gap-2">
               Products & Services
-              <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{products?.length || 0}</span>
+              <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{approvedProducts.length}</span>
             </h2>
-            {products && products.length > 0 ? (
+            {approvedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {products.map((product) => (
+                {approvedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             ) : (
               <div className="text-center py-20 border-2 border-dashed rounded-lg bg-card/50">
-                <p className="text-muted-foreground">This shop hasn't listed any products yet.</p>
+                <p className="text-muted-foreground">No approved products listed yet.</p>
               </div>
             )}
           </div>

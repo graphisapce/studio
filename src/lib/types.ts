@@ -33,8 +33,9 @@ export interface Business {
   description?: string;
   isPaid?: boolean;
   premiumStatus?: 'active' | 'pending' | 'expired' | 'none';
-  premiumUntil?: string | null; // ISO Date string for subscription expiry
+  premiumUntil?: string | null;
   lastTransactionId?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface Product {
@@ -45,6 +46,8 @@ export interface Product {
   description: string;
   imageUrl: string;
   imageHint: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt?: string;
 }
 
 export interface UserProfile {

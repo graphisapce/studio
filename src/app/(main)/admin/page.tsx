@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { 
@@ -32,7 +33,10 @@ import {
   Crown,
   CheckCircle,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  ThumbsUp,
+  ThumbsDown,
+  UserCog
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +51,13 @@ import {
 } from "@/components/ui/table";
 import { Business, Product, UserProfile } from "@/lib/types";
 import Link from "next/link";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -54,7 +65,6 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  // Guard: Only admins allowed
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
@@ -70,7 +80,6 @@ export default function AdminDashboardPage() {
     }
   }, [user, userProfile, authLoading, router, toast]);
 
-  // Data Fetching
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
   const { data: businesses, isLoading: loadingBusinesses } = useCollection<Business>(businessesRef);
 
@@ -79,6 +88,10 @@ export default function AdminDashboardPage() {
 
   const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsRef);
+
+  const pendingProducts = useMemo(() => {
+    return products?.filter(p => p.status === 'pending') || [];
+  }, [products]);
 
   const handleTogglePremium = (businessId: string, currentStatus: boolean) => {
     const businessRef = doc(firestore, "businesses", businessId);
@@ -97,12 +110,30 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const handleProductAction = (productId: string, action: 'approved' | 'rejected') => {
+    const productRef = doc(firestore, "products", productId);
+    updateDocumentNonBlocking(productRef, {
+      status: action
+    });
+    toast({ title: `Product ${action}`, description: `Listing has been marked as ${action}.` });
+  };
+
+  const handleUserRoleChange = (userId: string, newRole: string) => {
+    if (userId === user?.uid) {
+      toast({ variant: "destructive", title: "Error", description: "You cannot change your own role." });
+      return;
+    }
+    const userRef = doc(firestore, "users", userId);
+    updateDocumentNonBlocking(userRef, {
+      role: newRole
+    });
+    toast({ title: "Role Updated", description: `User role changed to ${newRole}.` });
+  };
+
   const handleDeleteEntry = (collectionName: string, id: string) => {
     if (!confirm("Are you sure you want to delete this entry? This action cannot be undone.")) return;
-    
     const docRef = doc(firestore, collectionName, id);
     deleteDocumentNonBlocking(docRef);
-    
     toast({ title: "Deleted", description: "The entry has been removed from the database." });
   };
 
@@ -115,71 +146,125 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (userProfile?.role !== 'admin') {
-    return (
-      <div className="container mx-auto py-20 text-center">
-         <ShieldAlert className="mx-auto h-16 w-16 text-destructive opacity-20 mb-4" />
-         <h1 className="text-2xl font-bold">Unauthorized Access</h1>
-         <p className="text-muted-foreground mt-2">You need administrative privileges to view this page.</p>
-         <Button className="mt-6" asChild><Link href="/">Back to Home</Link></Button>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 bg-primary/10 text-primary rounded-xl">
-          <ShieldAlert className="h-8 w-8" />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 text-primary rounded-xl">
+            <ShieldAlert className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold font-headline">Admin Control Panel</h1>
+            <p className="text-muted-foreground">Full authority over platform data and moderation.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold font-headline">Admin Control Panel</h1>
-          <p className="text-muted-foreground">Full authority over users, businesses, and listings.</p>
-        </div>
+        {pendingProducts.length > 0 && (
+          <Badge className="animate-pulse bg-red-500 hover:bg-red-600 text-white px-4 py-2">
+            {pendingProducts.length} Pending Approvals
+          </Badge>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="font-bold uppercase text-[10px]">Businesses</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <Store className="h-6 w-6 text-blue-500" />
+            <CardDescription className="font-bold uppercase text-[10px]">Total Businesses</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Store className="h-5 w-5 text-blue-500" />
               {businesses?.length || 0}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="font-bold uppercase text-[10px]">Users</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <Users className="h-6 w-6 text-purple-500" />
+            <CardDescription className="font-bold uppercase text-[10px]">Total Users</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-500" />
               {users?.length || 0}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="font-bold uppercase text-[10px]">Products</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <Package className="h-6 w-6 text-green-500" />
+            <CardDescription className="font-bold uppercase text-[10px]">Total Listings</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Package className="h-5 w-5 text-green-500" />
               {products?.length || 0}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="pb-2">
+            <CardDescription className="font-bold uppercase text-[10px]">Premium Revenue Est.</CardDescription>
+            <CardTitle className="text-2xl text-primary font-black">
+              ₹{(businesses?.filter(b => b.isPaid).length || 0) * 99}
             </CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      <Tabs defaultValue="businesses" className="w-full">
-        <TabsList className="grid grid-cols-3 w-full max-w-md mb-8">
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="mb-8 overflow-x-auto h-auto p-1 bg-muted rounded-lg flex-nowrap w-full justify-start md:w-auto">
+          <TabsTrigger value="pending" className="relative">
+            Pending Products
+            {pendingProducts.length > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                {pendingProducts.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="businesses">Businesses</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="all-products">All Listings</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="pending">
+          <Card>
+            <CardHeader>
+              <CardTitle>Needs Approval</CardTitle>
+              <CardDescription>Review and approve new products before they go live.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pendingProducts.length === 0 ? (
+                <div className="text-center py-10 opacity-50">No pending products to review.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Shop ID</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingProducts.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{p.title}</TableCell>
+                        <TableCell>₹{p.price}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{p.businessId}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleProductAction(p.id, 'approved')}>
+                            <ThumbsUp className="h-4 w-4 mr-1" /> Approve
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => handleProductAction(p.id, 'rejected')}>
+                            <ThumbsDown className="h-4 w-4 mr-1" /> Reject
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="businesses">
           <Card>
             <CardHeader>
               <CardTitle>Business Moderation</CardTitle>
-              <CardDescription>Grant premium access or delete shops.</CardDescription>
+              <CardDescription>Grant premium access or moderate shops.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -236,7 +321,7 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>User Directory</CardTitle>
-              <CardDescription>All registered customers and business owners.</CardDescription>
+              <CardDescription>Manage user roles and access.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -254,16 +339,27 @@ export default function AdminDashboardPage() {
                       <TableCell className="font-medium">{u.name}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>
-                        <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'business' ? 'default' : 'secondary'}>
-                          {u.role}
-                        </Badge>
+                        <Select 
+                          defaultValue={u.role} 
+                          onValueChange={(v) => handleUserRoleChange(u.id, v)}
+                          disabled={u.id === user?.uid}
+                        >
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="business">Business</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="destructive" 
                           size="sm"
                           onClick={() => handleDeleteEntry("users", u.id)}
-                          disabled={u.id === user?.uid} // Don't delete self
+                          disabled={u.id === user?.uid}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -276,7 +372,7 @@ export default function AdminDashboardPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="products">
+        <TabsContent value="all-products">
           <Card>
             <CardHeader>
               <CardTitle>Global Listings</CardTitle>
@@ -288,6 +384,7 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -296,6 +393,11 @@ export default function AdminDashboardPage() {
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.title}</TableCell>
                       <TableCell>₹{p.price}</TableCell>
+                      <TableCell>
+                        <Badge variant={p.status === 'approved' ? 'default' : p.status === 'rejected' ? 'destructive' : 'secondary'}>
+                          {p.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="destructive" 
