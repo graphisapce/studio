@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Business } from "./types"
@@ -26,7 +25,6 @@ function deg2rad(deg: number) {
 
 /**
  * Checks if a business has an active premium subscription.
- * Now strictly checks for 'active' status and non-expired date.
  */
 export function isBusinessPremium(business: Business | null | undefined): boolean {
   if (!business || !business.isPaid || !business.premiumUntil || business.premiumStatus !== 'active') return false;
@@ -35,4 +33,24 @@ export function isBusinessPremium(business: Business | null | undefined): boolea
   const now = new Date();
   
   return expiryDate > now;
+}
+
+/**
+ * Checks if a shop is currently open based on set hours.
+ */
+export function isShopOpen(business: Business | null | undefined): boolean {
+  if (!business || !business.openingTime || !business.closingTime) return true; // Default to open if not set
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const currentTimeInMins = currentHour * 60 + currentMin;
+
+  const [openH, openM] = business.openingTime.split(':').map(Number);
+  const [closeH, closeM] = business.closingTime.split(':').map(Number);
+
+  const openTimeInMins = openH * 60 + openM;
+  const closeTimeInMins = closeH * 60 + closeM;
+
+  return currentTimeInMins >= openTimeInMins && currentTimeInMins <= closeTimeInMins;
 }

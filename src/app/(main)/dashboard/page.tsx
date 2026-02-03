@@ -115,7 +115,9 @@ export default function DashboardPage() {
     shopDescription: "", 
     shopContact: "", 
     shopImageUrl: "", 
-    shopLogoUrl: "" 
+    shopLogoUrl: "",
+    openingTime: "09:00",
+    closingTime: "21:00"
   });
   const [addressParts, setAddressParts] = useState({ region: "India", state: "", city: "", street: "", landmark: "", pincode: "" });
 
@@ -129,7 +131,9 @@ export default function DashboardPage() {
         shopDescription: businessData.description || "",
         shopContact: businessData.contactNumber || "",
         shopImageUrl: businessData.imageUrl || "",
-        shopLogoUrl: businessData.logoUrl || ""
+        shopLogoUrl: businessData.logoUrl || "",
+        openingTime: businessData.openingTime || "09:00",
+        closingTime: businessData.closingTime || "21:00"
       });
 
       if (businessData.address) {
@@ -220,6 +224,8 @@ export default function DashboardPage() {
       whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl || "",
       logoUrl: shopProfile.shopLogoUrl || "",
+      openingTime: shopProfile.openingTime,
+      closingTime: shopProfile.closingTime,
       isPaid: businessData?.isPaid || false,
       premiumUntil: businessData?.premiumUntil || null,
       premiumStatus: businessData?.premiumStatus || 'none'
@@ -578,6 +584,17 @@ export default function DashboardPage() {
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Opening Time</Label>
+                    <Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Closing Time</Label>
+                    <Input type="time" value={shopProfile.closingTime} onChange={(e) => setShopProfile({...shopProfile, closingTime: e.target.value})} />
                   </div>
                 </div>
 

@@ -32,7 +32,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Eye,
-  BarChart3
+  BarChart3,
+  ShieldCheck
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +113,14 @@ export default function AdminDashboardPage() {
       premiumUntil: !currentStatus ? expiryDate.toISOString() : null
     });
     toast({ title: "Status Updated" });
+  };
+
+  const handleToggleVerify = (businessId: string, currentStatus: boolean) => {
+    const businessRef = doc(firestore, "businesses", businessId);
+    updateDocumentNonBlocking(businessRef, {
+      isVerified: !currentStatus
+    });
+    toast({ title: "Verification Updated" });
   };
 
   const handleProductAction = (productId: string, action: 'approved' | 'rejected') => {
@@ -232,7 +241,7 @@ export default function AdminDashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Shop Name</TableHead>
-                    <TableHead>Premium</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Views</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -240,11 +249,21 @@ export default function AdminDashboardPage() {
                 <TableBody>
                   {businesses?.map((b) => (
                     <TableRow key={b.id}>
-                      <TableCell className="font-medium">{b.shopName}</TableCell>
-                      <TableCell>{b.isPaid ? <Badge className="bg-green-500">Active</Badge> : <Badge variant="secondary">None</Badge>}</TableCell>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        {b.shopName}
+                        {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {b.isPaid ? <Badge className="bg-green-500 w-fit">Premium</Badge> : <Badge variant="secondary" className="w-fit">Free</Badge>}
+                          {b.isVerified ? <Badge className="bg-blue-500 w-fit">Verified</Badge> : <Badge variant="outline" className="w-fit text-[10px]">Unverified</Badge>}
+                        </div>
+                      </TableCell>
                       <TableCell>{b.views || 0}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" asChild><Link href={`/business/${b.id}`}><Eye className="h-4 w-4 mr-1" /> View</Link></Button>
+                        <Button variant="outline" size="sm" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
+                           <ShieldCheck className="h-4 w-4 mr-1" /> {b.isVerified ? "Unverify" : "Verify"}
+                        </Button>
                         <Button variant="outline" size="sm" className={b.isPaid ? "text-destructive" : "text-green-600"} onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
                           <Crown className="h-4 w-4 mr-1" /> {b.isPaid ? "Revoke" : "Grant"}
                         </Button>

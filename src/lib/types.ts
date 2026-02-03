@@ -27,7 +27,7 @@ export interface Business {
   contactNumber: string;
   whatsappLink: string;
   imageUrl: string; // Used as Banner
-  logoUrl?: string; // New: Official Shop Logo
+  logoUrl?: string; // Official Shop Logo
   imageHint: string;
   latitude?: number;
   longitude?: number;
@@ -40,6 +40,9 @@ export interface Business {
   views?: number;
   rating?: number;
   reviewCount?: number;
+  isVerified?: boolean;
+  openingTime?: string; // Format: "09:00"
+  closingTime?: string; // Format: "21:00"
 }
 
 export interface Product {

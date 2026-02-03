@@ -7,12 +7,12 @@ import { doc, collection, query, where, increment, addDoc } from "firebase/fires
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Phone, MessageCircle, Loader2, Store, Lock, Crown, Eye, Share2, Star, MapPin } from 'lucide-react';
+import { Phone, MessageCircle, Loader2, Store, Lock, Crown, Eye, Share2, Star, MapPin, Clock, ShieldCheck } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
 import type { Business, Product, Review } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
-import { isBusinessPremium } from '@/lib/utils';
+import { isBusinessPremium, isShopOpen } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -128,6 +128,7 @@ export default function BusinessDetailPage() {
     : `https://picsum.photos/seed/shop-logo-${business.id}/200/200`;
     
   const hasPremium = isBusinessPremium(business);
+  const isOpen = isShopOpen(business);
 
   return (
     <div className="container mx-auto max-w-6xl pb-12 px-4">
@@ -158,15 +159,19 @@ export default function BusinessDetailPage() {
            </Avatar>
            
            <div className="flex-1 pb-2">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h1 className="text-2xl md:text-4xl font-black font-headline text-foreground drop-shadow-sm">
                   {business.shopName}
                 </h1>
+                {business.isVerified && <ShieldCheck className="h-6 w-6 text-blue-500" />}
                 {hasPremium && (
                   <Badge className="bg-yellow-500 text-white border-none flex gap-1 items-center px-2 py-0.5">
                     <Crown className="h-3 w-3" /> Premium
                   </Badge>
                 )}
+                <Badge variant={isOpen ? "default" : "destructive"} className="animate-pulse">
+                  <Clock className="h-3 w-3 mr-1" /> {isOpen ? "Open Now" : "Closed"}
+                </Badge>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground font-medium">
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
@@ -194,6 +199,10 @@ export default function BusinessDetailPage() {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <p className="text-sm leading-relaxed">{business.address}</p>
+                </div>
+                <div className="flex items-center gap-3 text-sm font-bold">
+                  <Clock className="h-5 w-5 text-primary shrink-0" />
+                  <span>{business.openingTime || "09:00"} AM - {business.closingTime || "09:00"} PM</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{business.description || "No description provided."}</p>
                 
@@ -278,7 +287,7 @@ export default function BusinessDetailPage() {
             {approvedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {approvedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard key={product.id} product={product} shopWhatsApp={business.contactNumber} shopName={business.shopName} />
                 ))}
               </div>
             ) : (

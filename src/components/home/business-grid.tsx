@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { collection, query, limit, getDocs } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { mockBusinesses } from "@/lib/data";
-import type { Business, BusinessCategory, PlatformConfig } from "@/lib/types";
+import type { Business, BusinessCategory, PlatformConfig, Product } from "@/lib/types";
 import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,9 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
 
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
   const { data: realBusinesses, isLoading: loadingRealData } = useCollection<Business>(businessesRef);
+
+  const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
+  const { data: allProducts, isLoading: loadingProducts } = useCollection<Product>(productsRef);
 
   useEffect(() => {
     if (externalCategory !== undefined) setSelectedCategory(externalCategory);
@@ -70,12 +72,23 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
     let businesses: Business[] = realBusinesses ? [...realBusinesses] : [];
     if (businesses.length === 0 && !loadingRealData) businesses = [...mockBusinesses];
 
+    // Identify businesses that have products matching the search term
+    const businessIdsWithMatchingProducts = new Set<string>();
+    if (searchTerm.trim() !== "" && allProducts) {
+      allProducts.forEach(p => {
+        if (p.status === 'approved' && p.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+          businessIdsWithMatchingProducts.add(p.businessId);
+        }
+      });
+    }
+
     let filtered = businesses.filter((business) => {
       if (!business) return false;
       const shopName = business.shopName || "";
       const matchesCategory = !selectedCategory || business.category === selectedCategory;
       const matchesSearch = shopName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           (business.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+                           (business.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           businessIdsWithMatchingProducts.has(business.id);
       return matchesCategory && matchesSearch;
     });
 
@@ -98,7 +111,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
     });
 
     return filtered;
-  }, [searchTerm, selectedCategory, userLocation, realBusinesses, loadingRealData]);
+  }, [searchTerm, selectedCategory, userLocation, realBusinesses, loadingRealData, allProducts]);
 
   return (
     <div className="container mx-auto px-4 py-8 pb-20">
@@ -126,41 +139,41 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
              Market <span className="text-primary">Ab Aapke Haath</span> Mein
            </h1>
            <p className="text-muted-foreground max-w-xl mx-auto text-lg">
-             Hamara smart system aapke liye sabse behtareen local shops dhoondta hai.
+             Dhoondein shops, products aur services apne pados mein.
            </p>
         </div>
 
         {/* Quick Hub for Customers */}
-        <div className="flex justify-center gap-4 py-2">
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Food')}>
+        <div className="flex justify-center gap-4 py-2 overflow-x-auto no-scrollbar px-4">
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Food')}>
             <div className="p-3 rounded-full bg-orange-100 text-orange-600"><Utensils className="h-6 w-6" /></div>
-            <span className="text-xs font-bold uppercase tracking-widest">Food</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Food</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Groceries')}>
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Groceries')}>
             <div className="p-3 rounded-full bg-green-100 text-green-600"><ShoppingCart className="h-6 w-6" /></div>
-            <span className="text-xs font-bold uppercase tracking-widest">Groceries</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Groceries</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Repairs')}>
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Repairs')}>
             <div className="p-3 rounded-full bg-blue-100 text-blue-600"><Wrench className="h-6 w-6" /></div>
-            <span className="text-xs font-bold uppercase tracking-widest">Repairs</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Repairs</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedCategory('Electronics')}>
+          <Button variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 hover:text-primary transition-colors shrink-0" onClick={() => setSelectedCategory('Electronics')}>
             <div className="p-3 rounded-full bg-purple-100 text-purple-600"><Zap className="h-6 w-6" /></div>
-            <span className="text-xs font-bold uppercase tracking-widest">Gadgets</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Gadgets</span>
           </Button>
         </div>
 
-        <div className="relative max-w-2xl mx-auto">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
+        <div className="relative max-w-2xl mx-auto px-4">
+          <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
           <Input
-            placeholder="Kya dhoond rahe hain? (e.g. Pizza, Salon, Repairing)"
+            placeholder="Search Shops or Products (e.g. Pizza, Milk, Salon)"
             className="pl-14 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10 focus-visible:ring-primary focus-visible:border-primary transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-5xl mx-auto">
+        <div className="flex flex-wrap items-center justify-center gap-2 max-w-5xl mx-auto px-4">
           <Button
             variant={!selectedCategory ? "default" : "outline"}
             onClick={() => setSelectedCategory(null)}
@@ -228,7 +241,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
           })}
         </div>
       ) : (
-        <div className="text-center py-24 bg-muted/20 rounded-[2rem] border-4 border-dashed border-muted">
+        <div className="text-center py-24 bg-muted/20 rounded-[2rem] border-4 border-dashed border-muted mx-4">
           <div className="max-w-md mx-auto space-y-4">
             <MapPin className="h-16 w-16 mx-auto text-muted-foreground opacity-30" />
             <h2 className="text-3xl font-black">Koi shop nahi mili</h2>
