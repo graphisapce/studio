@@ -69,16 +69,15 @@ import { isBusinessPremium } from "@/lib/utils";
 
 // --- CONFIGURATION: EDIT YOUR DETAILS HERE ---
 /**
- * 1. Apni UPI ID yahan dalein (Example: yourname@upi)
+ * 1. Apni UPI ID yahan dalein
  */
 const MY_UPI_ID = "9876543210@paytm"; 
 
 /**
- * 2. QR Code Instruction:
- * Agar aapne 'public' folder mein 'qr-code.png' rakha hai, toh niche wala path sahi hai.
- * Agar aap online link use karna chahte hain, toh pura URL yahan paste karein.
+ * 2. QR Code URL:
+ * Google Drive direct link set kar diya gaya hai.
  */
-const MY_QR_CODE_URL = "/qr-code.png"; 
+const MY_QR_CODE_URL = "https://drive.google.com/uc?export=view&id=1QBn2Z0HBnQBfGv_fMtM4_lwWDbXQY1g2"; 
 // ---------------------------------------------
 
 const categoryList: BusinessCategory[] = [
@@ -408,7 +407,6 @@ export default function DashboardPage() {
                               <div className="flex flex-col items-center justify-center space-y-4">
                                 <div className="text-center">
                                   <p className="text-sm font-bold text-muted-foreground">Scan QR & Pay ₹99</p>
-                                  <p className="text-[10px] text-primary italic">Note: Place 'qr-code.png' in 'public' folder</p>
                                 </div>
                                 <div className="relative h-60 w-60 border-8 border-primary/5 rounded-2xl overflow-hidden p-2 bg-white shadow-xl flex items-center justify-center">
                                   <Image 
@@ -417,10 +415,8 @@ export default function DashboardPage() {
                                     fill 
                                     className="object-contain" 
                                     priority
+                                    unoptimized
                                   />
-                                  <div className="absolute inset-0 bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                    <p className="text-[10px] bg-white px-2 py-1 rounded shadow">Your QR Image Here</p>
-                                  </div>
                                 </div>
                                 <div className="text-center space-y-2 w-full">
                                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-black">Or Use UPI ID</Label>
