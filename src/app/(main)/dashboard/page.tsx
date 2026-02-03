@@ -39,7 +39,9 @@ import {
   TrendingUp,
   Sparkles,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MessageCircle,
+  Phone
 } from "lucide-react";
 import {
   Dialog,
@@ -599,8 +601,18 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>WhatsApp Number (With Country Code, e.g. 919876543210)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <Phone className="h-3 w-3" /> Contact Number (91...)
+                    </Label>
+                    {!hasPremium && (
+                      <Badge variant="outline" className="text-[10px] border-yellow-500 text-yellow-600 flex gap-1">
+                        <Lock className="h-2 w-2" /> WhatsApp is Premium Benefit
+                      </Badge>
+                    )}
+                  </div>
                   <Input placeholder="e.g. 919876543210" value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} />
+                  <p className="text-[10px] text-muted-foreground">Used for calling. WhatsApp button will be enabled automatically for Premium users.</p>
                 </div>
 
                 <div className="space-y-2">

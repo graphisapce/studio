@@ -287,7 +287,7 @@ export default function BusinessDetailPage() {
             {approvedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {approvedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} shopWhatsApp={business.contactNumber} shopName={business.shopName} />
+                  <ProductCard key={product.id} product={product} shopWhatsApp={business.contactNumber} shopName={business.shopName} isPremium={hasPremium} />
                 ))}
               </div>
             ) : (

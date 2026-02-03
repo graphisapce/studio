@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { Product, Business } from "@/lib/types";
+import type { Product } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -9,24 +9,32 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, PhoneCall } from "lucide-react";
 import { Watermark } from "@/components/watermark";
 
 interface ProductCardProps {
   product: Product;
   shopWhatsApp?: string;
   shopName?: string;
+  isPremium?: boolean;
 }
 
-export function ProductCard({ product, shopWhatsApp, shopName }: ProductCardProps) {
+export function ProductCard({ product, shopWhatsApp, shopName, isPremium = false }: ProductCardProps) {
   const displayImage = (typeof product?.imageUrl === 'string' && product.imageUrl.trim() !== "") 
     ? product.imageUrl 
     : `https://picsum.photos/seed/prod-${product?.id || 'default'}/400/300`;
 
-  const handleOrder = () => {
+  const handleAction = () => {
     if (!shopWhatsApp) return;
-    const message = encodeURIComponent(`Hi ${shopName}, I'm interested in buying your product "${product.title}" listed on LocalVyapar. Please share more details!`);
-    window.open(`https://wa.me/${shopWhatsApp.replace(/\D/g, '')}?text=${message}`, '_blank');
+    
+    if (isPremium) {
+      // WhatsApp Order for Premium
+      const message = encodeURIComponent(`Hi ${shopName}, I'm interested in buying your product "${product.title}" listed on LocalVyapar. Please share more details!`);
+      window.open(`https://wa.me/${shopWhatsApp.replace(/\D/g, '')}?text=${message}`, '_blank');
+    } else {
+      // Direct Call for Free Users
+      window.location.href = `tel:${shopWhatsApp.replace(/\D/g, '')}`;
+    }
   };
 
   return (
@@ -51,13 +59,24 @@ export function ProductCard({ product, shopWhatsApp, shopName }: ProductCardProp
         <CardDescription className="text-xs line-clamp-2">{product?.description || "No description provided."}</CardDescription>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button 
-          onClick={handleOrder}
-          disabled={!shopWhatsApp}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-10 shadow-sm"
-        >
-          <MessageCircle className="h-4 w-4 mr-2" /> Buy on WhatsApp
-        </Button>
+        {isPremium ? (
+          <Button 
+            onClick={handleAction}
+            disabled={!shopWhatsApp}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-10 shadow-sm"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" /> Buy on WhatsApp
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleAction}
+            disabled={!shopWhatsApp}
+            variant="outline"
+            className="w-full border-primary text-primary hover:bg-primary/5 font-bold h-10 shadow-sm"
+          >
+            <PhoneCall className="h-4 w-4 mr-2" /> Call to Order
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
