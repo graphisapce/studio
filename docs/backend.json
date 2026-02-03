@@ -1,156 +1,198 @@
-
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Represents a user's profile in the system.",
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
       "type": "object",
+      "description": "Represents a user of the LocalVyapar application.",
       "properties": {
-        "uid": {
+        "id": {
           "type": "string",
-          "description": "The user's unique ID from Firebase Auth."
+          "description": "Unique identifier for the user. (Primary Key)"
         },
         "name": {
           "type": "string",
-          "description": "The user's display name."
+          "description": "The user's full name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the application ('Customer' or 'Business Owner')."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number."
         },
         "email": {
           "type": "string",
           "description": "The user's email address.",
           "format": "email"
-        },
-        "phone": {
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "role",
+        "phone"
+      ]
+    },
+    "Business": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Business",
+      "type": "object",
+      "description": "Represents a business registered on the LocalVyapar application.",
+      "properties": {
+        "id": {
           "type": "string",
-          "description": "The user's personal phone number."
+          "description": "Unique identifier for the business. (Primary Key)"
         },
-        "photoURL": {
+        "ownerId": {
           "type": "string",
-          "description": "URL of the user's profile picture.",
-          "format": "uri"
-        },
-        "role": {
-          "type": "string",
-          "description": "The user's role in the application.",
-          "enum": [
-            "customer",
-            "business"
-          ]
+          "description": "Reference to the User who owns the business. (Relationship: User 1:N Business)"
         },
         "shopName": {
           "type": "string",
-          "description": "The name of the business shop."
+          "description": "The name of the business."
         },
-        "shopAddress": {
+        "category": {
           "type": "string",
-          "description": "The full professional address of the shop."
+          "description": "The category of the business (e.g., Food, Services, Retail)."
         },
-        "shopCategory": {
+        "address": {
           "type": "string",
-          "description": "The category of the business.",
-          "enum": [
-            "Food",
-            "Groceries",
-            "Retail",
-            "Electronics",
-            "Repairs",
-            "Services",
-            "Beauty",
-            "Health",
-            "Education",
-            "Automobile",
-            "Gifts",
-            "Home Decor",
-            "Clothing",
-            "Jewelry",
-            "Hardware",
-            "Pharmacy",
-            "Stationery",
-            "Others"
-          ]
+          "description": "The address of the business."
         },
-        "shopDescription": {
+        "geoPoint": {
           "type": "string",
-          "description": "A brief description of what the shop offers."
+          "description": "Geographical coordinates of the business (e.g., latitude, longitude)."
         },
-        "shopContact": {
+        "contactNumber": {
           "type": "string",
-          "description": "Public contact number for the shop."
+          "description": "The contact phone number of the business."
         },
-        "shopImageUrls": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of Base64 strings for shop photos."
-        },
-        "createdAt": {
+        "whatsappLink": {
           "type": "string",
-          "description": "The timestamp when the user account was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "uid",
-        "email",
-        "role",
-        "createdAt"
-      ]
-    },
-    "Product": {
-      "title": "Product",
-      "description": "Represents a product or service offered by a business.",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "businessId": {
-          "type": "string",
-          "description": "The UID of the business owner."
-        },
-        "title": {
-          "type": "string"
-        },
-        "price": {
-          "type": "number"
-        },
-        "description": {
-          "type": "string"
+          "description": "The WhatsApp link for the business."
         },
         "imageUrl": {
           "type": "string",
-          "description": "Base64 image data."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
+          "description": "URL of the business's image."
         }
       },
       "required": [
+        "id",
+        "ownerId",
+        "shopName",
+        "category",
+        "address",
+        "geoPoint",
+        "contactNumber",
+        "whatsappLink",
+        "imageUrl"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product or service offered by a business.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product. (Primary Key)"
+        },
+        "businessId": {
+          "type": "string",
+          "description": "Reference to the Business that offers the product. (Relationship: Business 1:N Product)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the product."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the product."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the product."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the product."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the product's image."
+        }
+      },
+      "required": [
+        "id",
         "businessId",
         "title",
-        "price"
+        "price",
+        "description",
+        "category",
+        "imageUrl"
       ]
     }
   },
   "auth": {
     "providers": [
-      "google.com",
-      "password"
+      "password",
+      "anonymous"
     ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/backend/entities/UserProfile"
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Only the authenticated user can read or write their own document.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            }
+          ]
+        }
       },
-      "description": "User profile documents, keyed by user ID."
-    },
-    "/products/{productId}": {
-      "schema": {
-        "$ref": "#/backend/entities/Product"
+      {
+        "path": "/businesses/{businessId}",
+        "definition": {
+          "entityName": "Business",
+          "schema": {
+            "$ref": "#/backend/entities/Business"
+          },
+          "description": "Stores business profiles. Includes 'ownerId' for authorization independence.",
+          "params": [
+            {
+              "name": "businessId",
+              "description": "The unique ID of the business."
+            }
+          ]
+        }
       },
-      "description": "Product documents for businesses."
-    }
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product information. Includes 'businessId' to link to the owning business.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique ID of the product."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to address the 'permission-denied' error by ensuring clear ownership and access control. The core principle is Authorization Independence, achieved through denormalization and strategic data segregation. \n\n1.  **Users Collection (`/users/{userId}`):** Stores user profiles. Access is limited to the user themselves. This uses the standard Path-Based ownership model.\n2.  **Businesses Collection (`/businesses/{businessId}`):** Stores business profiles. Each business document includes the `ownerId` field, establishing ownership. List operations require read access to all business documents, which is fine since the businesses are considered discoverable.  Write access is limited to the `ownerId`.\n3.  **Products Collection (`/products/{productId}`):** Stores product information. Each product document contains the `businessId`. This is a top-level collection for simplified querying across all businesses. List operations are allowed, as products are generally public. Create/Update/Delete operations are restricted to the business owner.\n\n**Authorization Independence (Denormalization):**\nThe `businesses` collection includes the `ownerId`, removing the need to query the `users` collection to determine ownership.\nThe `products` collection uses the `businessId` to link the `product` to its `business`. Security rules can efficiently validate that the user attempting to modify a product is, in fact, the owner of the corresponding business.\n\n**QAPs (Rules are not Filters):**\n*   The structure enables secure list operations for both `businesses` and `products` because there are no complex filtering requirements based on user roles within the rules themselves.  Filtering is handled client-side after a user is authorized to access the collection.\n*   Segregation: Different access needs are handled by segregating user data (private) from business/product data (publicly listable, owner-editable).\n\nThis structure avoids hierarchical `get()` calls in security rules, ensuring atomic operations and making it easier to debug permission issues. It uses explicit ownership fields (`ownerId`) and collection-level security to enforce access control."
   }
 }
