@@ -88,7 +88,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product, Order } from "@/lib/types";
 import { isBusinessPremium } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
-import { generateSocialCaption } from "@/ai/flows/social-caption-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -351,9 +350,9 @@ export default function DashboardPage() {
     }
   };
 
-  const qrUrl = origin && user?.uid 
+  const qrUrl = useMemo(() => origin && user?.uid 
     ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(origin + '/business/' + user.uid)}`
-    : null;
+    : null, [origin, user?.uid]);
 
   const downloadQRCode = async () => {
     if (!qrUrl) return;
