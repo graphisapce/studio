@@ -1,3 +1,4 @@
+
 "use client";
 import Link from "next/link";
 import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert } from "lucide-react";
@@ -16,8 +17,8 @@ export function DesktopSidebar() {
     return userProfile?.role === 'business';
   }, [userProfile]);
 
-  const isAdmin = useMemo(() => {
-    return userProfile?.role === 'admin';
+  const canManage = useMemo(() => {
+    return userProfile && ['admin', 'moderator'].includes(userProfile.role);
   }, [userProfile]);
 
   return (
@@ -41,7 +42,7 @@ export function DesktopSidebar() {
           </Button>
         )}
 
-        {user && isAdmin && (
+        {user && canManage && (
           <Button variant="ghost" className="justify-start gap-3 bg-red-50 text-red-600 hover:bg-red-100" asChild>
             <Link href="/admin"><ShieldAlert className="h-5 w-5" /><span>Admin Panel</span></Link>
           </Button>
@@ -61,7 +62,7 @@ export function DesktopSidebar() {
             </p>
             {userProfile ? (
               <p className="text-xs text-muted-foreground capitalize mb-2 font-medium">
-                {userProfile.role === 'admin' ? 'Administrator' : userProfile.role === 'business' ? 'Business Account' : 'Customer Account'}
+                {userProfile.role === 'admin' ? 'Administrator' : userProfile.role === 'business' ? 'Business Account' : userProfile.role === 'moderator' ? 'Moderator Staff' : 'Customer Account'}
               </p>
             ) : (
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
