@@ -89,6 +89,7 @@ import { generateProductDescription } from "@/ai/flows/generate-description-flow
 import { generateSocialCaption } from "@/ai/flows/social-caption-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
