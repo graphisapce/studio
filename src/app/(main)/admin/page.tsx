@@ -36,7 +36,10 @@ import {
   User as UserIcon,
   Trash2,
   UserPlus,
-  Heart
+  Search,
+  CheckCircle2,
+  TrendingUp,
+  AlertCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +51,7 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from "@/table-ui";
+} from "@/components/ui/table";
 import { Business, Product, UserProfile, PlatformConfig } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +65,8 @@ import {
 import {
   BarChart,
   Bar,
+  XAxis,
+  YAxis,
   Tooltip,
   ResponsiveContainer,
   Cell
@@ -89,6 +94,7 @@ export default function AdminDashboardPage() {
   // Tabs & Filter State
   const [activeTab, setActiveTab] = useState("approvals");
   const [userRoleFilter, setUserRoleFilter] = useState<"all" | "customer" | "staff">("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const isAdminOrModerator = useMemo(() => {
     return user && userProfile && ['admin', 'moderator'].includes(userProfile.role);
@@ -147,14 +153,37 @@ export default function AdminDashboardPage() {
   const customers = useMemo(() => allUsers?.filter(u => u.role === 'customer') || [], [allUsers]);
   const staffMembers = useMemo(() => allUsers?.filter(u => ['admin', 'moderator'].includes(u.role)) || [], [allUsers]);
 
-  // Filtered Users List
+  // Filtered Users List with Search
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
-    if (userRoleFilter === 'customer') return allUsers.filter(u => u.role === 'customer');
-    if (userRoleFilter === 'staff') return allUsers.filter(u => ['admin', 'moderator'].includes(u.role));
-    return allUsers;
-  }, [allUsers, userRoleFilter]);
+    let list = allUsers;
+    
+    if (userRoleFilter === 'customer') list = list.filter(u => u.role === 'customer');
+    if (userRoleFilter === 'staff') list = list.filter(u => ['admin', 'moderator'].includes(u.role));
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(u => 
+        u.name.toLowerCase().includes(q) || 
+        u.email.toLowerCase().includes(q)
+      );
+    }
+    
+    return list;
+  }, [allUsers, userRoleFilter, searchQuery]);
 
+  // Filtered Businesses with Search
+  const filteredBusinesses = useMemo(() => {
+    if (!businesses) return [];
+    if (!searchQuery.trim()) return businesses;
+    const q = searchQuery.toLowerCase();
+    return businesses.filter(b => 
+      b.shopName.toLowerCase().includes(q) || 
+      b.ownerId.toLowerCase().includes(q)
+    );
+  }, [businesses, searchQuery]);
+
+  // Chart Data: Category Distribution
   const chartData = useMemo(() => {
     if (!businesses) return [];
     const categories = businesses.reduce((acc, b) => {
@@ -162,10 +191,13 @@ export default function AdminDashboardPage() {
       return acc;
     }, {} as Record<string, number>);
     
-    return Object.entries(categories).map(([name, value]) => ({ name, value }));
+    return Object.entries(categories)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
   }, [businesses]);
 
-  const COLORS = ['#14b8a6', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981'];
+  const COLORS = ['#14b8a6', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#f97316', '#06b6d4'];
 
   // Actions
   const handleUpdateConfig = async () => {
@@ -236,9 +268,11 @@ export default function AdminDashboardPage() {
     toast({ title: "Business Deleted" });
   };
 
-  const handleStatClick = (type: "business" | "user-all" | "user-customer" | "user-staff") => {
+  const handleStatClick = (type: "business" | "user-all" | "user-customer" | "user-staff" | "approvals") => {
     if (type === "business") {
       setActiveTab("businesses");
+    } else if (type === "approvals") {
+      setActiveTab("approvals");
     } else {
       setActiveTab("users");
       if (type === "user-all") setUserRoleFilter("all");
@@ -260,27 +294,37 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/10 text-primary rounded-xl">
-            {isFullAdmin ? <ShieldAlert className="h-8 w-8" /> : <UserPlus className="h-8 w-8" />}
+            {isFullAdmin ? <ShieldAlert className="h-8 w-8" /> : <ShieldCheck className="h-8 w-8" />}
           </div>
           <div>
             <h1 className="text-3xl font-bold font-headline">
-              {isFullAdmin ? "Super Admin Dashboard" : "Staff Moderation Panel"}
+              {isFullAdmin ? "Super Admin" : "Moderator Panel"}
             </h1>
-            <p className="text-muted-foreground">Manage users, shops, and platform content.</p>
+            <p className="text-muted-foreground text-sm">Platform management and insights.</p>
           </div>
+        </div>
+        
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search name, email, shop..." 
+            className="pl-10 h-10 rounded-full"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <Card 
-          className={cn("shadow-sm cursor-pointer transition-all hover:ring-2 hover:ring-primary/20", activeTab === 'businesses' && "ring-2 ring-primary")}
+          className={cn("shadow-sm cursor-pointer transition-all hover:scale-[1.02]", activeTab === 'businesses' && "ring-2 ring-primary")}
           onClick={() => handleStatClick("business")}
         >
           <CardHeader className="p-4">
-            <CardDescription className="font-bold uppercase text-[10px]">Businesses</CardDescription>
+            <CardDescription className="font-bold uppercase text-[10px]">Shops</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
               <Store className="h-5 w-5 text-blue-500" />
               {businesses?.length || 0}
@@ -289,20 +333,20 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card 
-          className={cn("shadow-sm cursor-pointer transition-all hover:ring-2 hover:ring-primary/20", activeTab === 'users' && userRoleFilter === 'all' && "ring-2 ring-primary")}
-          onClick={() => handleStatClick("user-all")}
+          className={cn("shadow-sm cursor-pointer transition-all hover:scale-[1.02]", activeTab === 'approvals' && "ring-2 ring-primary")}
+          onClick={() => handleStatClick("approvals")}
         >
           <CardHeader className="p-4">
-            <CardDescription className="font-bold uppercase text-[10px]">Total Users</CardDescription>
+            <CardDescription className="font-bold uppercase text-[10px]">Pending</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <UsersIcon className="h-5 w-5 text-purple-500" />
-              {allUsers?.length || 0}
+              <AlertCircle className={cn("h-5 w-5", pendingProducts.length > 0 ? "text-red-500 animate-pulse" : "text-muted-foreground")} />
+              {pendingProducts.length}
             </CardTitle>
           </CardHeader>
         </Card>
 
         <Card 
-          className={cn("shadow-sm cursor-pointer transition-all hover:ring-2 hover:ring-primary/20", activeTab === 'users' && userRoleFilter === 'customer' && "ring-2 ring-primary")}
+          className={cn("shadow-sm cursor-pointer transition-all hover:scale-[1.02]", activeTab === 'users' && userRoleFilter === 'customer' && "ring-2 ring-primary")}
           onClick={() => handleStatClick("user-customer")}
         >
           <CardHeader className="p-4">
@@ -315,11 +359,11 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card 
-          className={cn("shadow-sm cursor-pointer transition-all hover:ring-2 hover:ring-primary/20", activeTab === 'users' && userRoleFilter === 'staff' && "ring-2 ring-primary")}
+          className={cn("shadow-sm cursor-pointer transition-all hover:scale-[1.02]", activeTab === 'users' && userRoleFilter === 'staff' && "ring-2 ring-primary")}
           onClick={() => handleStatClick("user-staff")}
         >
           <CardHeader className="p-4">
-            <CardDescription className="font-bold uppercase text-[10px]">Staff/Admins</CardDescription>
+            <CardDescription className="font-bold uppercase text-[10px]">Staff</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2 text-primary">
               <ShieldCheck className="h-5 w-5" />
               {staffMembers.length}
@@ -327,11 +371,11 @@ export default function AdminDashboardPage() {
           </CardHeader>
         </Card>
 
-        <Card className="shadow-sm md:col-span-1 lg:col-span-1 hidden lg:block overflow-hidden">
+        <Card className="shadow-sm hidden lg:block overflow-hidden border-none bg-primary/5">
           <CardContent className="h-[80px] p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <Bar dataKey="value">
+                <Bar dataKey="value" radius={[2, 2, 0, 0]}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -343,60 +387,58 @@ export default function AdminDashboardPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-8">
-          <TabsTrigger value="approvals">Approvals ({pendingProducts.length})</TabsTrigger>
-          <TabsTrigger value="users">Users & Staff</TabsTrigger>
-          <TabsTrigger value="businesses">Shops</TabsTrigger>
-          {isFullAdmin && <TabsTrigger value="config">Settings</TabsTrigger>}
+        <TabsList className="mb-8 h-12 bg-muted/50 p-1">
+          <TabsTrigger value="approvals" className="px-6 data-[state=active]:bg-white">Approval Queue</TabsTrigger>
+          <TabsTrigger value="users" className="px-6 data-[state=active]:bg-white">Users & Staff</TabsTrigger>
+          <TabsTrigger value="businesses" className="px-6 data-[state=active]:bg-white">Active Shops</TabsTrigger>
+          {isFullAdmin && <TabsTrigger value="config" className="px-6 data-[state=active]:bg-white">Platform Settings</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="users">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+        <TabsContent value="users" className="space-y-4">
+          <Card className="border-none shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b mb-4">
               <div>
-                <CardTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Account Moderation</CardTitle>
-                <CardDescription>
-                  {userRoleFilter === 'customer' ? "Showing only Customers." : userRoleFilter === 'staff' ? "Showing Staff & Moderators." : "Showing all account types."}
-                </CardDescription>
+                <CardTitle className="text-xl flex items-center gap-2"><UserCog className="h-5 w-5 text-primary" /> Account Moderation</CardTitle>
+                <CardDescription>Update roles and manage account access.</CardDescription>
               </div>
               <Select value={userRoleFilter} onValueChange={(v: any) => setUserRoleFilter(v)}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Filter by Role" />
+                <SelectTrigger className="w-[150px] rounded-full">
+                  <SelectValue placeholder="Role Filter" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
-                  <SelectItem value="customer">Customers</SelectItem>
-                  <SelectItem value="staff">Staff Members</SelectItem>
+                  <SelectItem value="all">All Profiles</SelectItem>
+                  <SelectItem value="customer">Customers Only</SelectItem>
+                  <SelectItem value="staff">Staff & Admins</SelectItem>
                 </SelectContent>
               </Select>
             </CardHeader>
             <CardContent>
               {loadingUsers ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>User Identity</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead className="text-right">Manage</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers?.map((u) => (
-                      <TableRow key={u.id}>
+                      <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-bold flex items-center gap-2">
-                              <UserIcon className="h-3 w-3 text-muted-foreground" /> {u.name}
+                              {u.name}
                             </span>
-                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Mail className="h-2 w-2" /> {u.email}
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-3 w-3" /> {u.email}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'moderator' ? 'default' : u.role === 'business' ? 'secondary' : 'outline'} className="uppercase text-[10px]">
+                          <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'moderator' ? 'default' : u.role === 'business' ? 'secondary' : 'outline'} className="uppercase text-[9px] font-black">
                             {u.role}
                           </Badge>
                         </TableCell>
@@ -407,7 +449,7 @@ export default function AdminDashboardPage() {
                               defaultValue={u.role} 
                               onValueChange={(val: any) => handleUpdateUserRole(u.id, u.role, val)}
                             >
-                              <SelectTrigger className="w-[120px] h-8 text-xs">
+                              <SelectTrigger className="w-[110px] h-8 text-[10px] font-bold rounded-full">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -421,18 +463,18 @@ export default function AdminDashboardPage() {
                             {isFullAdmin && u.id !== user?.uid && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10">
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete User Profile?</AlertDialogTitle>
-                                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                    <AlertDialogDescription>This will remove the user permanently. This action cannot be undone.</AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id, u.role)} className="bg-destructive">Delete</AlertDialogAction>
+                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id, u.role)} className="bg-destructive">Delete Permanently</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
@@ -449,40 +491,55 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="config">
-           <Card>
-             <CardHeader><CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" /> Platform Announcement</CardTitle></CardHeader>
+           <Card className="border-none shadow-md">
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5 text-primary" /> Platform-wide Announcement</CardTitle>
+               <CardDescription>This message will appear on the homepage for all users.</CardDescription>
+             </CardHeader>
              <CardContent className="space-y-4">
-               <Input value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} placeholder="Announcement text..." />
-               <Button onClick={handleUpdateConfig} className="gap-2"><Save className="h-4 w-4" /> Save</Button>
+               <div className="space-y-2">
+                 <Label>Announcement Text</Label>
+                 <Input value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} placeholder="e.g. Swagat hai LocalVyapar par! Nayi shops ab live hain." />
+               </div>
+               <Button onClick={handleUpdateConfig} className="gap-2 rounded-full"><Save className="h-4 w-4" /> Save Configuration</Button>
              </CardContent>
            </Card>
         </TabsContent>
 
         <TabsContent value="approvals">
-          <Card>
-            <CardHeader><CardTitle>Approval Queue</CardTitle></CardHeader>
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <CardTitle>Product Approval Queue</CardTitle>
+              <CardDescription>Verify and approve new product listings from shop owners.</CardDescription>
+            </CardHeader>
             <CardContent>
               {loadingProducts ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
               ) : pendingProducts.length === 0 ? (
-                <div className="text-center py-10 opacity-50">No pending products.</div>
+                <div className="text-center py-20 opacity-30 flex flex-col items-center">
+                  <CheckCircle2 className="h-12 w-12 mb-4" />
+                  <p className="font-bold">Queue is empty. Great job!</p>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
+                    <TableRow className="bg-muted/30">
+                      <TableHead>Product Info</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pendingProducts.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.title}</TableCell>
-                        <TableCell>₹{p.price}</TableCell>
+                      <TableRow key={p.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell className="font-medium">
+                          {p.title}
+                          <div className="text-[10px] text-muted-foreground">Shop ID: {p.businessId}</div>
+                        </TableCell>
+                        <TableCell className="font-black text-primary">₹{p.price}</TableCell>
                         <TableCell className="text-right space-x-2">
-                          <Button size="sm" className="bg-green-600 h-8" onClick={() => handleProductAction(p.id, 'approved')}>Approve</Button>
-                          <Button size="sm" variant="destructive" className="h-8" onClick={() => handleProductAction(p.id, 'rejected')}>Reject</Button>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8 rounded-full" onClick={() => handleProductAction(p.id, 'approved')}>Approve</Button>
+                          <Button size="sm" variant="destructive" className="h-8 rounded-full" onClick={() => handleProductAction(p.id, 'rejected')}>Reject</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -494,14 +551,14 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="businesses">
-          <Card>
+          <Card className="border-none shadow-md">
             <CardContent className="pt-6">
               {loadingBusinesses ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>Shop Info</TableHead>
                       <TableHead>Plan</TableHead>
                       <TableHead>Performance</TableHead>
@@ -509,41 +566,43 @@ export default function AdminDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {businesses?.map((b) => (
-                      <TableRow key={b.id}>
+                    {filteredBusinesses?.map((b) => (
+                      <TableRow key={b.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{b.shopName}</span>
+                            <span className="font-bold">{b.shopName}</span>
                             {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">Owner ID: {b.ownerId}</div>
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
+                            <UserIcon className="h-2 w-2" /> {b.ownerId}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {b.isPaid ? <Badge className="bg-green-500 text-[10px]">Premium</Badge> : <Badge variant="secondary" className="text-[10px]">Free</Badge>}
+                          {b.isPaid ? <Badge className="bg-yellow-500 text-[9px] font-black"><Crown className="h-2.5 w-2.5 mr-1" /> PREMIUM</Badge> : <Badge variant="secondary" className="text-[9px] font-black">FREE</Badge>}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-primary">{b.views || 0} Views</span>
-                            <span className="text-[10px] text-muted-foreground">{(b.callCount || 0) + (b.whatsappCount || 0)} Leads</span>
+                            <span className="text-[11px] font-black text-primary flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {b.views || 0} Views</span>
+                            <span className="text-[10px] text-muted-foreground font-bold">{(b.callCount || 0) + (b.whatsappCount || 0)} Real Leads</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
-                              {b.isVerified ? "Unverify" : "Verify"}
+                            <Button variant="outline" size="sm" className="h-7 text-[10px] rounded-full border-primary/20" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
+                              {b.isVerified ? "Unverify" : "Verify Shop"}
                             </Button>
-                            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
-                              {b.isPaid ? "Revoke" : "Grant"}
+                            <Button variant="outline" size="sm" className="h-7 text-[10px] rounded-full" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
+                              {b.isPaid ? "Revoke Premium" : "Grant Premium"}
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
-                                <AlertDialogHeader><AlertDialogTitle>Delete Business?</AlertDialogTitle></AlertDialogHeader>
+                                <AlertDialogHeader><AlertDialogTitle>Delete Business?</AlertDialogTitle><AlertDialogDescription>This will remove the shop and its inventory.</AlertDialogDescription></AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteBusiness(b.id)} className="bg-destructive">Delete</AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleDeleteBusiness(b.id)} className="bg-destructive">Delete Shop</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
