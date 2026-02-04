@@ -192,11 +192,27 @@ export default function AdminDashboardPage() {
     toast({ title: `Product ${action}` });
   };
 
-  const handleUpdateUserRole = (userId: string, newRole: any) => {
-    if (!isFullAdmin && newRole === 'admin') {
-      toast({ variant: "destructive", title: "Permission Denied", description: "Only admins can assign admin role." });
+  const handleUpdateUserRole = (userId: string, targetCurrentRole: string, newRole: any) => {
+    // SECURITY: Moderators cannot change role of an Admin
+    if (!isFullAdmin && targetCurrentRole === 'admin') {
+      toast({ 
+        variant: "destructive", 
+        title: "Permission Denied", 
+        description: "Staff members cannot modify Administrator profiles." 
+      });
       return;
     }
+
+    // SECURITY: Only Admins can assign Admin role
+    if (!isFullAdmin && newRole === 'admin') {
+      toast({ 
+        variant: "destructive", 
+        title: "Permission Denied", 
+        description: "Only super admins can assign the ADMIN role." 
+      });
+      return;
+    }
+
     const userRef = doc(firestore, "users", userId);
     updateDocumentNonBlocking(userRef, { role: newRole });
     toast({ 
@@ -205,8 +221,15 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (!isFullAdmin) return;
+  const handleDeleteUser = (userId: string, targetRole: string) => {
+    if (!isFullAdmin) {
+       toast({ variant: "destructive", title: "Admin Required", description: "Only super admins can delete users." });
+       return;
+    }
+    if (targetRole === 'admin' && userId !== user?.uid) {
+       toast({ variant: "destructive", title: "Forbidden", description: "Other admins cannot be deleted via panel." });
+       return;
+    }
     deleteDocumentNonBlocking(doc(firestore, "users", userId));
     toast({ title: "User Deleted", description: "User profile has been removed." });
   };
@@ -343,8 +366,9 @@ export default function AdminDashboardPage() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Select 
+                              disabled={u.role === 'admin' && !isFullAdmin}
                               defaultValue={u.role} 
-                              onValueChange={(val: any) => handleUpdateUserRole(u.id, val)}
+                              onValueChange={(val: any) => handleUpdateUserRole(u.id, u.role, val)}
                             >
                               <SelectTrigger className="w-[120px] h-8 text-xs">
                                 <SelectValue />
@@ -373,7 +397,7 @@ export default function AdminDashboardPage() {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id, u.role)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>

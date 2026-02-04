@@ -38,7 +38,14 @@ service cloud.firestore {
     match /users/{userId} {
       allow get, list: if isOwner(userId) || isModerator();
       allow create: if isSignedIn();
-      allow update: if isOwner(userId) || isModerator();
+      
+      // RULES: 
+      // 1. User can update their own profile.
+      // 2. Admin can update anyone.
+      // 3. Moderator can update others, BUT NOT ADMINS.
+      allow update: if isOwner(userId) || isAdmin() || 
+                      (isModerator() && resource.data.role != 'admin' && request.resource.data.role != 'admin');
+      
       allow delete: if isAdmin();
     }
 
