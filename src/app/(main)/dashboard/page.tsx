@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -12,8 +13,10 @@ import {
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
   setDocumentNonBlocking,
-  updateDocumentNonBlocking
+  updateDocumentNonBlocking,
+  useAuth as useFirebaseAuth
 } from "@/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 import {
   Card,
   CardContent,
@@ -51,10 +54,12 @@ import {
   Image as ImageIcon,
   Download,
   AlertCircle,
-  Scale,
-  Hammer,
-  Bike,
-  Car
+  UserCircle,
+  Lock,
+  Save,
+  MapPin,
+  Mail,
+  Phone
 } from "lucide-react";
 import {
   Dialog,
@@ -98,12 +103,15 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const auth = useFirebaseAuth();
   
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [generatedCaption, setGeneratedCaption] = useState("");
   const [origin, setOrigin] = useState("");
   
@@ -133,6 +141,12 @@ export default function DashboardPage() {
     facebookUrl: ""
   });
 
+  const [accountInfo, setAccountInfo] = useState({
+    name: "",
+    phone: "",
+    address: ""
+  });
+
   const hasPremium = isBusinessPremium(businessData);
 
   useEffect(() => {
@@ -159,7 +173,14 @@ export default function DashboardPage() {
         facebookUrl: businessData.facebookUrl || ""
       });
     }
-  }, [businessData]);
+    if (userProfile) {
+      setAccountInfo({
+        name: userProfile.name || "",
+        phone: userProfile.phone || "",
+        address: userProfile.address || ""
+      });
+    }
+  }, [businessData, userProfile]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -250,7 +271,6 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user) return;
 
-    // RULE: Free account can only add 3 items
     if (!hasPremium && products && products.length >= 3) {
       toast({ 
         variant: "destructive", 
@@ -310,6 +330,33 @@ export default function DashboardPage() {
     setIsUpdatingProfile(false);
   };
 
+  const handleUpdateAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsUpdatingAccount(true);
+    const userRef = doc(firestore, "users", user.uid);
+    updateDocumentNonBlocking(userRef, {
+      name: accountInfo.name,
+      phone: accountInfo.phone,
+      address: accountInfo.address
+    });
+    toast({ title: "Profile Updated", description: "Personal details successfully save ho gayi hain." });
+    setIsUpdatingAccount(false);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) return;
+    setIsResettingPassword(true);
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      toast({ title: "Reset Link Sent", description: "Aapki email par password badalne ka link bhej diya gaya hai." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: "Reset email nahi bheja ja saka." });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copied!", description: "WhatsApp status par paste karein." });
@@ -332,7 +379,7 @@ export default function DashboardPage() {
       window.URL.revokeObjectURL(url);
       toast({ title: "Download Started", description: "Aapka Shop QR code download ho raha hai." });
     } catch (err) {
-      toast({ variant: "destructive", title: "Download Failed", description: "QR code download nahi ho paya. Kripya print screen use karein." });
+      toast({ variant: "destructive", title: "Download Failed", description: "QR code download nahi ho paya." });
     }
   };
 
@@ -383,13 +430,7 @@ export default function DashboardPage() {
               <form onSubmit={handleAddProduct} className="space-y-4">
                 <DialogHeader>
                   <DialogTitle>New Product</DialogTitle>
-                  {!hasPremium && products && products.length >= 3 && (
-                    <DialogDescription className="text-destructive font-bold flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" /> Limit Reached! Upgrade to Premium.
-                    </DialogDescription>
-                  )}
                 </DialogHeader>
-                
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label>Product Photo (Max 300KB)</Label>
@@ -397,34 +438,17 @@ export default function DashboardPage() {
                       {newProduct.imageUrl ? (
                         <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
                           <Image src={newProduct.imageUrl} alt="Preview" fill className="object-cover" />
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            size="icon" 
-                            className="absolute top-2 right-2 h-8 w-8"
-                            onClick={() => setNewProduct(prev => ({ ...prev, imageUrl: "" }))}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => setNewProduct(prev => ({ ...prev, imageUrl: "" }))}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg bg-muted/50 text-muted-foreground">
                           <ImageIcon className="h-8 w-8 mb-2 opacity-20" />
-                          <Label htmlFor="product-image" className="cursor-pointer text-xs font-bold text-primary hover:underline">
-                            Select Photo from Device
-                          </Label>
-                          <Input 
-                            id="product-image" 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            onChange={handleProductImageUpload} 
-                          />
+                          <Label htmlFor="product-image" className="cursor-pointer text-xs font-bold text-primary hover:underline">Select Photo from Device</Label>
+                          <Input id="product-image" type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
                         </div>
                       )}
                     </div>
                   </div>
-
                   <div className="space-y-2"><Label>Item Name</Label><Input required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} /></div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
@@ -446,35 +470,22 @@ export default function DashboardPage() {
                     <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isSubmittingProduct} className="w-full">
-                    Submit for Approval
-                  </Button>
-                </DialogFooter>
+                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit for Approval</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {!hasPremium && products && products.length >= 3 && (
-        <Alert className="mb-8 border-yellow-500 bg-yellow-50">
-          <Crown className="h-4 w-4 text-yellow-600" />
-          <AlertTitle className="text-yellow-800 font-bold">Free Limit Reached!</AlertTitle>
-          <AlertDescription className="text-yellow-700">
-            Aapne 3 items add kar liye hain. Unlimited items aur digital payment features ke liye aaj hi **Premium** join karein!
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
            <Tabs defaultValue="inventory">
              <div className="flex items-center justify-between mb-4 border-b">
-               <TabsList className="bg-transparent gap-4">
+               <TabsList className="bg-transparent gap-4 overflow-x-auto no-scrollbar justify-start w-full">
                  <TabsTrigger value="inventory" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Inventory</TabsTrigger>
                  <TabsTrigger value="marketing" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Marketing</TabsTrigger>
-                 <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Settings</TabsTrigger>
+                 <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Shop Settings</TabsTrigger>
+                 <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Account</TabsTrigger>
                </TabsList>
              </div>
 
@@ -502,18 +513,7 @@ export default function DashboardPage() {
                               ))}
                             </div>
                           </div>
-                          <Dialog>
-                            <DialogTrigger asChild><Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleGenerateCaption(p)}><Share2 className="h-3 w-3 mr-2" /> Share on Social Media</Button></DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                              <DialogHeader><DialogTitle>WhatsApp / Instagram Caption</DialogTitle><DialogDescription>Dukan ko promote karne ke liye AI ne yeh likha hai:</DialogDescription></DialogHeader>
-                              <div className="space-y-4 py-4">
-                                {isGeneratingCaption ? <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : (
-                                  <div className="p-4 bg-muted rounded-xl text-sm italic leading-relaxed whitespace-pre-wrap">{generatedCaption || "Generating..."}</div>
-                                )}
-                              </div>
-                              <DialogFooter><Button onClick={() => copyToClipboard(generatedCaption)} className="w-full"><Rocket className="mr-2 h-4 w-4" /> Copy & Post</Button></DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleGenerateCaption(p)}><Share2 className="h-3 w-3 mr-2" /> Share on Social</Button>
                         </CardContent>
                         <CardFooter className="p-4 pt-0">
                           <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
@@ -530,125 +530,34 @@ export default function DashboardPage() {
                     <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
                     <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate Offer</Button></CardContent>
                   </Card>
-                  
                   <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle></CardHeader>
                     <CardContent className="space-y-4 pt-2">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">UPI ID</Label>
-                        <Input 
-                          placeholder="e.g. name@upi" 
-                          className="h-9 bg-white"
-                          value={shopProfile.upiId} 
-                          onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} 
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Payment QR Image</Label>
-                        <div className="flex flex-col gap-3">
-                          {shopProfile.paymentQrUrl ? (
-                            <div className="relative w-24 h-24 border rounded-lg overflow-hidden bg-white mx-auto group">
-                              <Image src={shopProfile.paymentQrUrl} alt="QR Preview" fill className="object-contain" />
-                              <button 
-                                onClick={() => setShopProfile(prev => ({ ...prev, paymentQrUrl: "" }))}
-                                className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center w-full h-24 border-2 border-dashed rounded-lg bg-white/50 text-muted-foreground">
-                              <ImageIcon className="h-8 w-8 opacity-20" />
-                            </div>
-                          )}
-                          
-                          <div className="relative">
-                            <Input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              id="qr-upload" 
-                              onChange={handleQrUpload} 
-                            />
-                            <Label 
-                              htmlFor="qr-upload" 
-                              className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold"
-                            >
-                              <Upload className="h-3 w-3" /> {shopProfile.paymentQrUrl ? "Change QR Image" : "Select from Device"}
-                            </Label>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold" 
-                        onClick={() => handleUpdateShopProfile()}
-                      >
-                        Save Payment Settings
-                      </Button>
+                      <Input placeholder="UPI ID (e.g. name@upi)" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
+                      <Label htmlFor="qr-upload" className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer hover:bg-gray-50 text-xs font-bold">
+                        <Upload className="h-3 w-3" /> {shopProfile.paymentQrUrl ? "Change QR Image" : "Upload QR Code"}
+                      </Label>
+                      <Input type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
+                      <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateShopProfile()}>Save Payment</Button>
                     </CardContent>
                   </Card>
                 </div>
-
                 <Card>
-                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Share2 className="h-5 w-5" /> Social Presence</CardTitle><CardDescription>Update your social media links for customers.</CardDescription></CardHeader>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Share2 className="h-5 w-5" /> Social Presence</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Instagram className="h-4 w-4 text-pink-600" /> Instagram Link</Label>
-                        <Input placeholder="https://instagram.com/shop" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Facebook className="h-4 w-4 text-blue-600" /> Facebook Link</Label>
-                        <Input placeholder="https://facebook.com/shop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
-                      </div>
+                      <Input placeholder="Instagram Link" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
+                      <Input placeholder="Facebook Link" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
                     </div>
                     <Button className="w-full" onClick={() => handleUpdateShopProfile()}>Update Social Links</Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader><CardTitle className="text-lg">Digital Marketing Kit</CardTitle><CardDescription>Dukan ko promote karne ke liye naye tools.</CardDescription></CardHeader>
-                  <CardContent className="grid sm:grid-cols-3 gap-6">
-                     <div className="flex flex-col items-center p-6 border rounded-xl bg-muted/30 hover:bg-white transition-colors group">
-                        <div className="p-4 bg-primary/10 rounded-full mb-4 text-primary group-hover:scale-110 transition-transform">
-                          <QrCode className="h-8 w-8" />
-                        </div>
-                        <p className="text-sm font-bold mb-1">Shop Profile QR</p>
-                        <p className="text-[10px] text-muted-foreground mb-4 text-center">Customers seedha aapki dukan par pahuchenge.</p>
-                        <Button variant="outline" size="sm" className="w-full gap-2 border-primary text-primary hover:bg-primary/5" onClick={downloadQRCode}>
-                          <Download className="h-3 w-3" /> Download QR
-                        </Button>
-                     </div>
-                     <div className="flex flex-col items-center p-6 border rounded-xl bg-muted/30 hover:bg-white transition-colors group">
-                        <div className="p-4 bg-green-50 rounded-full mb-4 text-green-600 group-hover:scale-110 transition-transform">
-                          <MessageCircle className="h-8 w-8" />
-                        </div>
-                        <p className="text-sm font-bold mb-1">WhatsApp Status</p>
-                        <p className="text-[10px] text-muted-foreground mb-4 text-center">Padosiyon ko apni dukan online dikhayein.</p>
-                        <Button variant="outline" size="sm" className="w-full gap-2 border-green-500 text-green-600 hover:bg-green-50" onClick={shareOnWhatsAppStatus}>
-                          <Share2 className="h-3 w-3" /> Share Status
-                        </Button>
-                     </div>
-                     <div className="flex flex-col items-center p-6 border rounded-xl bg-muted/30 opacity-60">
-                        <div className="p-4 bg-orange-50 rounded-full mb-4 text-orange-600">
-                          <Rocket className="h-8 w-8" />
-                        </div>
-                        <p className="text-sm font-bold mb-1">Ads Manager</p>
-                        <p className="text-[10px] text-muted-foreground mb-4 text-center">Zyada customers lane ke liye paid ads.</p>
-                        <Badge variant="secondary" className="w-full justify-center">Coming Soon</Badge>
-                     </div>
                   </CardContent>
                 </Card>
              </TabsContent>
 
              <TabsContent value="settings" className="space-y-6">
                <Card>
-                 <CardContent className="pt-6">
+                 <CardHeader><CardTitle>Shop Profile Settings</CardTitle></CardHeader>
+                 <CardContent>
                     <form onSubmit={handleUpdateShopProfile} className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
@@ -661,9 +570,41 @@ export default function DashboardPage() {
                         <div className="space-y-2"><Label>Opening Time</Label><Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} /></div>
                         <div className="space-y-2"><Label>Closing Time</Label><Input type="time" value={shopProfile.closingTime} onChange={(e) => setShopProfile({...shopProfile, closingTime: e.target.value})} /></div>
                       </div>
-                      <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} placeholder="Dukan ke bare mein batayein..." /></div>
+                      <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
                       <Button type="submit" className="w-full" disabled={isUpdatingProfile}>{isUpdatingProfile ? "Saving..." : "Update Shop Profile"}</Button>
                     </form>
+                 </CardContent>
+               </Card>
+             </TabsContent>
+
+             <TabsContent value="account" className="space-y-6">
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Personal Details</CardTitle>
+                   <CardDescription>Aapka personal naam aur contact info.</CardDescription>
+                 </CardHeader>
+                 <CardContent>
+                   <form onSubmit={handleUpdateAccount} className="space-y-4">
+                     <div className="grid sm:grid-cols-2 gap-4">
+                       <div className="space-y-2"><Label>Full Name</Label><Input value={accountInfo.name} onChange={(e) => setAccountInfo({...accountInfo, name: e.target.value})} /></div>
+                       <div className="space-y-2"><Label>Phone Number</Label><Input value={accountInfo.phone} onChange={(e) => setAccountInfo({...accountInfo, phone: e.target.value})} /></div>
+                     </div>
+                     <div className="space-y-2"><Label>Personal Email</Label><Input value={userProfile?.email} disabled className="bg-muted" /></div>
+                     <div className="space-y-2"><Label>Personal Address</Label><Textarea value={accountInfo.address} onChange={(e) => setAccountInfo({...accountInfo, address: e.target.value})} placeholder="Home address for delivery..." /></div>
+                     <Button type="submit" className="w-full gap-2" disabled={isUpdatingAccount}>
+                       {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Account Details
+                     </Button>
+                   </form>
+                 </CardContent>
+               </Card>
+
+               <Card className="border-destructive/20">
+                 <CardHeader><CardTitle className="text-destructive flex items-center gap-2"><Lock className="h-5 w-5" /> Account Security</CardTitle></CardHeader>
+                 <CardContent>
+                   <div className="bg-muted/50 p-4 rounded-xl flex items-center justify-between gap-4">
+                     <div><p className="text-sm font-bold">Change Password</p><p className="text-xs text-muted-foreground">Reset link aapki email par bheja jayega.</p></div>
+                     <Button variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword}>{isResettingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Link"}</Button>
+                   </div>
                  </CardContent>
                </Card>
              </TabsContent>
@@ -678,22 +619,16 @@ export default function DashboardPage() {
                    <div className="bg-white p-3 rounded-lg shadow-sm border"><p className="text-[10px] uppercase font-bold text-muted-foreground">Views</p><p className="text-xl font-black">{businessData?.views || 0}</p></div>
                    <div className="bg-white p-3 rounded-lg shadow-sm border"><p className="text-[10px] uppercase font-bold text-muted-foreground">Leads</p><p className="text-xl font-black">{(businessData?.callCount || 0) + (businessData?.whatsappCount || 0)}</p></div>
                 </div>
-                <div className="p-3 bg-white rounded-lg border text-xs"><p className="font-bold flex items-center gap-2 mb-2"><CheckCircle2 className="h-3 w-3 text-green-500" /> Platform Strength</p><div className="w-full bg-muted h-1 rounded-full overflow-hidden"><div className="bg-green-500 h-full" style={{ width: `${Math.min(((products?.length || 0) * 10) + 20, 100)}%` }} /></div><p className="mt-2 text-[10px] text-muted-foreground">Zyada products dalne se customers badhte hain.</p></div>
              </CardContent>
            </Card>
-
            <Card className="bg-gradient-to-br from-primary to-blue-600 text-white border-none shadow-xl">
-             <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4" /> Marketing Kit</CardTitle><CardDescription className="text-white/70 text-[10px]">Apni dukan ki pehchan banayein.</CardDescription></CardHeader>
+             <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4" /> Marketing Kit</CardTitle></CardHeader>
              <CardContent className="space-y-4">
                <div className="aspect-square bg-white rounded-xl flex items-center justify-center p-4">
-                 {qrUrl ? (
-                   <Image src={qrUrl} alt="QR Code" width={200} height={200} />
-                 ) : (
-                   <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg" />
-                 )}
+                 {qrUrl ? <Image src={qrUrl} alt="QR Code" width={200} height={200} /> : <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg" />}
                </div>
                <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={downloadQRCode}><Download className="h-4 w-4 mr-2" /> Download Shop QR</Button>
-               <p className="text-[10px] italic text-center opacity-80">Tip: Ise scan karte hi customers dukan dekh payenge.</p>
+               <Button variant="ghost" className="w-full text-white hover:bg-white/10" onClick={shareOnWhatsAppStatus}><MessageCircle className="h-4 w-4 mr-2" /> Share on WhatsApp</Button>
              </CardContent>
            </Card>
         </div>
