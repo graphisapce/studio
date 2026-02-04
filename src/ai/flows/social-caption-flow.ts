@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI Social Media Caption Generator for Business Owners.
@@ -25,12 +26,16 @@ export async function generateSocialCaption(input: SocialCaptionInput): Promise<
   if (!process.env.GOOGLE_GENAI_API_KEY) {
     throw new Error("API Key missing.");
   }
-  return socialCaptionFlow(input);
+  try {
+    return await socialCaptionFlow(input);
+  } catch (error: any) {
+    console.error("Genkit Social Flow Error:", error);
+    throw new Error("Caption generate nahi ho paya. Kripya dobara try karein.");
+  }
 }
 
 const prompt = ai.definePrompt({
   name: 'generateSocialCaptionPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: SocialCaptionInputSchema },
   output: { schema: SocialCaptionOutputSchema },
   prompt: `You are an expert Social Media Manager for Indian local shops.

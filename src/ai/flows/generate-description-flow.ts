@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI Content Generator for Business Owners.
@@ -21,15 +22,19 @@ export type DescriptionOutput = z.infer<typeof DescriptionOutputSchema>;
 
 export async function generateProductDescription(input: DescriptionInput): Promise<DescriptionOutput> {
   if (!process.env.GOOGLE_GENAI_API_KEY) {
-    throw new Error("API Key missing. AI description feature is unavailable.");
+    throw new Error("API Key missing in environment variables. Please check your .env file.");
   }
   
-  return generateDescriptionFlow(input);
+  try {
+    return await generateDescriptionFlow(input);
+  } catch (error: any) {
+    console.error("Genkit Flow Error:", error);
+    throw new Error(error.message || "AI could not generate description.");
+  }
 }
 
 const prompt = ai.definePrompt({
   name: 'generateDescriptionPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: DescriptionInputSchema },
   output: { schema: DescriptionOutputSchema },
   prompt: `You are an expert Indian marketing copywriter. 
