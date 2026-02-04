@@ -27,11 +27,18 @@ export default function MyOrdersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const { data: orders, isLoading } = useCollection<Order>(useMemoFirebase(() => 
-    user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid), orderBy("createdAt", "desc")) : null, [firestore, user]
-  ));
+  const ordersQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid), orderBy("createdAt", "desc")) : null, 
+    [firestore, user]
+  );
+  
+  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
-  const handleShareLocation = (riderPhone: string, orderId: string) => {
+  const handleShareLocation = (riderPhone: string | undefined, orderId: string) => {
+    if (!riderPhone) {
+      toast({ variant: "destructive", title: "Error", description: "Rider contact number not found." });
+      return;
+    }
     const text = encodeURIComponent(`Hi, main apna live location share kar raha hoon order ID ${orderId} ke liye. Kripya check karein.`);
     window.open(`https://wa.me/${riderPhone.replace(/\D/g, '')}?text=${text}`, '_blank');
     toast({ title: "WhatsApp Opened", description: "Ab aap rider ko apni location bhej sakte hain." });
@@ -92,8 +99,10 @@ export default function MyOrdersPage() {
                                 <div><p className="text-[8px] font-black uppercase opacity-60">Rider</p><p className="text-xs font-bold">{order.deliveryBoyName}</p></div>
                              </div>
                              <div className="flex gap-2">
-                               <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-green-500 text-green-600" onClick={() => handleShareLocation(order.deliveryBoyPhone!, order.displayOrderId)}><MessageCircle className="h-4 w-4" /></Button>
-                               <Button size="icon" className="h-9 w-9 rounded-full bg-green-600" asChild><a href={`tel:${order.deliveryBoyPhone}`}><Phone className="h-4 w-4" /></a></Button>
+                               <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-green-500 text-green-600" onClick={() => handleShareLocation(order.deliveryBoyPhone, order.displayOrderId)}><MessageCircle className="h-4 w-4" /></Button>
+                               {order.deliveryBoyPhone && (
+                                 <Button size="icon" className="h-9 w-9 rounded-full bg-green-600" asChild><a href={`tel:${order.deliveryBoyPhone}`}><Phone className="h-4 w-4" /></a></Button>
+                               )}
                              </div>
                           </div>
                        )}
