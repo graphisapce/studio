@@ -28,6 +28,7 @@ export default function MyOrdersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // Optimized query without orderBy to avoid index requirement crash
   const ordersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid)) : null, 
     [firestore, user]
@@ -35,6 +36,7 @@ export default function MyOrdersPage() {
   
   const { data: rawOrders, isLoading } = useCollection<Order>(ordersQuery);
 
+  // Sorting in memory to prevent "Permission Denied / Index missing" errors
   const orders = useMemo(() => {
     if (!rawOrders) return [];
     return [...rawOrders].sort((a, b) => 

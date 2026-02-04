@@ -2,29 +2,28 @@
 
 Aapne apna project safaltapoorvak taiyar kar liya hai. Ise apne computer par lene aur GitHub par dalne ke liye ye guide follow karein:
 
-## Step 1: Code Download Karein
-Firebase Studio mein "Download Project" icon par click karein. Ye icon usually screen ke **Top Right** mein hota hai (Arrow pointing down icon 📥).
+## Step 1: Code Download Karein (UI Guide)
+Firebase Studio mein **Gemini Chat** ke theek upar ek toolbar hai. Wahan char icons hain:
+1. Refresh
+2. Share
+3. **Download (📥 Icon)** - Is par click karte hi aapki saari files ek ZIP file mein download ho jayengi.
 
-## Step 2: Project Structure (Kaunsi file kya hai?)
-Jab aap zip file kholenge, aapko ye main cheezein dikhengi:
+## Step 2: Unzip aur Structure Check
+Jab aap ZIP file kholenge, aapko ye folder milenge:
+- **`src/`**: Saara logic aur components (Main code yahan hai).
+- **`public/`**: Images aur icons.
+- **`package.json`**: Dependencies ki list.
+- **`docs/`**: GitHub (`GITHUB_GUIDE.md`) aur Deployment (`DEPLOYMENT.md`) ki guides.
 
-- **`src/app/`**: Aapke app ke saare pages (Home, Login, Dashboard, Admin).
-- **`src/components/`**: UI ke saare components (Buttons, Cards, Layouts).
-- **`src/firebase/`**: Firebase setup aur database ke functions.
-- **`src/ai/`**: Gemini AI ke flows (Audio intro, Product description).
-- **`docs/`**: Deployment, GitHub, aur Migration guides.
-- **`package.json`**: Saari libraries ki list (App run karne ke liye zaroori).
-- **`firestore.rules`**: Database ki security settings.
+## Step 3: GitHub par Push (Step-by-Step)
+1. Ek naya folder banayein apne PC par.
+2. ZIP file ka saara content us folder mein daal dein.
+3. Terminal khol kar `docs/GITHUB_GUIDE.md` mein di gayi commands chalayein.
 
-## Step 3: Local Setup (Computer Par)
-1. Zip file extract karein.
-2. [Node.js](https://nodejs.org/) install karein (agar nahi hai).
-3. Terminal mein `npm install` chalayein saari files download karne ke liye.
-4. `.env.local` file banayein aur usme apni Firebase aur Gemini API keys dalein (Jo aapko Firebase Console se milengi).
-5. `npm run dev` se app start karein.
-
-## Step 4: GitHub par Push
-Ab aap `docs/GITHUB_GUIDE.md` follow karke ise GitHub par upload kar sakte hain.
+## Step 4: Live Run (Firebase App Hosting)
+1. GitHub par code dalne ke baad, Firebase Console par jayein.
+2. **App Hosting** select karein aur GitHub repo connect karein.
+3. Environment variables mein Gemini API Key (`GOOGLE_GENAI_API_KEY`) add karein.
 
 ---
-**Tip:** Download karne ke baad, saari files ko ek naye folder mein rakhein aur wahan se Git commands chalayein.
+**Zaroori Tip:** ZIP download karne ke baad, use apne computer ke kisi safe folder mein rakhein. Aapka app ab bilkul stable hai!

@@ -42,4 +42,7 @@ next-env.d.ts
 
 # firebase
 firebase-debug.log
-firestore-debug.log
+firestore-debug.log**/node_modules
+mycode.zip
+.firebase
+functions/node_modules
