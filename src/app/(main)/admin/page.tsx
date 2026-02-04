@@ -22,13 +22,16 @@ import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
   Store, 
-  Users, 
+  Users as UsersIcon, 
   ShieldAlert, 
   Crown,
   ShieldCheck,
   BarChart3,
   Megaphone,
-  Save
+  Save,
+  UserCog,
+  Mail,
+  User as UserIcon
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -40,10 +43,17 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from "@/components/ui/table";
+} from "@/table-ui";
 import { Business, Product, UserProfile, PlatformConfig } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -52,6 +62,10 @@ import {
   Cell
 } from "recharts";
 
+/**
+ * AdminDashboardPage
+ * Global control center for LocalVyapar administrators.
+ */
 export default function AdminDashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -59,6 +73,7 @@ export default function AdminDashboardPage() {
   const firestore = useFirestore();
   const [announcementText, setAnnouncementText] = useState("");
 
+  // Redirect if not admin
   useEffect(() => {
     if (!authLoading) {
       if (!user) router.push("/login");
@@ -66,6 +81,7 @@ export default function AdminDashboardPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
+  // Platform Configuration
   const configRef = useMemoFirebase(() => doc(firestore, "config", "platform"), [firestore]);
   const { data: config } = useDoc<PlatformConfig>(configRef);
 
@@ -73,15 +89,17 @@ export default function AdminDashboardPage() {
     if (config?.announcement) setAnnouncementText(config.announcement);
   }, [config]);
 
+  // Data Collections
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
   const { data: businesses, isLoading: loadingBusinesses } = useCollection<Business>(businessesRef);
 
   const usersRef = useMemoFirebase(() => collection(firestore, "users"), [firestore]);
-  const { data: users, isLoading: loadingUsers } = useCollection<UserProfile>(usersRef);
+  const { data: allUsers, isLoading: loadingUsers } = useCollection<UserProfile>(usersRef);
 
   const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsRef);
 
+  // Statistics
   const pendingProducts = useMemo(() => products?.filter(p => p.status === 'pending') || [], [products]);
 
   const chartData = useMemo(() => {
@@ -94,8 +112,9 @@ export default function AdminDashboardPage() {
     return Object.entries(categories).map(([name, value]) => ({ name, value }));
   }, [businesses]);
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const COLORS = ['#14b8a6', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981'];
 
+  // Actions
   const handleUpdateConfig = async () => {
     try {
       await setDoc(doc(firestore, "config", "platform"), {
@@ -135,6 +154,15 @@ export default function AdminDashboardPage() {
     toast({ title: `Product ${action}` });
   };
 
+  const handleUpdateUserRole = (userId: string, newRole: 'customer' | 'business' | 'admin') => {
+    const userRef = doc(firestore, "users", userId);
+    updateDocumentNonBlocking(userRef, { role: newRole });
+    toast({ 
+      title: "Role Updated", 
+      description: `User role changed to ${newRole.toUpperCase()}.` 
+    });
+  };
+
   if (authLoading || loadingBusinesses || loadingUsers || loadingProducts) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
@@ -151,7 +179,7 @@ export default function AdminDashboardPage() {
           <div className="p-3 bg-primary/10 text-primary rounded-xl"><ShieldAlert className="h-8 w-8" /></div>
           <div>
             <h1 className="text-3xl font-bold font-headline">Platform Administration</h1>
-            <p className="text-muted-foreground">Global settings and moderation controls.</p>
+            <p className="text-muted-foreground">Global settings, users, and shop moderation.</p>
           </div>
         </div>
       </div>
@@ -166,13 +194,13 @@ export default function AdminDashboardPage() {
           </Card>
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardDescription className="font-bold uppercase text-[10px]">Active Users</CardDescription>
-              <CardTitle className="text-3xl flex items-center gap-2"><Users className="h-6 w-6 text-purple-500" />{users?.length || 0}</CardTitle>
+              <CardDescription className="font-bold uppercase text-[10px]">Total Users</CardDescription>
+              <CardTitle className="text-3xl flex items-center gap-2"><UsersIcon className="h-6 w-6 text-purple-500" />{allUsers?.length || 0}</CardTitle>
             </CardHeader>
           </Card>
           <Card className="shadow-sm bg-primary/5 border-primary/20">
             <CardHeader className="pb-2">
-              <CardDescription className="font-bold uppercase text-[10px]">Premium Users</CardDescription>
+              <CardDescription className="font-bold uppercase text-[10px]">Premium Subscriptions</CardDescription>
               <CardTitle className="text-3xl text-primary font-black"><Crown className="h-6 w-6" />{businesses?.filter(b => b.isPaid).length || 0}</CardTitle>
             </CardHeader>
           </Card>
@@ -181,7 +209,7 @@ export default function AdminDashboardPage() {
         <Card className="lg:col-span-1 shadow-sm overflow-hidden">
           <CardHeader className="pb-2">
              <CardTitle className="text-sm font-bold flex items-center gap-2">
-               <BarChart3 className="h-4 w-4" /> Category Distribution
+               <BarChart3 className="h-4 w-4" /> Shops by Category
              </CardTitle>
           </CardHeader>
           <CardContent className="h-[120px] p-0">
@@ -199,12 +227,69 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
+      <Tabs defaultValue="approvals" className="w-full">
         <TabsList className="mb-8">
-          <TabsTrigger value="pending">Approvals ({pendingProducts.length})</TabsTrigger>
-          <TabsTrigger value="businesses">Businesses</TabsTrigger>
+          <TabsTrigger value="approvals">Approvals ({pendingProducts.length})</TabsTrigger>
+          <TabsTrigger value="users">Manage Users</TabsTrigger>
+          <TabsTrigger value="businesses">Shops</TabsTrigger>
           <TabsTrigger value="config">Platform Config</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> User Accounts</CardTitle>
+              <CardDescription>View all users and update their platform roles.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User Detail</TableHead>
+                    <TableHead>Current Role</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allUsers?.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-bold flex items-center gap-2">
+                            <UserIcon className="h-3 w-3 text-muted-foreground" /> {u.name}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-2 w-2" /> {u.email}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'business' ? 'default' : 'secondary'} className="uppercase text-[10px]">
+                          {u.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Select 
+                          defaultValue={u.role} 
+                          onValueChange={(val: any) => handleUpdateUserRole(u.id, val)}
+                        >
+                          <SelectTrigger className="w-[140px] ml-auto h-8 text-xs">
+                            <SelectValue placeholder="Change Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="business">Business</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="config">
            <Card>
@@ -228,7 +313,7 @@ export default function AdminDashboardPage() {
            </Card>
         </TabsContent>
 
-        <TabsContent value="pending">
+        <TabsContent value="approvals">
           <Card>
             <CardHeader><CardTitle>Review Queue</CardTitle></CardHeader>
             <CardContent>
@@ -269,30 +354,34 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Shop Name</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Views/Leads</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Engagement</TableHead>
+                    <TableHead className="text-right">Moderation</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {businesses?.map((b) => (
                     <TableRow key={b.id}>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        {b.shopName}
-                        {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{b.shopName}</span>
+                          {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">Owner ID: {b.ownerId}</div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          {b.isPaid ? <Badge className="bg-green-500 w-fit">Premium</Badge> : <Badge variant="secondary" className="w-fit">Free</Badge>}
+                          {b.isPaid ? <Badge className="bg-green-500 w-fit text-[10px]">Premium</Badge> : <Badge variant="secondary" className="w-fit text-[10px]">Free Plan</Badge>}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs">{b.views || 0} V | {(b.callCount || 0) + (b.whatsappCount || 0)} L</span>
+                        <span className="text-xs font-bold text-primary">{b.views || 0} Views</span>
+                        <div className="text-[10px] text-muted-foreground">{(b.callCount || 0) + (b.whatsappCount || 0)} Leads</div>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
+                        <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
                            {b.isVerified ? "Unverify" : "Verify"}
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
+                        <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
                           {b.isPaid ? "Revoke" : "Grant"} Premium
                         </Button>
                       </TableCell>
