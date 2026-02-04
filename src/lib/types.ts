@@ -77,20 +77,21 @@ export interface Product {
 
 export interface Order {
   id: string;
+  displayOrderId: string; // New: Area-based readable ID
   customerId: string;
   customerName: string;
   customerDeliveryId: string;
-  customerPhone?: string;
+  customerPhone: string; // Required for Rider to call
   businessId: string;
   shopName: string;
-  shopPhone?: string;
-  shopAddress?: string;
+  shopPhone: string; // Required for Rider to call Shop
+  shopAddress: string;
   productId: string;
   productTitle: string;
   price: number;
   deliveryBoyId?: string;
   deliveryBoyName?: string;
-  deliveryBoyPhone?: string;
+  deliveryBoyPhone?: string; // Required for Customer to call Rider
   status: 'pending' | 'assigned' | 'picked-up' | 'out-for-delivery' | 'delivered' | 'cancelled';
   address: string;
   createdAt: string;

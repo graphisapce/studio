@@ -42,7 +42,8 @@ import {
   Save,
   Building2,
   Store,
-  User
+  User,
+  Hash
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -135,14 +136,19 @@ export default function DeliveryDashboardPage() {
 
   const handleAcceptOrder = (orderId: string) => {
     if (!user || !userProfile) return;
+    if (!userProfile.phone) {
+      toast({ variant: "destructive", title: "Action Denied", description: "Pehle Dashboard mein apna phone number save karein taaki customer call kar sake." });
+      return;
+    }
+
     const orderRef = doc(firestore, "orders", orderId);
     updateDocumentNonBlocking(orderRef, {
       deliveryBoyId: user.uid,
       deliveryBoyName: userProfile.name,
-      deliveryBoyPhone: userProfile.phone || "",
+      deliveryBoyPhone: userProfile.phone, // Crucial: Share rider phone with customer
       status: "assigned"
     });
-    toast({ title: "Order Accepted!", description: "Ab aap is order ko deliver kar sakte hain." });
+    toast({ title: "Order Accepted!", description: "Customer ko aapka contact number bhej diya gaya hai." });
   };
 
   const handleUpdateStatus = (orderId: string, newStatus: Order['status']) => {
@@ -245,10 +251,10 @@ export default function DeliveryDashboardPage() {
 
       <Tabs defaultValue="available" className="w-full">
         <TabsList className="mb-6 w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-8 overflow-x-auto no-scrollbar">
-          <TabsTrigger value="available" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">New Orders</TabsTrigger>
-          <TabsTrigger value="active" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">Current Task</TabsTrigger>
-          <TabsTrigger value="history" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">History</TabsTrigger>
-          <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">Profile Settings</TabsTrigger>
+          <TabsTrigger value="available" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4 font-black uppercase text-[10px]">New Orders</TabsTrigger>
+          <TabsTrigger value="active" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4 font-black uppercase text-[10px]">Current Task</TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4 font-black uppercase text-[10px]">History</TabsTrigger>
+          <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4 font-black uppercase text-[10px]">Profile Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="available" className="space-y-4">
@@ -258,14 +264,19 @@ export default function DeliveryDashboardPage() {
               {availableOrders?.map((order) => (
                 <Card key={order.id} className="shadow-md border-primary/10">
                   <CardHeader className="bg-primary/5 pb-4">
-                    <Badge variant="outline" className="w-fit mb-2">{order.customerDeliveryId}</Badge>
+                    <div className="flex items-center justify-between mb-2">
+                       <Badge variant="outline" className="border-primary text-primary font-black text-[9px] uppercase">
+                         <Hash className="h-2 w-2 mr-1" /> {order.displayOrderId}
+                       </Badge>
+                       <Badge variant="secondary" className="font-bold text-[9px] uppercase">{order.customerDeliveryId}</Badge>
+                    </div>
                     <CardTitle className="text-lg">{order.productTitle}</CardTitle>
                     <CardDescription className="font-bold text-primary flex items-center gap-1"><Store className="h-3 w-3" /> Pickup: {order.shopName}</CardDescription>
                   </CardHeader>
                   <CardContent className="pt-4 space-y-2 text-sm">
                     <div className="flex items-start gap-2"><MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" /><p className="line-clamp-2">{order.address}</p></div>
                   </CardContent>
-                  <CardFooter className="border-t pt-4"><Button onClick={() => handleAcceptOrder(order.id)} className="w-full">Accept Job</Button></CardFooter>
+                  <CardFooter className="border-t pt-4"><Button onClick={() => handleAcceptOrder(order.id)} className="w-full h-11 font-bold shadow-lg">Accept Job</Button></CardFooter>
                 </Card>
               ))}
             </div>
@@ -278,7 +289,12 @@ export default function DeliveryDashboardPage() {
                {activeDeliveries.map((order) => (
                  <Card key={order.id} className="shadow-lg border-2 border-primary/20">
                     <CardHeader className="border-b bg-muted/30">
-                      <div className="flex justify-between items-center"><Badge className="bg-blue-600 uppercase text-[10px]">{order.status}</Badge><span className="text-[10px] font-bold text-muted-foreground">{new Date(order.createdAt).toLocaleTimeString()}</span></div>
+                      <div className="flex justify-between items-center">
+                        <Badge className="bg-blue-600 uppercase text-[10px]">{order.status}</Badge>
+                        <Badge variant="outline" className="border-primary text-primary font-black text-[9px] uppercase">
+                          <Hash className="h-2 w-2 mr-1" /> {order.displayOrderId}
+                        </Badge>
+                      </div>
                       <CardTitle className="text-xl mt-2">{order.productTitle}</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-6">
@@ -287,7 +303,7 @@ export default function DeliveryDashboardPage() {
                              <p className="text-[10px] font-black text-primary uppercase">Pickup From</p>
                              <p className="text-sm font-bold truncate">{order.shopName}</p>
                              <p className="text-[10px] text-muted-foreground line-clamp-1">{order.shopAddress || "Address not stored"}</p>
-                             <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary hover:bg-primary/10" asChild>
+                             <Button variant="outline" size="sm" className="w-full h-9 gap-2 border-primary text-primary hover:bg-primary/10 shadow-sm" asChild>
                                <a href={`tel:${order.shopPhone}`}><Phone className="h-3 w-3" /> Call Shop</a>
                              </Button>
                           </div>
@@ -295,7 +311,7 @@ export default function DeliveryDashboardPage() {
                              <p className="text-[10px] font-black text-orange-600 uppercase">Deliver To</p>
                              <p className="text-sm font-bold truncate">{order.customerName}</p>
                              <p className="text-[10px] text-muted-foreground line-clamp-1">{order.customerDeliveryId}</p>
-                             <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-orange-500 text-orange-600 hover:bg-orange-100" asChild>
+                             <Button variant="outline" size="sm" className="w-full h-9 gap-2 border-orange-500 text-orange-600 hover:bg-orange-100 shadow-sm" asChild>
                                <a href={`tel:${order.customerPhone}`}><Phone className="h-3 w-3" /> Call Customer</a>
                              </Button>
                           </div>
@@ -309,9 +325,9 @@ export default function DeliveryDashboardPage() {
                        </div>
                     </CardContent>
                     <CardFooter className="border-t grid grid-cols-2 gap-2 pt-4">
-                       {order.status === 'assigned' && <Button className="col-span-2 bg-orange-500 h-12" onClick={() => handleUpdateStatus(order.id, 'picked-up')}>Order Picked Up</Button>}
-                       {order.status === 'picked-up' && <Button className="col-span-2 bg-blue-500 h-12" onClick={() => handleUpdateStatus(order.id, 'out-for-delivery')}>Out for Delivery</Button>}
-                       {order.status === 'out-for-delivery' && <Button className="col-span-2 bg-green-600 h-12" onClick={() => handleUpdateStatus(order.id, 'delivered')}>Confirm Delivered ✅</Button>}
+                       {order.status === 'assigned' && <Button className="col-span-2 bg-orange-500 h-12 text-white font-bold" onClick={() => handleUpdateStatus(order.id, 'picked-up')}>Order Picked Up</Button>}
+                       {order.status === 'picked-up' && <Button className="col-span-2 bg-blue-500 h-12 text-white font-bold" onClick={() => handleUpdateStatus(order.id, 'out-for-delivery')}>Out for Delivery</Button>}
+                       {order.status === 'out-for-delivery' && <Button className="col-span-2 bg-green-600 h-12 text-white font-bold" onClick={() => handleUpdateStatus(order.id, 'delivered')}>Confirm Delivered ✅</Button>}
                     </CardFooter>
                  </Card>
                ))}

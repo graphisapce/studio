@@ -23,12 +23,14 @@ import {
   Store, 
   XCircle, 
   Phone,
-  Circle
+  Circle,
+  Hash
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const orderSteps = [
   { status: 'pending', label: 'Requested', icon: Clock },
@@ -102,6 +104,11 @@ export default function MyOrdersPage() {
                 <CardHeader className="bg-muted/30 pb-4 border-b">
                   <div className="flex justify-between items-start">
                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 mb-1">
+                           <Badge variant="outline" className="font-black text-[10px] uppercase border-primary text-primary">
+                             <Hash className="h-2 w-2 mr-1" /> {order.displayOrderId}
+                           </Badge>
+                        </div>
                         <CardTitle className="text-lg">{order.productTitle}</CardTitle>
                         <CardDescription className="font-bold text-primary flex items-center gap-1">
                           <Store className="h-3 w-3" /> {order.shopName}
@@ -161,20 +168,28 @@ export default function MyOrdersPage() {
                           <span className="font-medium text-muted-foreground text-xs uppercase font-black">Total Price</span>
                           <span className="font-black text-primary">₹{order.price}</span>
                        </div>
-                       {order.deliveryBoyName && (
-                          <div className="pt-2 border-t flex items-center justify-between">
+                       
+                       {/* Delivery Partner Info & Call Button */}
+                       {order.deliveryBoyName ? (
+                          <div className="pt-3 border-t flex items-center justify-between">
                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8 border-2 border-primary/20">
-                                   <AvatarFallback className="bg-primary text-white text-[10px]">{order.deliveryBoyName.charAt(0)}</AvatarFallback>
+                                <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                   <AvatarFallback className="bg-primary text-white text-xs font-black">{order.deliveryBoyName.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                    <p className="text-[9px] font-black uppercase opacity-60">Delivery Partner</p>
                                    <p className="text-xs font-bold">{order.deliveryBoyName}</p>
                                 </div>
                              </div>
-                             <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" asChild>
-                               <a href={`tel:${order.deliveryBoyPhone}`}><Phone className="h-4 w-4" /></a>
+                             <Button size="icon" className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700 shadow-lg" asChild>
+                               <a href={`tel:${order.deliveryBoyPhone}`}>
+                                 <Phone className="h-5 w-5 text-white" />
+                               </a>
                              </Button>
+                          </div>
+                       ) : !isCancelled && (
+                          <div className="pt-3 border-t">
+                             <p className="text-[10px] text-center text-muted-foreground italic font-medium">Finding nearby delivery partner...</p>
                           </div>
                        )}
                     </div>

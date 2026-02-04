@@ -56,15 +56,26 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
       return;
     }
 
+    if (!userProfile.phone) {
+      toast({ variant: "destructive", title: "Phone Missing", description: "Pehle Dashboard mein apna phone number save karein." });
+      return;
+    }
+
     setIsOrdering(true);
     try {
       const addressString = `${userProfile.houseNo}, ${userProfile.street}, ${userProfile.landmark || ''}, ${userProfile.city}, ${userProfile.state} - ${userProfile.pincode}`;
       
+      // Generate readable Order ID based on area
+      const areaCode = userProfile.areaCode || "LV";
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const displayOrderId = `${areaCode}-ORD-${randomNum}`;
+
       await addDocumentNonBlocking(collection(firestore, "orders"), {
+        displayOrderId: displayOrderId,
         customerId: user.uid,
         customerName: userProfile.name,
         customerDeliveryId: userProfile.deliveryId,
-        customerPhone: userProfile.phone || "",
+        customerPhone: userProfile.phone,
         businessId: product.businessId,
         shopName: shopName || "Local Shop",
         shopPhone: shopWhatsApp || "",
@@ -77,7 +88,10 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
         createdAt: new Date().toISOString()
       });
 
-      toast({ title: "Delivery Requested! 🚚", description: "Humara delivery partner jald hi shop se order pick karega." });
+      toast({ 
+        title: "Delivery Requested! 🚚", 
+        description: `Order ID: ${displayOrderId}. Humara rider jald hi dukan pahunchega.` 
+      });
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: "Order request fail ho gayi." });
     } finally {
@@ -116,11 +130,11 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
         <CardDescription className="text-xs line-clamp-2 h-8">{product?.description}</CardDescription>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex flex-col gap-2">
-        <Button onClick={handleRequestDelivery} disabled={isOrdering} className="w-full bg-orange-500 hover:bg-orange-600 font-bold gap-2">
+        <Button onClick={handleRequestDelivery} disabled={isOrdering} className="w-full bg-orange-500 hover:bg-orange-600 font-bold gap-2 h-11">
           {isOrdering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
           Request Delivery
         </Button>
-        <Button onClick={handleAction} variant="outline" className="w-full border-primary text-primary font-bold">
+        <Button onClick={handleAction} variant="outline" className="w-full border-primary text-primary font-bold h-11">
           <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Buy
         </Button>
       </CardFooter>
