@@ -28,7 +28,6 @@ export default function MyOrdersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Removed orderBy to prevent Firestore Index missing errors which cause app crashes
   const ordersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid)) : null, 
     [firestore, user]
@@ -36,7 +35,6 @@ export default function MyOrdersPage() {
   
   const { data: rawOrders, isLoading } = useCollection<Order>(ordersQuery);
 
-  // Sorting in memory instead of Firestore to avoid permission/index crashes
   const orders = useMemo(() => {
     if (!rawOrders) return [];
     return [...rawOrders].sort((a, b) => 
@@ -61,7 +59,10 @@ export default function MyOrdersPage() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="flex items-center gap-4 mb-8">
         <div className="p-3 bg-primary/10 text-primary rounded-xl"><Package className="h-8 w-8" /></div>
-        <div><h1 className="text-3xl font-black font-headline">My Orders</h1><p className="text-muted-foreground">Track your hyperlocal deliveries live.</p></div>
+        <div>
+          <h1 className="text-3xl font-black font-headline">My Orders</h1>
+          <p className="text-muted-foreground">Track your hyperlocal deliveries live.</p>
+        </div>
       </div>
 
       {!orders || orders.length === 0 ? (
@@ -109,15 +110,26 @@ export default function MyOrdersPage() {
                   )}
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <div className="flex items-start gap-2"><MapPin className="text-primary h-4 w-4 mt-0.5" /><div><p className="text-[9px] font-black uppercase opacity-60">Deliver To</p><p className="text-xs font-medium">{order.address}</p></div></div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="text-primary h-4 w-4 mt-0.5" />
+                        <div>
+                          <p className="text-[9px] font-black uppercase opacity-60">Deliver To</p>
+                          <p className="text-xs font-medium">{order.address}</p>
+                        </div>
+                      </div>
                     </div>
                     <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
                        <div className="flex justify-between font-black text-primary"><span>Total</span><span>₹{order.price}</span></div>
                        {order.deliveryBoyName && (
                           <div className="pt-3 mt-3 border-t flex items-center justify-between">
                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary text-white text-[10px]">{order.deliveryBoyName.charAt(0)}</AvatarFallback></Avatar>
-                                <div><p className="text-[8px] font-black uppercase opacity-60">Rider</p><p className="text-xs font-bold">{order.deliveryBoyName}</p></div>
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="bg-primary text-white text-[10px] font-black">{order.deliveryBoyName.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-[8px] font-black uppercase opacity-60">Rider</p>
+                                  <p className="text-xs font-bold">{order.deliveryBoyName}</p>
+                                </div>
                              </div>
                              <div className="flex gap-2">
                                <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-green-500 text-green-600" onClick={() => handleShareLocation(order.deliveryBoyPhone, order.displayOrderId)}>
