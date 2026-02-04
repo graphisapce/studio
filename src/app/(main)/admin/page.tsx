@@ -45,7 +45,9 @@ import {
   Eye,
   ArrowLeft,
   Truck,
-  Package
+  Package,
+  ClipboardList,
+  Clock
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -69,15 +71,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell
-} from "recharts";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -217,11 +210,13 @@ export default function AdminDashboardPage() {
     toast({ title: "User Deleted" });
   };
 
-  const handleStatClick = (type: "business" | "user-all" | "user-customer" | "user-staff" | "delivery" | "approvals") => {
+  const handleStatClick = (type: "business" | "user-all" | "user-customer" | "user-staff" | "delivery" | "approvals" | "orders") => {
     if (type === "business") {
       setActiveTab("businesses");
     } else if (type === "approvals") {
       setActiveTab("approvals");
+    } else if (type === "orders") {
+      setActiveTab("orders");
     } else {
       setActiveTab("users");
       if (type === "user-all") setUserRoleFilter("all");
@@ -297,7 +292,7 @@ export default function AdminDashboardPage() {
             <CardTitle className="text-xl flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />{staffMembers.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="shadow-sm">
+        <Card className={cn("cursor-pointer transition-all", activeTab === 'orders' && "ring-2 ring-primary")} onClick={() => handleStatClick("orders")}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Total Orders</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><Package className="h-4 w-4 text-purple-500" />{orders?.length || 0}</CardTitle>
@@ -306,12 +301,77 @@ export default function AdminDashboardPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-8 h-12 bg-muted/50 p-1">
-          <TabsTrigger value="approvals" className="px-6">Approvals</TabsTrigger>
-          <TabsTrigger value="users" className="px-6">Users & Management</TabsTrigger>
-          <TabsTrigger value="businesses" className="px-6">Active Shops</TabsTrigger>
-          {isFullAdmin && <TabsTrigger value="config" className="px-6">Platform Settings</TabsTrigger>}
+        <TabsList className="mb-8 h-12 bg-muted/50 p-1 flex overflow-x-auto no-scrollbar justify-start">
+          <TabsTrigger value="approvals" className="px-6 shrink-0">Approvals</TabsTrigger>
+          <TabsTrigger value="orders" className="px-6 shrink-0">Platform Orders</TabsTrigger>
+          <TabsTrigger value="users" className="px-6 shrink-0">Users & Roles</TabsTrigger>
+          <TabsTrigger value="businesses" className="px-6 shrink-0">Active Shops</TabsTrigger>
+          {isFullAdmin && <TabsTrigger value="config" className="px-6 shrink-0">Settings</TabsTrigger>}
         </TabsList>
+
+        <TabsContent value="orders">
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl"><ClipboardList className="h-5 w-5 text-primary" /> Live Order Monitor</CardTitle>
+              <CardDescription>Track every hyperlocal delivery on LocalVyapar.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingOrders ? (
+                <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+              ) : !orders || orders.length === 0 ? (
+                <div className="text-center py-20 opacity-30">No orders found on the platform.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Product & Shop</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Rider</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-black text-[10px] uppercase">{order.displayOrderId}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm">{order.productTitle}</span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Store className="h-2 w-2" /> {order.shopName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-xs">{order.customerName}</span>
+                            <span className="text-[9px] text-muted-foreground">{order.customerDeliveryId}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {order.deliveryBoyName ? (
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="bg-primary/10 text-primary text-[8px] font-black">{order.deliveryBoyName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-bold">{order.deliveryBoyName}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] italic text-muted-foreground">Not Assigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[8px] font-black">
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="users">
           <Card className="border-none shadow-md">
