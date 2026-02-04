@@ -33,6 +33,7 @@ export interface Business {
   shopName: string;
   category: BusinessCategory;
   address: string;
+  areaCode?: string; // New: Area matching
   contactNumber: string;
   whatsappLink: string;
   imageUrl: string;
@@ -77,21 +78,21 @@ export interface Product {
 
 export interface Order {
   id: string;
-  displayOrderId: string; // New: Area-based readable ID
+  displayOrderId: string;
   customerId: string;
   customerName: string;
   customerDeliveryId: string;
-  customerPhone: string; // Required for Rider to call
+  customerPhone: string;
   businessId: string;
   shopName: string;
-  shopPhone: string; // Required for Rider to call Shop
+  shopPhone: string;
   shopAddress: string;
   productId: string;
   productTitle: string;
   price: number;
   deliveryBoyId?: string;
   deliveryBoyName?: string;
-  deliveryBoyPhone?: string; // Required for Customer to call Rider
+  deliveryBoyPhone?: string;
   status: 'pending' | 'assigned' | 'picked-up' | 'out-for-delivery' | 'delivered' | 'cancelled';
   address: string;
   createdAt: string;
