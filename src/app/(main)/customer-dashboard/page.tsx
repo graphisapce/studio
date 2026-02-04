@@ -33,7 +33,9 @@ import {
   Save, 
   Loader2, 
   CheckCircle2,
-  Heart
+  Heart,
+  Camera,
+  Upload
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -87,6 +89,32 @@ export default function CustomerDashboardPage() {
     setIsUpdating(false);
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 200 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Photo too large",
+        description: "Profile photo 200KB se kam honi chahiye.",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const userRef = doc(firestore, "users", user.uid);
+      updateDocumentNonBlocking(userRef, { photoURL: base64String });
+      toast({
+        title: "Photo Updated",
+        description: "Aapka naya profile picture save ho gaya hai.",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handlePasswordReset = async () => {
     if (!user?.email) return;
     setIsResettingPassword(true);
@@ -133,24 +161,45 @@ export default function CustomerDashboardPage() {
         <div className="space-y-6">
           <Card className="text-center pt-8 overflow-hidden">
             <CardContent className="space-y-4">
-              <Avatar className="h-24 w-24 mx-auto border-4 border-primary/20">
-                <AvatarImage src={userProfile?.photoURL} />
-                <AvatarFallback className="text-2xl font-black bg-primary/5 text-primary">
-                  {userProfile?.name?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative w-fit mx-auto group">
+                <Avatar className="h-24 w-24 border-4 border-primary/20">
+                  <AvatarImage src={userProfile?.photoURL} className="object-cover" />
+                  <AvatarFallback className="text-2xl font-black bg-primary/5 text-primary">
+                    {userProfile?.name?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <Label 
+                  htmlFor="photo-upload" 
+                  className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform"
+                >
+                  <Camera className="h-4 w-4" />
+                </Label>
+                <Input 
+                  id="photo-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handlePhotoUpload}
+                />
+              </div>
               <div>
                 <h2 className="text-xl font-bold">{userProfile?.name}</h2>
                 <p className="text-sm text-muted-foreground uppercase tracking-widest font-bold">
                   {userProfile?.role}
                 </p>
               </div>
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t space-y-2">
                 <Button asChild variant="outline" className="w-full gap-2">
                   <Link href="/favorites">
                     <Heart className="h-4 w-4 text-red-500" /> My Favorites
                   </Link>
                 </Button>
+                <Label 
+                  htmlFor="photo-upload" 
+                  className="inline-flex items-center justify-center gap-2 text-xs font-bold text-primary cursor-pointer hover:underline p-2"
+                >
+                  <Upload className="h-3 w-3" /> Change Profile Photo
+                </Label>
               </div>
             </CardContent>
           </Card>
