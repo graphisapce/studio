@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { doc, collection, query, where, increment, addDoc } from "firebase/firestore";
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,8 @@ import {
   Volume2,
   VolumeX,
   Heart,
-  Copy
+  Copy,
+  ArrowLeft
 } from 'lucide-react';
 import { ProductCard } from '@/components/business/product-card';
 import { Watermark } from '@/components/watermark';
@@ -45,9 +46,11 @@ import {
   DialogTrigger as UIDialogTrigger,
 } from "@/components/ui/dialog";
 import { generateShopAudioIntro } from '@/ai/flows/shop-audio-intro-flow';
+import Link from 'next/link';
 
 export default function BusinessDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const firestore = useFirestore();
   const { user, userProfile } = useAuth();
@@ -75,6 +78,10 @@ export default function BusinessDetailPage() {
     [firestore, id]
   );
   const { data: reviews, isLoading: loadingReviews } = useCollection<Review>(reviewsQuery);
+
+  const isStaff = useMemo(() => {
+    return userProfile && ['admin', 'moderator'].includes(userProfile.role);
+  }, [userProfile]);
 
   useEffect(() => {
     if (id && firestore) {
@@ -188,6 +195,17 @@ export default function BusinessDetailPage() {
 
   return (
     <div className="container mx-auto max-w-6xl pb-12 px-4">
+      {/* Staff Back Navigation */}
+      {isStaff && (
+        <div className="pt-4 mb-4">
+          <Button asChild variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
+            <Link href="/admin">
+              <ArrowLeft className="h-4 w-4" /> Back to Admin Panel
+            </Link>
+          </Button>
+        </div>
+      )}
+
       <header className="relative mb-20">
         <div className="relative h-48 md:h-72 w-full overflow-hidden rounded-b-2xl shadow-lg bg-muted">
           <Image src={business.imageUrl || `https://picsum.photos/seed/${business.id}/1200/400`} alt={business.shopName} fill className="object-cover" priority />

@@ -42,7 +42,8 @@ import {
   TrendingUp,
   AlertCircle,
   ExternalLink,
-  Eye
+  Eye,
+  ArrowLeft
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -457,13 +458,11 @@ export default function AdminDashboardPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {u.role === 'business' && (
-                              <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-primary">
-                                <Link href={`/business/${u.id}`} target="_blank">
-                                  <Eye className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            )}
+                            <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                              <Link href={u.role === 'business' ? `/business/${u.id}` : `/profile/${u.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
                             <Select 
                               disabled={(u.role === 'admin' && !isFullAdmin) || (u.id === user?.uid && !isFullAdmin)}
                               defaultValue={u.role} 
@@ -556,7 +555,7 @@ export default function AdminDashboardPage() {
                           <div className="flex items-center gap-2">
                             {p.title}
                             <Button asChild variant="ghost" size="icon" className="h-6 w-6 text-primary">
-                              <Link href={`/business/${p.businessId}`} target="_blank">
+                              <Link href={`/business/${p.businessId}`}>
                                 <ExternalLink className="h-3 w-3" />
                               </Link>
                             </Button>
@@ -597,7 +596,7 @@ export default function AdminDashboardPage() {
                       <TableRow key={b.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Link href={`/business/${b.id}`} target="_blank" className="font-bold hover:text-primary transition-colors flex items-center gap-2">
+                            <Link href={`/business/${b.id}`} className="font-bold hover:text-primary transition-colors flex items-center gap-2">
                               {b.shopName}
                               <ExternalLink className="h-3 w-3 opacity-50" />
                             </Link>
