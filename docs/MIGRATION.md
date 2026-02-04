@@ -1,35 +1,30 @@
-# Project Migration Guide (LocalVyapar)
+# Project Migration & Structure Guide (LocalVyapar)
 
-Aapne apna project safaltapoorvak taiyar kar liya hai. Ise naye editor (VS Code / Cursor) mein le jaane ke liye niche diye gaye steps follow karein:
+Aapne apna project safaltapoorvak taiyar kar liya hai. Ise apne computer par lene aur GitHub par dalne ke liye ye guide follow karein:
 
 ## Step 1: Code Download Karein
-Saare files ko ek folder mein download karein. Isme `src`, `public`, `package.json`, `tsconfig.json`, aur `next.config.ts` jaise mukhya folders honge.
+Firebase Studio mein "Download Project" icon par click karein. Aapko ek `.zip` file milegi jisme ye saara code hoga.
 
-## Step 2: Firebase Setup
-1. [Firebase Console](https://console.firebase.google.com/) par jayein.
-2. **Authentication** enable karein (Email/Password aur Google providers).
-3. **Cloud Firestore** database banayein.
-4. Project Settings mein jakar "Web App" add karein aur configuration keys copy karein.
+## Step 2: Project Structure (Kaunsi file kya hai?)
+Jab aap zip file kholenge, aapko ye main cheezein dikhengi:
 
-## Step 3: Environment Variables
-Naye project ke root mein `.env.local` file banayein aur ye values bharon:
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-GOOGLE_GENAI_API_KEY=your_gemini_key
-```
+- **`src/app/`**: Aapke app ke saare pages (Home, Login, Dashboard, Admin).
+- **`src/components/`**: UI ke saare components (Buttons, Cards, Layouts).
+- **`src/firebase/`**: Firebase setup aur database ke functions.
+- **`src/ai/`**: Gemini AI ke flows (Audio intro, Product description).
+- **`docs/`**: Deployment, GitHub, aur Migration guides (Jo maine aapke liye banayi hain).
+- **`package.json`**: Saari libraries ki list (App run karne ke liye zaroori).
+- **`firestore.rules`**: Database ki security settings.
 
-## Step 4: Firestore Rules
-Project mein maujood `firestore.rules` ke code ko Firebase Console ke "Rules" tab mein paste karke publish karein.
+## Step 3: Local Setup (Computer Par)
+1. Zip file extract karein.
+2. [Node.js](https://nodejs.org/) install karein (agar nahi hai).
+3. Terminal mein `npm install` chalayein saari files download karne ke liye.
+4. `.env.local` file banayein aur usme apni Firebase aur Gemini API keys dalein.
+5. `npm run dev` se app start karein.
 
-## Step 5: Install aur Run
-Terminal khol kar ye commands chalayein:
-1. `npm install` (Saari libraries install karne ke liye)
-2. `npm run dev` (Project start karne ke liye)
+## Step 4: GitHub par Push
+Ab aap `docs/GITHUB_GUIDE.md` follow karke ise GitHub par upload kar sakte hain.
 
 ---
-**Note:** Dashboard ka option tabhi dikhega jab aap login karenge aur aapka role 'business' ya 'delivery-boy' hoga.
+**Note:** Dashboard ka option tabhi dikhega jab aap login karenge aur aapka role sahi hoga. Aap Admin panel se roles change kar sakte hain.
