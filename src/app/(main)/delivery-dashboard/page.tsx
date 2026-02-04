@@ -9,8 +9,10 @@ import {
   useFirestore, 
   useCollection, 
   useMemoFirebase,
-  updateDocumentNonBlocking
+  updateDocumentNonBlocking,
+  useAuth as useFirebaseAuth
 } from "@/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 import {
   Card,
   CardContent,
@@ -32,18 +34,72 @@ import {
   BadgeCheck,
   TrendingUp,
   History,
-  AlertCircle
+  AlertCircle,
+  UserCircle,
+  Camera,
+  Upload,
+  Lock,
+  Save,
+  Building2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Order } from "@/lib/types";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+
+const stateList = [
+  "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "Bihar", 
+  "West Bengal", "Gujarat", "Rajasthan", "Punjab", "Haryana", "Madhya Pradesh", "Others"
+];
 
 export default function DeliveryDashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const auth = useFirebaseAuth();
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    houseNo: "",
+    street: "",
+    landmark: "",
+    city: "",
+    state: "",
+    pincode: "",
+    country: "India"
+  });
+  const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Sync Form Data
+  useEffect(() => {
+    if (userProfile) {
+      setFormData({
+        name: userProfile.name || "",
+        phone: userProfile.phone || "",
+        houseNo: userProfile.houseNo || "",
+        street: userProfile.street || "",
+        landmark: userProfile.landmark || "",
+        city: userProfile.city || "",
+        state: userProfile.state || "Delhi",
+        pincode: userProfile.pincode || "",
+        country: userProfile.country || "India"
+      });
+    }
+  }, [userProfile]);
 
   // Redirect if not delivery boy
   useEffect(() => {
@@ -56,14 +112,14 @@ export default function DeliveryDashboardPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
-  // Fetch Available Orders (Pending and not assigned)
+  // Fetch Available Orders
   const availableOrdersQuery = useMemoFirebase(() => 
     query(collection(firestore, "orders"), where("status", "==", "pending")), 
     [firestore]
   );
   const { data: availableOrders, isLoading: loadingAvailable } = useCollection<Order>(availableOrdersQuery);
 
-  // Fetch My Orders (Assigned to me)
+  // Fetch My Orders
   const myOrdersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, "orders"), where("deliveryBoyId", "==", user.uid)) : null, 
     [firestore, user]
@@ -97,6 +153,55 @@ export default function DeliveryDashboardPage() {
     toast({ title: "Status Updated", description: `Order status changed to ${newStatus}.` });
   };
 
+  const handleUpdateAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsUpdatingAccount(true);
+    const userRef = doc(firestore, "users", user.uid);
+    updateDocumentNonBlocking(userRef, {
+      name: formData.name,
+      phone: formData.phone,
+      houseNo: formData.houseNo,
+      street: formData.street,
+      landmark: formData.landmark,
+      city: formData.city,
+      state: formData.state,
+      pincode: formData.pincode,
+      country: formData.country
+    });
+    toast({ title: "Profile Updated", description: "Aapki jankari save ho gayi hai." });
+    setIsUpdatingAccount(false);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 200 * 1024) {
+      toast({ variant: "destructive", title: "Photo too large", description: "Profile photo 200KB se kam honi chahiye." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const userRef = doc(firestore, "users", user.uid);
+      updateDocumentNonBlocking(userRef, { photoURL: reader.result as string });
+      toast({ title: "Photo Updated" });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) return;
+    setIsResettingPassword(true);
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      toast({ title: "Reset Link Sent", description: "Aapki email check karein." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error" });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   if (authLoading || (user && !userProfile)) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
@@ -110,12 +215,13 @@ export default function DeliveryDashboardPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 text-primary rounded-2xl">
-            <Truck className="h-10 w-10" />
-          </div>
+          <Avatar className="h-16 w-16 border-2 border-primary">
+            <AvatarImage src={userProfile?.photoURL} className="object-cover" />
+            <AvatarFallback className="bg-primary/10 text-primary font-black">{userProfile?.name?.charAt(0)}</AvatarFallback>
+          </Avatar>
           <div>
-            <h1 className="text-3xl font-black font-headline">Delivery Partner</h1>
-            <p className="text-muted-foreground">Manage your orders and deliveries.</p>
+            <h1 className="text-3xl font-black font-headline">{userProfile?.name || "Delivery Partner"}</h1>
+            <p className="text-muted-foreground text-sm">Status: Active & Online</p>
           </div>
         </div>
         
@@ -168,10 +274,11 @@ export default function DeliveryDashboardPage() {
       </div>
 
       <Tabs defaultValue="available" className="w-full">
-        <TabsList className="mb-6 w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-8">
-          <TabsTrigger value="available" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">Available Orders ({availableOrders?.length || 0})</TabsTrigger>
+        <TabsList className="mb-6 w-full justify-start bg-transparent border-b rounded-none h-auto p-0 gap-8 overflow-x-auto no-scrollbar">
+          <TabsTrigger value="available" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">Orders ({availableOrders?.length || 0})</TabsTrigger>
           <TabsTrigger value="active" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">My Task ({activeDeliveries.length})</TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">History</TabsTrigger>
+          <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none px-0 pb-4">My Account</TabsTrigger>
         </TabsList>
 
         <TabsContent value="available" className="space-y-4">
@@ -290,6 +397,120 @@ export default function DeliveryDashboardPage() {
                 </div>
              </CardContent>
            </Card>
+        </TabsContent>
+
+        <TabsContent value="account" className="space-y-6">
+          <div className="grid md:grid-cols-12 gap-6">
+            <div className="md:col-span-4 space-y-6">
+              <Card className="text-center pt-8">
+                <CardContent className="space-y-4">
+                  <div className="relative w-fit mx-auto group">
+                    <Avatar className="h-28 w-28 border-4 border-primary/20">
+                      <AvatarImage src={userProfile?.photoURL} className="object-cover" />
+                      <AvatarFallback className="text-3xl font-black bg-primary/5 text-primary">
+                        {userProfile?.name?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Label 
+                      htmlFor="photo-upload" 
+                      className="absolute bottom-1 right-1 p-2 bg-primary text-white rounded-full cursor-pointer shadow-lg hover:scale-110 transition-transform"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Label>
+                    <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                  </div>
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-widest opacity-60">Delivery Partner</p>
+                  <Button asChild variant="ghost" className="text-xs text-primary p-0 h-auto">
+                    <Label htmlFor="photo-upload" className="cursor-pointer">Update Photo</Label>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-destructive/20 bg-destructive/5">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2 text-destructive"><Lock className="h-4 w-4" /> Security</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2 flex items-center justify-between">
+                  <p className="text-xs font-bold text-muted-foreground">Account Password</p>
+                  <Button size="sm" variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword} className="h-7 text-[10px] uppercase font-black">
+                    {isResettingPassword ? "Sending..." : "Reset"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="md:col-span-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><UserCircle className="h-5 w-5 text-primary" /> Personal Details</CardTitle>
+                  <CardDescription>Aapki profile aur professional delivery details.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUpdateAccount} className="space-y-6">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Full Name</Label>
+                        <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Phone Number</Label>
+                        <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
+                      <div className="flex items-center gap-2 pb-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-black uppercase tracking-tight">Professional Address</span>
+                      </div>
+                      
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat No.</Label>
+                          <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="A-123" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Colony</Label>
+                          <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="Main Road" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark</Label>
+                        <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="Near Public Park" />
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
+                          <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
+                          <Input value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} />
+                        </div>
+                        <div className="space-y-2 col-span-2 sm:col-span-1">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
+                          <Select value={formData.state} onValueChange={(v) => setFormData({...formData, state: v})}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="State" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stateList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button type="submit" className="w-full gap-2 font-bold" disabled={isUpdatingAccount}>
+                      {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Profile
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
