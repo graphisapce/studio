@@ -61,6 +61,7 @@ import {
 import { Business, Product, UserProfile, PlatformConfig, Order } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
