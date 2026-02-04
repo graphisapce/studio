@@ -1,7 +1,7 @@
 
 "use client";
 import Link from "next/link";
-import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert, UserCircle } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert, UserCircle, Truck } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -13,13 +13,9 @@ export function DesktopSidebar() {
 
   const handleLogout = () => auth.signOut();
 
-  const isBusiness = useMemo(() => {
-    return userProfile?.role === 'business';
-  }, [userProfile]);
-
-  const canManage = useMemo(() => {
-    return userProfile && ['admin', 'moderator'].includes(userProfile.role);
-  }, [userProfile]);
+  const isBusiness = useMemo(() => userProfile?.role === 'business', [userProfile]);
+  const isDelivery = useMemo(() => userProfile?.role === 'delivery-boy', [userProfile]);
+  const canManage = useMemo(() => userProfile && ['admin', 'moderator'].includes(userProfile.role), [userProfile]);
 
   return (
     <aside className="w-64 flex-col border-r bg-background p-4 hidden md:flex h-screen sticky top-0">
@@ -38,7 +34,13 @@ export function DesktopSidebar() {
 
         {user && isBusiness && (
           <Button variant="ghost" className="justify-start gap-3 bg-primary/5 text-primary hover:bg-primary/10" asChild>
-            <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
+            <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>Business Dashboard</span></Link>
+          </Button>
+        )}
+
+        {user && isDelivery && (
+          <Button variant="ghost" className="justify-start gap-3 bg-orange-50 text-orange-600 hover:bg-orange-100" asChild>
+            <Link href="/delivery-dashboard"><Truck className="h-5 w-5" /><span>Delivery Panel</span></Link>
           </Button>
         )}
 
@@ -66,17 +68,12 @@ export function DesktopSidebar() {
             <p className="font-semibold truncate text-primary">
               {userProfile?.name || user.displayName || user.email}
             </p>
-            {userProfile ? (
-              <p className="text-xs text-muted-foreground capitalize mb-2 font-medium">
-                {userProfile.role === 'admin' ? 'Administrator' : userProfile.role === 'business' ? 'Business Account' : userProfile.role === 'moderator' ? 'Moderator Staff' : 'Customer Account'}
+            {userProfile && (
+              <p className="text-[10px] text-muted-foreground uppercase font-black">
+                {userProfile.role} Account
               </p>
-            ) : (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Syncing role...</span>
-              </div>
             )}
-            <Button variant="ghost" onClick={handleLogout} className="justify-start p-0 h-auto text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors">
+            <Button variant="ghost" onClick={handleLogout} className="justify-start p-0 h-auto text-destructive hover:text-destructive hover:bg-destructive/10">
               <LogOut className="h-5 w-5 mr-2" />Logout
             </Button>
           </div>

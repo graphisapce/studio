@@ -3,12 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * LOCALVYAPAR SECURITY RULES
-     */
-
-    // --- Helper Functions ---
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -25,6 +19,10 @@ service cloud.firestore {
       return isSignedIn() && (getUserData().role == 'moderator' || getUserData().role == 'admin');
     }
 
+    function isDeliveryBoy() {
+      return isSignedIn() && getUserData().role == 'delivery-boy';
+    }
+
     function isOwner(userId) {
       return isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
@@ -33,33 +31,21 @@ service cloud.firestore {
       return isSignedIn() && (get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId == request.auth.uid || isModerator());
     }
 
-    // --- Collection Rules ---
-
     match /users/{userId} {
-      // Allow anyone to see a specific profile, but only moderators can list all profiles.
       allow get: if true;
       allow list: if isModerator();
-      
       allow create: if isSignedIn();
-      
-      // RULES: 
-      // 1. Admin can update anyone.
-      // 2. Owner can update their profile BUT NOT THEIR ROLE.
-      // 3. Moderator can update others, BUT NOT ADMINS and NOT THEMSELVES.
       allow update: if isAdmin() || 
                       (isOwner(userId) && request.resource.data.role == resource.data.role) ||
                       (isModerator() && resource.data.role != 'admin' && userId != request.auth.uid);
-      
       allow delete: if isAdmin();
     }
 
     match /businesses/{businessId} {
       allow get, list: if true;
       allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isModerator());
-      
       allow update: if (isOwner(resource.data.ownerId) || isModerator()) || 
                       (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']));
-      
       allow delete: if isOwner(resource.data.ownerId) || isModerator();
     }
 
@@ -67,6 +53,23 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if ownsBusiness(request.resource.data.businessId) || isModerator();
       allow update, delete: if resource != null && (ownsBusiness(resource.data.businessId) || isModerator());
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (
+        request.auth.uid == resource.data.customerId || 
+        request.auth.uid == resource.data.businessId || 
+        isDeliveryBoy() || 
+        isModerator()
+      );
+      allow list: if isSignedIn() && (isDeliveryBoy() || isModerator());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isDeliveryBoy() || 
+        isModerator() || 
+        (resource.data.customerId == request.auth.uid && request.resource.data.status == 'cancelled')
+      );
+      allow delete: if isModerator();
     }
 
     match /reviews/{reviewId} {

@@ -25,6 +25,8 @@ export type BusinessCategory =
   | 'Car Painter'
   | 'Others';
 
+export type UserRole = 'customer' | 'business' | 'admin' | 'moderator' | 'delivery-boy';
+
 export interface Business {
   id: string;
   ownerId: string;
@@ -33,8 +35,8 @@ export interface Business {
   address: string;
   contactNumber: string;
   whatsappLink: string;
-  imageUrl: string; // Used as Banner
-  logoUrl?: string; // Official Shop Logo
+  imageUrl: string;
+  logoUrl?: string;
   imageHint: string;
   latitude?: number;
   longitude?: number;
@@ -45,18 +47,18 @@ export interface Business {
   lastTransactionId?: string;
   status?: 'pending' | 'approved' | 'rejected';
   views?: number;
-  callCount?: number; // Tracks button clicks
-  whatsappCount?: number; // Tracks button clicks
+  callCount?: number;
+  whatsappCount?: number;
   rating?: number;
   reviewCount?: number;
   isVerified?: boolean;
-  openingTime?: string; // Format: "09:00"
-  closingTime?: string; // Format: "21:00"
-  upiId?: string; // For direct payments
-  paymentQrUrl?: string; // Uploaded QR Code image
+  openingTime?: string;
+  closingTime?: string;
+  upiId?: string;
+  paymentQrUrl?: string;
   instagramUrl?: string;
   facebookUrl?: string;
-  flashDeal?: string; // Quick announcement/offer
+  flashDeal?: string;
   flashDealExpiry?: string;
 }
 
@@ -69,8 +71,27 @@ export interface Product {
   imageUrl: string;
   imageHint: string;
   status: 'pending' | 'approved' | 'rejected';
-  badge?: 'best-seller' | 'new' | 'limited' | 'sale'; // NEW: Product Highlight Badges
+  badge?: 'best-seller' | 'new' | 'limited' | 'sale';
   createdAt?: string;
+}
+
+export interface Order {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerDeliveryId: string;
+  customerPhone?: string;
+  businessId: string;
+  shopName: string;
+  shopPhone?: string;
+  productId: string;
+  productTitle: string;
+  price: number;
+  deliveryBoyId?: string;
+  deliveryBoyName?: string;
+  status: 'pending' | 'assigned' | 'picked-up' | 'out-for-delivery' | 'delivered' | 'cancelled';
+  address: string;
+  createdAt: string;
 }
 
 export interface UserProfile {
@@ -79,13 +100,11 @@ export interface UserProfile {
   email: string;
   phone?: string;
   photoURL?: string;
-  role: 'customer' | 'business' | 'admin' | 'moderator';
+  role: UserRole;
   createdAt: string;
   favorites?: string[]; 
-  deliveryId?: string; // Unique Delivery ID for logistics
-  areaCode?: string; // Short code for the area (e.g., JHP)
-  
-  // Structured Address
+  deliveryId?: string;
+  areaCode?: string;
   houseNo?: string;
   street?: string;
   landmark?: string;

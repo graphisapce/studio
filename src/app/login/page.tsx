@@ -11,7 +11,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  getAdditionalUserInfo,
   sendPasswordResetEmail,
   GoogleAuthProvider,
 } from "firebase/auth";
@@ -57,6 +56,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { UserRole } from "@/lib/types";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -81,7 +81,7 @@ export default function LoginPage() {
   const auth = useFirebaseAuth();
   const db = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
-  const [role, setRole] = useState<"customer" | "business">("customer");
+  const [role, setRole] = useState<UserRole>("customer");
   
   useEffect(() => {
     if(!authLoading && user) {
@@ -110,11 +110,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push("/");
     } catch (error: any) {
-      let errorMessage = "Kripya sahi email aur password check karein. Agar account nahi hai toh Sign Up karein.";
-      if (error.code === 'auth/invalid-credential') {
-        errorMessage = "Email ya Password galat hai. Check karein ya Sign Up karein.";
-      }
-      toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
+      toast({ variant: "destructive", title: "Login Failed", description: "Email/Password galat hai." });
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +146,6 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const newUser = result.user;
 
-      // Check if profile exists, if not create it
       const profileDoc = await getDoc(doc(db, "users", newUser.uid));
       if (!profileDoc.exists()) {
         await setDoc(doc(db, "users", newUser.uid), {
@@ -174,10 +169,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
         await sendPasswordResetEmail(auth, values.email);
-        toast({
-            title: "Success",
-            description: "If an account exists, a reset link has been sent. Check your spam folder.",
-        });
+        toast({ title: "Success", description: "Reset link sent to your email." });
     } catch (error: any) {
         toast({ variant: "destructive", title: "Error", description: "Failed to send reset email." });
     } finally {
@@ -188,7 +180,6 @@ export default function LoginPage() {
   if (authLoading && !user) return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p className="text-muted-foreground">Checking authentication...</p>
     </div>
   );
 
@@ -206,7 +197,7 @@ export default function LoginPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Welcome Back</CardTitle>
-                <CardDescription>Enter your credentials to access your account.</CardDescription>
+                <CardDescription>Enter your credentials to access LocalVyapar.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...loginForm}>
@@ -228,34 +219,8 @@ export default function LoginPage() {
                     <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? "Signing In..." : "Sign In"}</Button>
                   </form>
                 </Form>
-                 <div className="mt-2 text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild><Button variant="link" className="p-0 h-auto font-normal">Forgot Password?</Button></AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Forgot Your Password?</AlertDialogTitle>
-                          <AlertDialogDescription>Enter your email and we'll send you a link to reset it.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <Form {...forgotPasswordForm}>
-                            <form id="forgot-password-form" onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)}>
-                                 <FormField control={forgotPasswordForm.control} name="email" render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <FormControl><Input placeholder="name@example.com" {...field} /></FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </form>
-                        </Form>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <Button type="submit" form="forgot-password-form" disabled={isLoading}>Send Reset Link</Button>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                </div>
                 <div className="relative my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or continue with</span></div></div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon className="mr-2 h-5 w-5" />Sign in with Google</Button>
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon className="mr-2 h-5 w-5" />Google Sign In</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -264,19 +229,23 @@ export default function LoginPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Create an Account</CardTitle>
-                <CardDescription>Select your role and enter your details.</CardDescription>
+                <CardDescription>Select your role and join LocalVyapar.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 space-y-2">
-                    <Label>I am a...</Label>
-                    <RadioGroup defaultValue={role} onValueChange={(v: any) => setRole(v)} className="flex gap-4">
-                        <div className="flex items-center space-x-2">
+                <div className="mb-6 space-y-3 p-4 bg-muted/50 rounded-xl">
+                    <Label className="text-xs font-black uppercase text-muted-foreground">Main Role</Label>
+                    <RadioGroup defaultValue={role} onValueChange={(v: any) => setRole(v)} className="grid grid-cols-3 gap-2">
+                        <div className="flex items-center space-x-2 bg-white p-2 rounded-lg border">
                             <RadioGroupItem value="customer" id="customer" />
-                            <Label htmlFor="customer">Customer</Label>
+                            <Label htmlFor="customer" className="text-[10px] font-bold">User</Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 bg-white p-2 rounded-lg border">
                             <RadioGroupItem value="business" id="business" />
-                            <Label htmlFor="business">Business Owner</Label>
+                            <Label htmlFor="business" className="text-[10px] font-bold">Shop</Label>
+                        </div>
+                        <div className="flex items-center space-x-2 bg-white p-2 rounded-lg border">
+                            <RadioGroupItem value="delivery-boy" id="delivery-boy" />
+                            <Label htmlFor="delivery-boy" className="text-[10px] font-bold">Delivery</Label>
                         </div>
                     </RadioGroup>
                 </div>
@@ -298,7 +267,7 @@ export default function LoginPage() {
                     )} />
                      <FormField control={signupForm.control} name="phone" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>Phone</FormLabel>
                         <FormControl><Input placeholder="9876543210" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -313,8 +282,6 @@ export default function LoginPage() {
                     <Button type="submit" className="w-full" disabled={isLoading}>Create Account</Button>
                   </form>
                 </Form>
-                <div className="relative my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or</span></div></div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}><GoogleIcon className="mr-2 h-5 w-5" />Sign up with Google</Button>
               </CardContent>
             </Card>
           </TabsContent>

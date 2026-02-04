@@ -8,7 +8,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string", "enum": ["customer", "business", "admin", "moderator"] },
+        "role": { "type": "string", "enum": ["customer", "business", "admin", "moderator", "delivery-boy"] },
         "email": { "type": "string", "format": "email" },
         "phone": { "type": "string" },
         "photoURL": { "type": "string" },
@@ -35,12 +35,30 @@
         "category": { "type": "string" },
         "views": { "type": "number" },
         "isPaid": { "type": "boolean" },
-        "imageUrl": { "type": "string", "description": "Shop Banner image" },
-        "logoUrl": { "type": "string", "description": "Shop Logo image" },
-        "paymentQrUrl": { "type": "string", "description": "Payment QR Code Image" },
-        "instagramUrl": { "type": "string" },
-        "facebookUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "paymentQrUrl": { "type": "string" },
         "flashDeal": { "type": "string" }
+      }
+    },
+    "Order": {
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a delivery order.",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerDeliveryId": { "type": "string" },
+        "businessId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productTitle": { "type": "string" },
+        "price": { "type": "number" },
+        "deliveryBoyId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "assigned", "picked-up", "out-for-delivery", "delivered", "cancelled"] },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       }
     },
     "Review": {
@@ -67,6 +85,10 @@
     "/businesses/{businessId}": {
       "schema": { "$ref": "#/backend/entities/Business" },
       "description": "Business profiles."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/backend/entities/Order" },
+      "description": "Delivery orders."
     },
     "/reviews/{reviewId}": {
       "schema": { "$ref": "#/backend/entities/Review" },
