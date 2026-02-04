@@ -1,12 +1,13 @@
 
 "use client";
 
+import { useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { collection, query, where, orderBy, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Loader2, Package, Truck, CheckCircle2, Clock, MapPin, Store, XCircle, Phone, Hash, MessageCircle } from "lucide-react";
+import { collection, query, where } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Package, Truck, CheckCircle2, Clock, MapPin, Store, Phone, Hash, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -22,17 +23,26 @@ const orderSteps = [
 ];
 
 export default function MyOrdersPage() {
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // Removed orderBy to prevent Firestore Index missing errors which cause app crashes
   const ordersQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid), orderBy("createdAt", "desc")) : null, 
+    user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid)) : null, 
     [firestore, user]
   );
   
-  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
+  const { data: rawOrders, isLoading } = useCollection<Order>(ordersQuery);
+
+  // Sorting in memory instead of Firestore to avoid permission/index crashes
+  const orders = useMemo(() => {
+    if (!rawOrders) return [];
+    return [...rawOrders].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [rawOrders]);
 
   const handleShareLocation = (riderPhone: string | undefined, orderId: string) => {
     if (!riderPhone) {
@@ -54,7 +64,12 @@ export default function MyOrdersPage() {
         <div><h1 className="text-3xl font-black font-headline">My Orders</h1><p className="text-muted-foreground">Track your hyperlocal deliveries live.</p></div>
       </div>
 
-      {!orders || orders.length === 0 ? <div className="text-center py-20 border-2 border-dashed rounded-3xl opacity-30"><Package className="h-12 w-12 mx-auto mb-4" /><p>No orders yet.</p></div> : 
+      {!orders || orders.length === 0 ? (
+        <div className="text-center py-20 border-2 border-dashed rounded-3xl opacity-30">
+          <Package className="h-12 w-12 mx-auto mb-4" />
+          <p>Abhi tak koi order nahi hai.</p>
+        </div>
+      ) : (
         <div className="space-y-8">
           {orders.map((order) => {
             const currentStepIdx = orderSteps.findIndex(s => s.status === order.status);
@@ -64,15 +79,21 @@ export default function MyOrdersPage() {
                 <CardHeader className="bg-muted/30 pb-4 border-b">
                   <div className="flex justify-between items-start">
                      <div className="space-y-1">
-                        <Badge variant="outline" className="text-[10px] font-black border-primary text-primary"><Hash className="h-2 w-2 mr-1" /> {order.displayOrderId}</Badge>
+                        <Badge variant="outline" className="text-[10px] font-black border-primary text-primary">
+                          <Hash className="h-2 w-2 mr-1" /> {order.displayOrderId || 'LV-ORD'}
+                        </Badge>
                         <CardTitle className="text-lg">{order.productTitle}</CardTitle>
-                        <CardDescription className="font-bold text-primary flex items-center gap-1"><Store className="h-3 w-3" /> {order.shopName}</CardDescription>
+                        <CardDescription className="font-bold text-primary flex items-center gap-1">
+                          <Store className="h-3 w-3" /> {order.shopName}
+                        </CardDescription>
                      </div>
-                     <Badge variant={isCancelled ? 'destructive' : order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[10px]">{order.status}</Badge>
+                     <Badge variant={isCancelled ? 'destructive' : order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[10px]">
+                        {order.status}
+                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  {!isCancelled && order.status !== 'delivered' && (
+                  {!isCancelled && order.status !== 'delivered' && currentStepIdx >= 0 && (
                     <div className="mb-8 relative px-4">
                        <div className="absolute top-1/2 left-0 w-full h-1 bg-muted -translate-y-1/2" />
                        <div className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 transition-all duration-500" style={{ width: `${(currentStepIdx / (orderSteps.length - 1)) * 100}%` }} />
@@ -99,9 +120,13 @@ export default function MyOrdersPage() {
                                 <div><p className="text-[8px] font-black uppercase opacity-60">Rider</p><p className="text-xs font-bold">{order.deliveryBoyName}</p></div>
                              </div>
                              <div className="flex gap-2">
-                               <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-green-500 text-green-600" onClick={() => handleShareLocation(order.deliveryBoyPhone, order.displayOrderId)}><MessageCircle className="h-4 w-4" /></Button>
+                               <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-green-500 text-green-600" onClick={() => handleShareLocation(order.deliveryBoyPhone, order.displayOrderId)}>
+                                 <MessageCircle className="h-4 w-4" />
+                               </Button>
                                {order.deliveryBoyPhone && (
-                                 <Button size="icon" className="h-9 w-9 rounded-full bg-green-600" asChild><a href={`tel:${order.deliveryBoyPhone}`}><Phone className="h-4 w-4" /></a></Button>
+                                 <Button size="icon" className="h-9 w-9 rounded-full bg-green-600" asChild>
+                                   <a href={`tel:${order.deliveryBoyPhone}`}><Phone className="h-4 w-4" /></a>
+                                 </Button>
                                )}
                              </div>
                           </div>
@@ -113,7 +138,7 @@ export default function MyOrdersPage() {
             );
           })}
         </div>
-      }
+      )}
     </div>
   );
 }

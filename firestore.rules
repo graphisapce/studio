@@ -44,9 +44,8 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Simplified for reliability: allow any signed in user to see their relevant orders
-      // In a production app, you would add more granular checks
-      allow get, list, create, update, delete: if isSignedIn();
+      // Allow any signed-in user to interact with orders for now to ensure stability
+      allow read, write: if isSignedIn();
     }
 
     match /reviews/{reviewId} {

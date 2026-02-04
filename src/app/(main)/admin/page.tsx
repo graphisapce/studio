@@ -25,29 +25,18 @@ import { Button } from "@/components/ui/button";
 import { 
   Loader2, 
   Store, 
-  Users as UsersIcon, 
   ShieldAlert, 
-  Crown,
   ShieldCheck,
-  BarChart3,
-  Megaphone,
+  Package,
   Save,
-  UserCog,
-  Mail,
-  User as UserIcon,
   Trash2,
-  UserPlus,
   Search,
-  CheckCircle2,
-  TrendingUp,
-  AlertCircle,
   ExternalLink,
   Eye,
-  ArrowLeft,
   Truck,
-  Package,
   ClipboardList,
-  Clock
+  User as UserIcon,
+  AlertCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -72,17 +61,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
@@ -92,7 +70,6 @@ export default function AdminDashboardPage() {
   const firestore = useFirestore();
   const [announcementText, setAnnouncementText] = useState("");
   
-  // Tabs & Filter State
   const [activeTab, setActiveTab] = useState("approvals");
   const [userRoleFilter, setUserRoleFilter] = useState<"all" | "customer" | "staff" | "delivery">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,7 +78,6 @@ export default function AdminDashboardPage() {
     return user && userProfile && ['admin', 'moderator'].includes(userProfile.role);
   }, [user, userProfile]);
 
-  // Redirect if not admin or moderator
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
@@ -112,7 +88,6 @@ export default function AdminDashboardPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
-  // Platform Configuration
   const configRef = useMemoFirebase(() => 
     isAdminOrModerator ? doc(firestore, "config", "platform") : null, 
     [firestore, isAdminOrModerator]
@@ -123,7 +98,6 @@ export default function AdminDashboardPage() {
     if (config?.announcement) setAnnouncementText(config.announcement);
   }, [config]);
 
-  // Data Collections
   const businessesRef = useMemoFirebase(() => 
     isAdminOrModerator ? collection(firestore, "businesses") : null, 
     [firestore, isAdminOrModerator]
@@ -150,13 +124,11 @@ export default function AdminDashboardPage() {
 
   const isFullAdmin = userProfile?.role === 'admin';
 
-  // Statistics
   const pendingProducts = useMemo(() => products?.filter(p => p.status === 'pending') || [], [products]);
   const customers = useMemo(() => allUsers?.filter(u => u.role === 'customer') || [], [allUsers]);
   const staffMembers = useMemo(() => allUsers?.filter(u => ['admin', 'moderator'].includes(u.role)) || [], [allUsers]);
   const deliveryBoys = useMemo(() => allUsers?.filter(u => u.role === 'delivery-boy') || [], [allUsers]);
 
-  // Filtered Users List with Search
   const filteredUsers = useMemo(() => {
     if (!allUsers) return [];
     let list = allUsers;
@@ -177,7 +149,6 @@ export default function AdminDashboardPage() {
     return list;
   }, [allUsers, userRoleFilter, searchQuery]);
 
-  // Actions
   const handleUpdateConfig = async () => {
     if (!isFullAdmin) return;
     try {
@@ -196,10 +167,6 @@ export default function AdminDashboardPage() {
       toast({ variant: "destructive", title: "Action Denied", description: "Self role update not allowed." });
       return;
     }
-    if (!isFullAdmin && targetCurrentRole === 'admin') {
-      toast({ variant: "destructive", title: "Permission Denied" });
-      return;
-    }
     const userRef = doc(firestore, "users", userId);
     updateDocumentNonBlocking(userRef, { role: newRole });
     toast({ title: "Role Updated" });
@@ -209,22 +176,6 @@ export default function AdminDashboardPage() {
     if (!isFullAdmin) return;
     deleteDocumentNonBlocking(doc(firestore, "users", userId));
     toast({ title: "User Deleted" });
-  };
-
-  const handleStatClick = (type: "business" | "user-all" | "user-customer" | "user-staff" | "delivery" | "approvals" | "orders") => {
-    if (type === "business") {
-      setActiveTab("businesses");
-    } else if (type === "approvals") {
-      setActiveTab("approvals");
-    } else if (type === "orders") {
-      setActiveTab("orders");
-    } else {
-      setActiveTab("users");
-      if (type === "user-all") setUserRoleFilter("all");
-      if (type === "user-customer") setUserRoleFilter("customer");
-      if (type === "user-staff") setUserRoleFilter("staff");
-      if (type === "delivery") setUserRoleFilter("delivery");
-    }
   };
 
   if (authLoading || (user && !userProfile)) {
@@ -263,37 +214,37 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <Card className={cn("cursor-pointer transition-all", activeTab === 'businesses' && "ring-2 ring-primary")} onClick={() => handleStatClick("business")}>
+        <Card className={cn("cursor-pointer transition-all", activeTab === 'businesses' && "ring-2 ring-primary")} onClick={() => setActiveTab("businesses")}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Shops</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><Store className="h-4 w-4 text-blue-500" />{businesses?.length || 0}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={cn("cursor-pointer transition-all", activeTab === 'approvals' && "ring-2 ring-primary")} onClick={() => handleStatClick("approvals")}>
+        <Card className={cn("cursor-pointer transition-all", activeTab === 'approvals' && "ring-2 ring-primary")} onClick={() => setActiveTab("approvals")}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Pending</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><AlertCircle className="h-4 w-4 text-red-500" />{pendingProducts.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={cn("cursor-pointer transition-all", userRoleFilter === 'customer' && "ring-2 ring-primary")} onClick={() => handleStatClick("user-customer")}>
+        <Card className={cn("cursor-pointer transition-all", userRoleFilter === 'customer' && "ring-2 ring-primary")} onClick={() => {setActiveTab("users"); setUserRoleFilter("customer");}}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Customers</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><UserIcon className="h-4 w-4 text-green-500" />{customers.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={cn("cursor-pointer transition-all", userRoleFilter === 'delivery' && "ring-2 ring-primary")} onClick={() => handleStatClick("delivery")}>
+        <Card className={cn("cursor-pointer transition-all", userRoleFilter === 'delivery' && "ring-2 ring-primary")} onClick={() => {setActiveTab("users"); setUserRoleFilter("delivery");}}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Delivery Boys</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><Truck className="h-4 w-4 text-orange-500" />{deliveryBoys.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={cn("cursor-pointer transition-all", userRoleFilter === 'staff' && "ring-2 ring-primary")} onClick={() => handleStatClick("user-staff")}>
+        <Card className={cn("cursor-pointer transition-all", userRoleFilter === 'staff' && "ring-2 ring-primary")} onClick={() => {setActiveTab("users"); setUserRoleFilter("staff");}}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Staff</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />{staffMembers.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className={cn("cursor-pointer transition-all", activeTab === 'orders' && "ring-2 ring-primary")} onClick={() => handleStatClick("orders")}>
+        <Card className={cn("cursor-pointer transition-all", activeTab === 'orders' && "ring-2 ring-primary")} onClick={() => setActiveTab("orders")}>
           <CardHeader className="p-4">
             <CardDescription className="font-bold uppercase text-[9px]">Total Orders</CardDescription>
             <CardTitle className="text-xl flex items-center gap-2"><Package className="h-4 w-4 text-purple-500" />{orders?.length || 0}</CardTitle>
