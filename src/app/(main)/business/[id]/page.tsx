@@ -169,6 +169,7 @@ export default function BusinessDetailPage() {
         businessId: id,
         userId: user.uid,
         userName: userProfile.name,
+        userPhotoURL: userProfile.photoURL || "", // Store photo for display
         rating,
         comment,
         createdAt: new Date().toISOString()
@@ -195,16 +196,19 @@ export default function BusinessDetailPage() {
 
   return (
     <div className="container mx-auto max-w-6xl pb-12 px-4">
-      {/* Staff Back Navigation */}
-      {isStaff && (
-        <div className="pt-4 mb-4">
-          <Button asChild variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
+      {/* Back Navigation */}
+      <div className="pt-4 mb-4 flex justify-between items-center">
+        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        {isStaff && (
+          <Button asChild variant="outline" size="sm" className="gap-2 border-primary/20 text-primary">
             <Link href="/admin">
-              <ArrowLeft className="h-4 w-4" /> Back to Admin Panel
+              Admin Panel
             </Link>
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <header className="relative mb-20">
         <div className="relative h-48 md:h-72 w-full overflow-hidden rounded-b-2xl shadow-lg bg-muted">
@@ -335,10 +339,21 @@ export default function BusinessDetailPage() {
                 </form>
                 <div className="space-y-4 border-t pt-4">
                   {reviews?.map((r) => (
-                    <div key={r.id} className="p-3 rounded-lg border bg-card">
-                      <div className="flex justify-between items-center"><p className="text-sm font-bold">{r.userName}</p><div className="flex gap-0.5">{Array.from({ length: r.rating }).map((_, i) => (<Star key={i} className="h-2 w-2 text-yellow-500 fill-yellow-500" />))}</div></div>
-                      <p className="text-xs text-muted-foreground italic mt-1">"{r.comment}"</p>
-                    </div>
+                    <Link href={`/profile/${r.userId}`} key={r.id} className="block group">
+                      <div className="p-3 rounded-lg border bg-card group-hover:border-primary/50 transition-colors">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={(r as any).userPhotoURL} className="object-cover" />
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{r.userName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <p className="text-sm font-bold group-hover:text-primary transition-colors">{r.userName}</p>
+                          </div>
+                          <div className="flex gap-0.5">{Array.from({ length: r.rating }).map((_, i) => (<Star key={i} className="h-2 w-2 text-yellow-500 fill-yellow-500" />))}</div>
+                        </div>
+                        <p className="text-xs text-muted-foreground italic">"{r.comment}"</p>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </CardContent>

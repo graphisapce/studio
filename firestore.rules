@@ -36,7 +36,10 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get, list: if isOwner(userId) || isModerator();
+      // Allow anyone to see a specific profile, but only moderators can list all profiles.
+      allow get: if true;
+      allow list: if isModerator();
+      
       allow create: if isSignedIn();
       
       // RULES: 
