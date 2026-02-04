@@ -8,41 +8,33 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : null;
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
+      let data = getUserData();
+      return isSignedIn() && data != null && data.role == 'admin';
     }
 
     function isModerator() {
-      return isSignedIn() && (getUserData().role == 'moderator' || getUserData().role == 'admin');
-    }
-
-    function isDeliveryBoy() {
-      return isSignedIn() && getUserData().role == 'delivery-boy';
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && (request.auth.uid == userId || isAdmin());
+      let data = getUserData();
+      return isSignedIn() && data != null && (data.role == 'moderator' || data.role == 'admin');
     }
 
     match /users/{userId} {
       allow get: if true;
       allow list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isAdmin() || 
-                      (isOwner(userId) && request.resource.data.role == resource.data.role) ||
-                      (isModerator() && resource.data.role != 'admin' && userId != request.auth.uid);
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isModerator());
       allow delete: if isAdmin();
     }
 
     match /businesses/{businessId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isModerator());
-      allow update: if (isOwner(resource.data.ownerId) || isModerator()) || 
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'callCount', 'whatsappCount', 'rating', 'reviewCount']));
-      allow delete: if isOwner(resource.data.ownerId) || isModerator();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.ownerId || isAdmin() || isModerator() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'callCount', 'whatsappCount', 'rating', 'reviewCount']));
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.ownerId || isAdmin() || isModerator());
     }
 
     match /products/{productId} {
@@ -52,12 +44,9 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Allow any signed-in user to list/get orders. 
-      // In production, you'd add filters to ensure privacy, but for the MVP/Admin visibility:
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isModerator();
+      // Permissive for MVP: allow any signed in user to read/write orders
+      // In production, you would restrict this to only the involved parties.
+      allow read, write: if isSignedIn();
     }
 
     match /reviews/{reviewId} {
@@ -68,7 +57,7 @@ service cloud.firestore {
 
     match /config/{configId} {
       allow get: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isModerator();
     }
   }
 }
