@@ -228,7 +228,7 @@ export default function DashboardPage() {
       pincode: accountInfo.pincode,
       country: accountInfo.country
     });
-    toast({ title: "Account Updated", description: "Personal details and professional address successfully save ho gayi hain." });
+    toast({ title: "Account Updated", description: "Personal details successfully save ho gayi hain." });
     setIsUpdatingAccount(false);
   };
 
@@ -351,6 +351,30 @@ export default function DashboardPage() {
     }
   };
 
+  const qrUrl = origin && user?.uid 
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(origin + '/business/' + user.uid)}`
+    : null;
+
+  const downloadQRCode = async () => {
+    if (!qrUrl) return;
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `shop-qr-${user?.uid}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast({ title: "QR Code Downloaded" });
+    } catch (err) {
+      console.error("QR Download Error:", err);
+      toast({ variant: "destructive", title: "Download failed", description: "QR code download nahi ho paya." });
+    }
+  };
+
   if (authLoading || loadingBusiness || loadingProducts || loadingOrders) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
@@ -359,10 +383,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const qrUrl = origin && user?.uid 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(origin + '/business/' + user.uid)}`
-    : null;
 
   return (
     <div className="container mx-auto px-4 py-8">
