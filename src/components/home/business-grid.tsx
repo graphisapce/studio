@@ -10,7 +10,7 @@ import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
-  Search, Navigation, Megaphone, Utensils, Zap, ShoppingCart, Wrench, Info, Scale, Hammer, Bike, Car, Brush, Laptop, HeartPulse, GraduationCap, Gift, Sofa, Shirt, Gem, Pill, Book, Scissors, LayoutGrid, ChevronDown, ChevronUp, MapPin
+  Search, Navigation, Megaphone, Utensils, Zap, ShoppingCart, Wrench, Info, Scale, Hammer, Bike, Car, Brush, Laptop, HeartPulse, GraduationCap, Gift, Sofa, Shirt, Gem, Pill, Book, Scissors, LayoutGrid, ChevronDown, ChevronUp, MapPin, Store
 } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,8 +32,11 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
   const firestore = useFirestore();
 
-  const { data: realBusinesses, isLoading: loadingRealData } = useCollection<Business>(useMemoFirebase(() => collection(firestore, "businesses"), [firestore]));
-  const { data: allProducts } = useCollection<Product>(useMemoFirebase(() => collection(firestore, "products"), [firestore]));
+  const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
+  const { data: realBusinesses, isLoading: loadingRealData } = useCollection<Business>(businessesRef);
+  
+  const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
+  const { data: allProducts } = useCollection<Product>(productsRef);
 
   useEffect(() => {
     if (externalCategory) setSelectedCategory(externalCategory);
@@ -41,19 +44,35 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
   }, [externalCategory, externalSearch]);
 
   const sortedAndFilteredBusinesses = useMemo(() => {
-    let list: Business[] = realBusinesses ? [...realBusinesses] : [...mockBusinesses];
+    // Combine real businesses with mock data if needed, or just use real
+    let list: Business[] = realBusinesses || [];
 
     const matchesSearch = (b: Business) => {
-      const matchName = b.shopName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchProd = allProducts?.some(p => p.businessId === b.id && p.status === 'approved' && p.title.toLowerCase().includes(searchTerm.toLowerCase()));
-      return matchName || matchProd;
+      const s = searchTerm.toLowerCase();
+      const matchName = b.shopName.toLowerCase().includes(s);
+      const matchCat = b.category.toLowerCase().includes(s);
+      // Search in products of this business
+      const matchProd = allProducts?.some(p => 
+        p.businessId === b.id && 
+        p.status === 'approved' && 
+        (p.title.toLowerCase().includes(s) || p.description.toLowerCase().includes(s))
+      );
+      return matchName || matchCat || matchProd;
     };
 
     return list.filter(b => {
       const matchesCat = !selectedCategory || b.category === selectedCategory;
+      // Area Logic: If toggle is ON, match business areaCode with user's areaCode
       const matchesArea = !isMyAreaOnly || !userProfile?.areaCode || b.areaCode === userProfile.areaCode;
       return matchesCat && matchesArea && matchesSearch(b);
-    }).sort((a, b) => (isBusinessPremium(b) ? 1 : -1));
+    }).sort((a, b) => {
+      // Prioritize Premium Listings
+      const aPrem = isBusinessPremium(a);
+      const bPrem = isBusinessPremium(b);
+      if (aPrem && !bPrem) return -1;
+      if (!aPrem && bPrem) return 1;
+      return 0;
+    });
   }, [searchTerm, selectedCategory, isMyAreaOnly, realBusinesses, allProducts, userProfile]);
 
   return (
@@ -103,7 +122,14 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
         {loadingRealData ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />) : 
-          sortedAndFilteredBusinesses.map((b) => <BusinessCard key={b.id} business={b} />)
+          sortedAndFilteredBusinesses.length > 0 ? (
+            sortedAndFilteredBusinesses.map((b) => <BusinessCard key={b.id} business={b} />)
+          ) : (
+            <div className="col-span-full py-20 text-center opacity-30 border-2 border-dashed rounded-[2rem]">
+               <Store className="h-16 w-16 mx-auto mb-4" />
+               <p className="font-bold text-lg">No shops found in this area/category.</p>
+            </div>
+          )
         }
       </div>
     </div>

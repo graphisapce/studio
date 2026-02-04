@@ -51,7 +51,7 @@ import {
   Instagram,
   Facebook,
   Upload,
-  Image as ImageIcon,
+  ImageIcon,
   Download,
   AlertCircle,
   UserCircle,
@@ -315,6 +315,8 @@ export default function DashboardPage() {
     if (e) e.preventDefault();
     if (!user) return;
     setIsUpdatingProfile(true);
+    
+    // Sync shop data with user's area code for listing visibility
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
@@ -332,7 +334,10 @@ export default function DashboardPage() {
       flashDeal: shopProfile.flashDeal,
       instagramUrl: shopProfile.instagramUrl,
       facebookUrl: shopProfile.facebookUrl,
+      areaCode: userProfile?.areaCode || "Global", // Important: Ensures shop is visible in its area
+      address: `${accountInfo.houseNo}, ${accountInfo.street}, ${accountInfo.city}, ${accountInfo.state}` // Sync address from account
     }, { merge: true });
+    
     toast({ title: "Updated", description: "Shop details saved successfully." });
     setIsUpdatingProfile(false);
   };
