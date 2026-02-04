@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import type { Business } from "@/lib/types";
@@ -9,13 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Crown, ShieldCheck, Store } from "lucide-react";
+import { MapPin, Crown, ShieldCheck, Store, Navigation } from "lucide-react";
 import { Watermark } from "@/components/watermark";
 import { isBusinessPremium } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface BusinessCardProps {
-  business: Business & { distance?: number | null };
+  business: Business & { distance?: number };
 }
 
 export function BusinessCard({ business }: BusinessCardProps) {
@@ -32,16 +33,20 @@ export function BusinessCard({ business }: BusinessCardProps) {
   return (
     <Link href={`/business/${business?.id}`}>
       <Card className="h-full overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 relative border-none bg-white shadow-md">
-        {hasPremium && (
-          <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+          {hasPremium && (
             <Badge className="bg-yellow-500 hover:bg-yellow-600 border-none flex gap-1 shadow-lg py-1 px-3">
               <Crown className="h-3 w-3" /> Premium
             </Badge>
-          </div>
-        )}
+          )}
+          {business.distance !== undefined && (
+            <Badge className="bg-primary text-white border-none flex gap-1 shadow-lg py-1 px-3">
+              <Navigation className="h-3 w-3" /> {business.distance.toFixed(1)} km
+            </Badge>
+          )}
+        </div>
         
         <CardHeader className="p-0 relative">
-          {/* Inner container for image zoom with overflow-hidden */}
           <div className="relative aspect-[4/3] w-full bg-muted group overflow-hidden rounded-t-lg">
             <Image
               src={displayImage}
@@ -54,7 +59,6 @@ export function BusinessCard({ business }: BusinessCardProps) {
             <Watermark />
           </div>
           
-          {/* Business Logo Overlap - Positioned outside the image container but inside the CardHeader */}
           <div className="absolute -bottom-7 left-4 z-20">
              <Avatar className="h-14 w-14 border-4 border-white shadow-xl bg-white">
                <AvatarImage src={displayLogo || ""} alt={business?.shopName} className="object-cover" />
@@ -65,7 +69,7 @@ export function BusinessCard({ business }: BusinessCardProps) {
           </div>
         </CardHeader>
         
-        <CardContent className="p-5 pt-10"> {/* Extra padding-top for the logo overlap */}
+        <CardContent className="p-5 pt-10">
           <div className="flex justify-between items-center mb-2">
              <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[10px] font-bold px-3">
                {business?.category || 'General'}

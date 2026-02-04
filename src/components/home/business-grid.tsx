@@ -2,15 +2,14 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { collection, query, limit, getDocs } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { mockBusinesses } from "@/lib/data";
-import type { Business, BusinessCategory, PlatformConfig, Product } from "@/lib/types";
+import type { Business, BusinessCategory, Product } from "@/lib/types";
 import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
-  Search, Navigation, Megaphone, Utensils, Zap, ShoppingCart, Wrench, Info, Scale, Hammer, Bike, Car, Brush, Laptop, HeartPulse, GraduationCap, Gift, Sofa, Shirt, Gem, Pill, Book, Scissors, LayoutGrid, ChevronDown, ChevronUp, MapPin, Store
+  Search, Navigation, Utensils, ShoppingCart, Wrench, Info, Scale, Hammer, Bike, Car, Brush, Laptop, HeartPulse, GraduationCap, Gift, Sofa, Shirt, Gem, Pill, Book, Scissors, LayoutGrid, ChevronDown, ChevronUp, MapPin, Store
 } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +29,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
   const [isMyAreaOnly, setIsMyAreaOnly] = useState(false);
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number, lon: number } | null>(null);
   const firestore = useFirestore();
 
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
@@ -38,20 +38,41 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
   const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
   const { data: allProducts } = useCollection<Product>(productsRef);
 
+  // Auto-request location on start
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn("Location access denied or unavailable.");
+        }
+      );
+    }
+  }, []);
+
   useEffect(() => {
     if (externalCategory) setSelectedCategory(externalCategory);
     if (externalSearch) setSearchTerm(externalSearch);
   }, [externalCategory, externalSearch]);
 
   const sortedAndFilteredBusinesses = useMemo(() => {
-    // Combine real businesses with mock data if needed, or just use real
-    let list: Business[] = realBusinesses || [];
+    let list: (Business & { distance?: number })[] = (realBusinesses || []).map(b => {
+      let distance: number | undefined = undefined;
+      if (userCoords && b.latitude && b.longitude) {
+        distance = getDistanceFromLatLonInKm(userCoords.lat, userCoords.lon, b.latitude, b.longitude);
+      }
+      return { ...b, distance };
+    });
 
     const matchesSearch = (b: Business) => {
       const s = searchTerm.toLowerCase();
       const matchName = b.shopName.toLowerCase().includes(s);
       const matchCat = b.category.toLowerCase().includes(s);
-      // Search in products of this business
       const matchProd = allProducts?.some(p => 
         p.businessId === b.id && 
         p.status === 'approved' && 
@@ -62,18 +83,23 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
 
     return list.filter(b => {
       const matchesCat = !selectedCategory || b.category === selectedCategory;
-      // Area Logic: If toggle is ON, match business areaCode with user's areaCode
       const matchesArea = !isMyAreaOnly || !userProfile?.areaCode || b.areaCode === userProfile.areaCode;
       return matchesCat && matchesArea && matchesSearch(b);
     }).sort((a, b) => {
-      // Prioritize Premium Listings
+      // 1. Premium First
       const aPrem = isBusinessPremium(a);
       const bPrem = isBusinessPremium(b);
       if (aPrem && !bPrem) return -1;
       if (!aPrem && bPrem) return 1;
+
+      // 2. Nearest First (if location available)
+      if (a.distance !== undefined && b.distance !== undefined) {
+        return a.distance - b.distance;
+      }
+
       return 0;
     });
-  }, [searchTerm, selectedCategory, isMyAreaOnly, realBusinesses, allProducts, userProfile]);
+  }, [searchTerm, selectedCategory, isMyAreaOnly, realBusinesses, allProducts, userProfile, userCoords]);
 
   return (
     <div className="container mx-auto px-4 py-8 pb-20">
@@ -81,6 +107,11 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
         <div className="text-center space-y-4">
            <h1 className="text-4xl md:text-6xl font-black font-headline tracking-tight">Market <span className="text-primary">Ab Aapke Haath</span> Mein</h1>
            <p className="text-muted-foreground max-w-xl mx-auto text-lg">Dhoondein shops, products aur services apne pados mein.</p>
+           {userCoords && (
+             <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 gap-1 py-1 px-3">
+               <Navigation className="h-3 w-3 animate-pulse" /> Location Active: Showing Nearest Shops
+             </Badge>
+           )}
         </div>
 
         <div className="max-w-2xl mx-auto space-y-4">
