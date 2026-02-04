@@ -154,18 +154,18 @@ export default function BusinessDetailPage() {
 
   const copyToClipboard = async () => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(window.location.href);
         toast({ title: "Link Copied!", description: "Share it with your friends!" });
       } else {
-        throw new Error("Clipboard not supported");
+        throw new Error("Clipboard API not available");
       }
     } catch (err) {
       console.error("Clipboard Error:", err);
       toast({ 
         variant: "destructive", 
         title: "Copy Failed", 
-        description: "Browser ne copy block kiya hai. Kripya manual link share karein." 
+        description: "Browser ne automatic copy block kiya hai. Kripya URL bar se link manually copy karein." 
       });
     }
   };

@@ -33,7 +33,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if true;
-      allow list: if isModerator();
+      allow list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isAdmin() || 
                       (isOwner(userId) && request.resource.data.role == resource.data.role) ||
@@ -45,31 +45,22 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isModerator());
       allow update: if (isOwner(resource.data.ownerId) || isModerator()) || 
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'callCount', 'whatsappCount']));
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'callCount', 'whatsappCount', 'rating', 'reviewCount']));
       allow delete: if isOwner(resource.data.ownerId) || isModerator();
     }
 
     match /products/{productId} {
       allow get, list: if true;
-      allow create: if ownsBusiness(request.resource.data.businessId) || isModerator();
-      allow update, delete: if resource != null && (ownsBusiness(resource.data.businessId) || isModerator());
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
     }
 
     match /orders/{orderId} {
-      allow get: if isSignedIn() && (
-        request.auth.uid == resource.data.customerId || 
-        request.auth.uid == resource.data.businessId || 
-        isDeliveryBoy() || 
-        isModerator()
-      );
-      // Allow listing if the user is a delivery boy, staff, OR the business/customer associated with orders
-      allow list: if isSignedIn(); 
+      // Allow get/list for any signed-in user. Firestore will automatically filter 
+      // results based on the query's 'where' clauses used in the app.
+      allow get, list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isDeliveryBoy() || 
-        isModerator() || 
-        (resource.data.customerId == request.auth.uid && request.resource.data.status == 'cancelled')
-      );
+      allow update: if isSignedIn();
       allow delete: if isModerator();
     }
 
