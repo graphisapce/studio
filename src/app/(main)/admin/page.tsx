@@ -241,6 +241,16 @@ export default function AdminDashboardPage() {
   };
 
   const handleUpdateUserRole = (userId: string, targetCurrentRole: string, newRole: any) => {
+    // SECURITY: Moderators cannot change their own role
+    if (!isFullAdmin && userId === user?.uid) {
+      toast({ 
+        variant: "destructive", 
+        title: "Action Denied", 
+        description: "Staff members cannot change their own role." 
+      });
+      return;
+    }
+
     if (!isFullAdmin && targetCurrentRole === 'admin') {
       toast({ variant: "destructive", title: "Permission Denied", description: "Staff members cannot modify Admin profiles." });
       return;
@@ -430,7 +440,7 @@ export default function AdminDashboardPage() {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-bold flex items-center gap-2">
-                              {u.name}
+                              {u.name} {u.id === user?.uid && <Badge variant="outline" className="text-[8px]">Me</Badge>}
                             </span>
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Mail className="h-3 w-3" /> {u.email}
@@ -445,7 +455,7 @@ export default function AdminDashboardPage() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Select 
-                              disabled={u.role === 'admin' && !isFullAdmin}
+                              disabled={(u.role === 'admin' && !isFullAdmin) || (u.id === user?.uid && !isFullAdmin)}
                               defaultValue={u.role} 
                               onValueChange={(val: any) => handleUpdateUserRole(u.id, u.role, val)}
                             >
@@ -499,7 +509,7 @@ export default function AdminDashboardPage() {
              <CardContent className="space-y-4">
                <div className="space-y-2">
                  <Label>Announcement Text</Label>
-                 <Input value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} placeholder="e.g. Swagat hai LocalVyapar par! Nayi shops ab live hain." />
+                 <Input value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} placeholder="e.g. Swagat hai LocalVyapar पर! Nayi shops ab live hain." />
                </div>
                <Button onClick={handleUpdateConfig} className="gap-2 rounded-full"><Save className="h-4 w-4" /> Save Configuration</Button>
              </CardContent>

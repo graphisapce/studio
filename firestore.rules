@@ -40,11 +40,12 @@ service cloud.firestore {
       allow create: if isSignedIn();
       
       // RULES: 
-      // 1. User can update their own profile.
-      // 2. Admin can update anyone.
-      // 3. Moderator can update others, BUT NOT ADMINS.
-      allow update: if isOwner(userId) || isAdmin() || 
-                      (isModerator() && resource.data.role != 'admin' && request.resource.data.role != 'admin');
+      // 1. Admin can update anyone.
+      // 2. Owner can update their profile BUT NOT THEIR ROLE.
+      // 3. Moderator can update others, BUT NOT ADMINS and NOT THEMSELVES.
+      allow update: if isAdmin() || 
+                      (isOwner(userId) && request.resource.data.role == resource.data.role) ||
+                      (isModerator() && resource.data.role != 'admin' && userId != request.auth.uid);
       
       allow delete: if isAdmin();
     }
