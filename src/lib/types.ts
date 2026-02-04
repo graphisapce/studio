@@ -78,11 +78,13 @@ export interface UserProfile {
   name: string;
   email: string;
   phone?: string;
-  address?: string; // Added address for customers
+  address?: string; 
   photoURL?: string;
   role: 'customer' | 'business' | 'admin' | 'moderator';
   createdAt: string;
-  favorites?: string[]; // Array of business IDs
+  favorites?: string[]; 
+  deliveryId?: string; // NEW: Unique Delivery ID for logistics
+  areaCode?: string; // NEW: Short code for the area (e.g., JHP)
 }
 
 export interface Review {
@@ -90,6 +92,7 @@ export interface Review {
   businessId: string;
   userId: string;
   userName: string;
+  userPhotoURL?: string;
   rating: number;
   comment: string;
   createdAt: string;

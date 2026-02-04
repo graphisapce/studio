@@ -35,10 +35,13 @@ import {
   CheckCircle2,
   Heart,
   Camera,
-  Upload
+  Upload,
+  Hash,
+  Truck
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 export default function CustomerDashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -65,9 +68,25 @@ export default function CustomerDashboardPage() {
           phone: userProfile.phone || "",
           address: userProfile.address || ""
         });
+
+        // Auto-generate Delivery ID if not exists
+        if (!userProfile.deliveryId) {
+          generateDeliveryId();
+        }
       }
     }
   }, [user, userProfile, authLoading, router]);
+
+  const generateDeliveryId = () => {
+    if (!user) return;
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const newDeliveryId = `LV-JHP-${randomNum}`; // JHP for Jahangirpuri default
+    const userRef = doc(firestore, "users", user.uid);
+    updateDocumentNonBlocking(userRef, { 
+      deliveryId: newDeliveryId,
+      areaCode: "JHP"
+    });
+  };
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,14 +165,26 @@ export default function CustomerDashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 bg-primary/10 text-primary rounded-2xl">
-          <UserCircle className="h-10 w-10" />
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+            <UserCircle className="h-10 w-10" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black font-headline">My Dashboard</h1>
+            <p className="text-muted-foreground">Manage your account and preferences.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-black font-headline">My Dashboard</h1>
-          <p className="text-muted-foreground">Manage your account and preferences.</p>
-        </div>
+        
+        {userProfile?.deliveryId && (
+          <div className="bg-primary/5 border-2 border-primary/20 p-4 rounded-2xl flex flex-col items-center md:items-end">
+            <div className="flex items-center gap-2 text-primary font-black text-sm uppercase">
+              <Truck className="h-4 w-4" /> Delivery ID
+            </div>
+            <p className="text-2xl font-black tracking-tighter text-navy">{userProfile.deliveryId}</p>
+            <p className="text-[10px] text-muted-foreground font-bold">Show this to delivery partner</p>
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">

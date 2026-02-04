@@ -43,7 +43,8 @@ import {
   AlertCircle,
   ExternalLink,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Truck
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -169,7 +170,8 @@ export default function AdminDashboardPage() {
       const q = searchQuery.toLowerCase();
       list = list.filter(u => 
         u.name.toLowerCase().includes(q) || 
-        u.email.toLowerCase().includes(q)
+        u.email.toLowerCase().includes(q) ||
+        (u.deliveryId && u.deliveryId.toLowerCase().includes(q))
       );
     }
     
@@ -324,7 +326,7 @@ export default function AdminDashboardPage() {
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search name, email, shop..." 
+            placeholder="Search name, email, shop, Delivery ID..." 
             className="pl-10 h-10 rounded-full"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -434,6 +436,7 @@ export default function AdminDashboardPage() {
                   <TableHeader>
                     <TableRow className="bg-muted/30">
                       <TableHead>User Identity</TableHead>
+                      <TableHead>Delivery ID</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -450,6 +453,15 @@ export default function AdminDashboardPage() {
                               <Mail className="h-3 w-3" /> {u.email}
                             </span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                           {u.deliveryId ? (
+                             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black gap-1">
+                               <Truck className="h-3 w-3" /> {u.deliveryId}
+                             </Badge>
+                           ) : (
+                             <span className="text-xs text-muted-foreground italic">N/A</span>
+                           )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'moderator' ? 'default' : u.role === 'business' ? 'secondary' : 'outline'} className="uppercase text-[9px] font-black">

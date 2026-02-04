@@ -15,7 +15,9 @@ import {
   User as UserIcon,
   ShieldCheck,
   Calendar,
-  Store
+  Store,
+  Truck,
+  Hash
 } from 'lucide-react';
 import type { UserProfile } from "@/lib/types";
 import { Badge } from '@/components/ui/badge';
@@ -84,6 +86,14 @@ export default function UserProfilePage() {
             </Badge>
             {profile.role === 'business' && <Badge className="bg-yellow-500 uppercase px-4 font-black">Business Owner</Badge>}
           </div>
+          
+          {profile.deliveryId && (
+             <div className="mt-4 flex flex-col items-center">
+                <Badge variant="outline" className="border-primary text-primary font-bold gap-1 py-1 px-3">
+                  <Truck className="h-3 w-3" /> Delivery ID: {profile.deliveryId}
+                </Badge>
+             </div>
+          )}
         </CardHeader>
         <CardContent className="pt-8 space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
