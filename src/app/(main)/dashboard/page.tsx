@@ -245,6 +245,38 @@ export default function DashboardPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 200 * 1024) {
+      toast({ variant: "destructive", title: "Logo too large", description: "Logo 200KB se kam honi chahiye." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setShopProfile(prev => ({ ...prev, shopLogoUrl: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 500 * 1024) {
+      toast({ variant: "destructive", title: "Banner too large", description: "Banner 500KB se kam honi chahiye." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setShopProfile(prev => ({ ...prev, shopImageUrl: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -408,7 +440,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
            <Avatar className="h-16 w-16 border-2 border-primary">
-             <AvatarImage src={businessData?.logoUrl} />
+             <AvatarImage src={businessData?.logoUrl} className="object-cover" />
              <AvatarFallback className="bg-primary/10 text-primary"><Store className="h-8 w-8" /></AvatarFallback>
            </Avatar>
            <div>
@@ -560,7 +592,45 @@ export default function DashboardPage() {
                  <CardHeader><CardTitle>Shop Profile Settings</CardTitle></CardHeader>
                  <CardContent>
                     <form onSubmit={handleUpdateShopProfile} className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
+                      {/* Visuals Section */}
+                      <div className="grid sm:grid-cols-2 gap-6 pb-6 border-b">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black uppercase text-muted-foreground">Shop Logo</Label>
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-20 w-20 border-2 border-primary/10">
+                              <AvatarImage src={shopProfile.shopLogoUrl} className="object-cover" />
+                              <AvatarFallback className="bg-primary/5 text-primary"><Store className="h-8 w-8" /></AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary hover:underline flex items-center gap-2 bg-primary/5 p-2 rounded-lg w-fit">
+                                <Upload className="h-4 w-4" /> Change Logo
+                              </Label>
+                              <Input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                              <p className="text-[10px] text-muted-foreground mt-2">Square image (Max 200KB) works best for the circular icon.</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black uppercase text-muted-foreground">Shop Banner (Cover Photo)</Label>
+                          <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-dashed border-primary/10 bg-muted/30">
+                            {shopProfile.shopImageUrl ? (
+                              <Image src={shopProfile.shopImageUrl} alt="Banner" fill className="object-cover" />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                                <ImageIcon className="h-8 w-8 opacity-20" />
+                                <span className="text-[10px] font-bold">No banner uploaded</span>
+                              </div>
+                            )}
+                            <Label htmlFor="banner-upload" className="absolute bottom-3 right-3 bg-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg cursor-pointer hover:bg-primary hover:text-white transition-all flex items-center gap-2">
+                              <ImageIcon className="h-3.5 w-3.5" /> {shopProfile.shopImageUrl ? "Update Banner" : "Upload Banner"}
+                            </Label>
+                            <Input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-2">High resolution wide image (Max 500KB) for shop top header.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-2">
                         <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
                         <div className="space-y-2">
                           <Label>Category</Label>
@@ -571,8 +641,11 @@ export default function DashboardPage() {
                         <div className="space-y-2"><Label>Opening Time</Label><Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} /></div>
                         <div className="space-y-2"><Label>Closing Time</Label><Input type="time" value={shopProfile.closingTime} onChange={(e) => setShopProfile({...shopProfile, closingTime: e.target.value})} /></div>
                       </div>
-                      <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
-                      <Button type="submit" className="w-full" disabled={isUpdatingProfile}>{isUpdatingProfile ? "Saving..." : "Update Shop Profile"}</Button>
+                      <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} className="min-h-[120px]" /></div>
+                      <Button type="submit" className="w-full h-12 rounded-xl shadow-lg" disabled={isUpdatingProfile}>
+                        {isUpdatingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                        Update Shop Profile
+                      </Button>
                     </form>
                  </CardContent>
                </Card>
