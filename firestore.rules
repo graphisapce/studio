@@ -27,10 +27,6 @@ service cloud.firestore {
       return isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    function ownsBusiness(businessId) {
-      return isSignedIn() && (get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId == request.auth.uid || isModerator());
-    }
-
     match /users/{userId} {
       allow get: if true;
       allow list: if isSignedIn();
@@ -56,8 +52,8 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Allow get/list for any signed-in user. Firestore will automatically filter 
-      // results based on the query's 'where' clauses used in the app.
+      // Allow any signed-in user to list/get orders. 
+      // In production, you'd add filters to ensure privacy, but for the MVP/Admin visibility:
       allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn();
