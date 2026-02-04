@@ -60,7 +60,8 @@ import {
   MapPin,
   Mail,
   Phone,
-  Building2
+  Building2,
+  Truck
 } from "lucide-react";
 import {
   Dialog,
@@ -84,12 +85,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BusinessCategory, Business, Product } from "@/lib/types";
+import { BusinessCategory, Business, Product, Order } from "@/lib/types";
 import { isBusinessPremium } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
 import { generateSocialCaption } from "@/ai/flows/social-caption-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
 const categoryList: BusinessCategory[] = [
@@ -117,9 +117,7 @@ export default function DashboardPage() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [generatedCaption, setGeneratedCaption] = useState("");
   const [origin, setOrigin] = useState("");
   
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
@@ -130,6 +128,12 @@ export default function DashboardPage() {
     [firestore, user]
   );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsQuery);
+
+  const ordersQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, "orders"), where("businessId", "==", user.uid)) : null, 
+    [firestore, user]
+  );
+  const { data: incomingOrders, isLoading: loadingOrders } = useCollection<Order>(ordersQuery);
 
   const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "", badge: "" });
   const [shopProfile, setShopProfile] = useState({ 
@@ -248,37 +252,12 @@ export default function DashboardPage() {
     }
   };
 
-  const handleGenerateCaption = async (product: Product) => {
-    setIsGeneratingCaption(true);
-    try {
-      const res = await generateSocialCaption({
-        shopName: businessData?.shopName || "Our Shop",
-        productName: product.title,
-        price: product.price,
-        category: businessData?.category || "General"
-      });
-      setGeneratedCaption(res.caption);
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "AI Error", description: "Caption generate nahi ho paya." });
-    } finally {
-      setIsGeneratingCaption(false);
-    }
-  };
-
   const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 500 * 1024) {
-      toast({ variant: "destructive", title: "File too large", description: "QR code image 500KB se kam honi chahiye." });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setShopProfile(prev => ({ ...prev, paymentQrUrl: base64String }));
-      toast({ title: "QR Loaded", description: "Save button dabayein update karne ke liye." });
+      setShopProfile(prev => ({ ...prev, paymentQrUrl: reader.result as string }));
     };
     reader.readAsDataURL(file);
   };
@@ -286,12 +265,6 @@ export default function DashboardPage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 200 * 1024) {
-      toast({ variant: "destructive", title: "Logo too large", description: "Logo 200KB se kam honi chahiye." });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = () => {
       setShopProfile(prev => ({ ...prev, shopLogoUrl: reader.result as string }));
@@ -302,12 +275,6 @@ export default function DashboardPage() {
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 500 * 1024) {
-      toast({ variant: "destructive", title: "Banner too large", description: "Banner 500KB se kam honi chahiye." });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = () => {
       setShopProfile(prev => ({ ...prev, shopImageUrl: reader.result as string }));
@@ -318,16 +285,6 @@ export default function DashboardPage() {
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 300 * 1024) {
-      toast({ 
-        variant: "destructive", 
-        title: "Photo too large!", 
-        description: "Product photo 300KB se kam honi chahiye." 
-      });
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = () => {
       setNewProduct(prev => ({ ...prev, imageUrl: reader.result as string }));
@@ -338,16 +295,6 @@ export default function DashboardPage() {
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
-    if (!hasPremium && products && products.length >= 3) {
-      toast({ 
-        variant: "destructive", 
-        title: "Limit Reached!", 
-        description: "Free account mein aap sirf 3 items add kar sakte hain." 
-      });
-      return;
-    }
-
     setIsSubmittingProduct(true);
     addDocumentNonBlocking(collection(firestore, "products"), {
       businessId: user.uid,
@@ -355,7 +302,6 @@ export default function DashboardPage() {
       price: parseFloat(newProduct.price),
       description: newProduct.description,
       imageUrl: newProduct.imageUrl || "",
-      imageHint: 'product',
       status: 'pending',
       badge: newProduct.badge || null,
       createdAt: new Date().toISOString()
@@ -364,12 +310,6 @@ export default function DashboardPage() {
     setNewProduct({ title: "", price: "", description: "", imageUrl: "", badge: "" });
     setIsProductDialogOpen(false);
     setIsSubmittingProduct(false);
-  };
-
-  const handleUpdateProductBadge = (productId: string, badge: any) => {
-    const productRef = doc(firestore, "products", productId);
-    updateDocumentNonBlocking(productRef, { badge });
-    toast({ title: "Badge Updated" });
   };
 
   const handleUpdateShopProfile = (e?: React.FormEvent) => {
@@ -404,26 +344,14 @@ export default function DashboardPage() {
     try {
       await sendPasswordResetEmail(auth, user.email);
       toast({ title: "Reset Link Sent" });
-    } catch (err: any) {
+    } catch (err) {
       toast({ variant: "destructive", title: "Error" });
     } finally {
       setIsResettingPassword(false);
     }
   };
 
-  const downloadQRCode = async () => {
-    if (!origin || !user?.uid) return;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(origin + '/business/' + user.uid)}`;
-    window.open(qrImageUrl, '_blank');
-  };
-
-  const shareOnWhatsAppStatus = () => {
-    if (!origin || !user?.uid) return;
-    const message = `Swagat hai hamari dukan *${shopProfile.shopName}* par! 🙏 Ab online dekhein: \n\n${origin}/business/${user.uid}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
-  if (authLoading || loadingBusiness || loadingProducts) {
+  if (authLoading || loadingBusiness || loadingProducts || loadingOrders) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -442,7 +370,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4">
            <Avatar className="h-16 w-16 border-2 border-primary">
              <AvatarImage src={businessData?.logoUrl} className="object-cover" />
-             <AvatarFallback className="bg-primary/10 text-primary"><Store className="h-8 w-8" /></AvatarFallback>
+             <AvatarFallback className="bg-primary/10 text-primary font-black"><Store className="h-8 w-8" /></AvatarFallback>
            </Avatar>
            <div>
              <h1 className="text-3xl font-bold font-headline">{businessData?.shopName || "My Business"}</h1>
@@ -462,9 +390,7 @@ export default function DashboardPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <form onSubmit={handleAddProduct} className="space-y-4">
-                <DialogHeader>
-                  <DialogTitle>New Product</DialogTitle>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label>Product Photo</Label>
@@ -517,6 +443,7 @@ export default function DashboardPage() {
              <div className="flex items-center justify-between mb-4 border-b">
                <TabsList className="bg-transparent gap-4 overflow-x-auto no-scrollbar justify-start w-full">
                  <TabsTrigger value="inventory" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Inventory</TabsTrigger>
+                 <TabsTrigger value="orders" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Orders</TabsTrigger>
                  <TabsTrigger value="marketing" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Marketing</TabsTrigger>
                  <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Shop Profile</TabsTrigger>
                  <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Personal Account</TabsTrigger>
@@ -541,6 +468,35 @@ export default function DashboardPage() {
                         <CardFooter className="p-4 pt-4">
                           <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
                         </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+             </TabsContent>
+
+             <TabsContent value="orders" className="space-y-4">
+                {!incomingOrders || incomingOrders.length === 0 ? (
+                  <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-30"><Truck className="h-12 w-12 mx-auto mb-4" /><p>Abhi tak koi delivery order nahi aaya.</p></div>
+                ) : (
+                  <div className="space-y-4">
+                    {incomingOrders.map(order => (
+                      <Card key={order.id} className="border-l-4 border-l-primary">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between">
+                            <CardTitle className="text-lg">{order.productTitle}</CardTitle>
+                            <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[9px]">{order.status}</Badge>
+                          </div>
+                          <CardDescription className="flex items-center gap-1 font-bold text-primary"><UserCircle className="h-3 w-3" /> Customer: {order.customerName} ({order.customerDeliveryId})</CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-xs space-y-2">
+                          <p className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {order.address}</p>
+                          {order.deliveryBoyName && (
+                            <div className="p-2 bg-muted rounded-lg flex items-center justify-between">
+                               <span className="font-bold flex items-center gap-1"><Truck className="h-3 w-3" /> Picked by: {order.deliveryBoyName}</span>
+                               <Button variant="ghost" size="sm" className="h-6 text-[10px]" asChild><a href={`tel:${order.deliveryBoyPhone}`}>Call Rider</a></Button>
+                            </div>
+                          )}
+                        </CardContent>
                       </Card>
                     ))}
                   </div>
@@ -607,76 +563,36 @@ export default function DashboardPage() {
 
              <TabsContent value="account" className="space-y-6">
                <Card>
-                 <CardHeader>
-                   <CardTitle>Personal Account Details</CardTitle>
-                   <CardDescription>Aapka personal naam aur professional delivery address.</CardDescription>
-                 </CardHeader>
+                 <CardHeader><CardTitle>Personal Account Details</CardTitle></CardHeader>
                  <CardContent>
                    <form onSubmit={handleUpdateAccount} className="space-y-6">
                      <div className="grid sm:grid-cols-2 gap-4">
                        <div className="space-y-2"><Label>Full Name</Label><Input value={accountInfo.name} onChange={(e) => setAccountInfo({...accountInfo, name: e.target.value})} /></div>
                        <div className="space-y-2"><Label>Phone Number</Label><Input value={accountInfo.phone} onChange={(e) => setAccountInfo({...accountInfo, phone: e.target.value})} /></div>
                      </div>
-                     
                      <div className="space-y-4 pt-4 border-t">
-                       <div className="flex items-center gap-2 pb-2">
-                         <Building2 className="h-4 w-4 text-primary" />
-                         <span className="text-sm font-black uppercase tracking-tight">Structured Address</span>
-                       </div>
-                       
+                       <div className="flex items-center gap-2 pb-2"><Building2 className="h-4 w-4 text-primary" /><span className="text-sm font-black uppercase tracking-tight">Structured Address</span></div>
                        <div className="grid sm:grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat / Floor</Label>
-                           <Input value={accountInfo.houseNo} onChange={(e) => setAccountInfo({...accountInfo, houseNo: e.target.value})} placeholder="A-123" className="rounded-xl" />
-                         </div>
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Colony / Area</Label>
-                           <Input value={accountInfo.street} onChange={(e) => setAccountInfo({...accountInfo, street: e.target.value})} placeholder="Main Road" className="rounded-xl" />
-                         </div>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">House No</Label><Input value={accountInfo.houseNo} onChange={(e) => setAccountInfo({...accountInfo, houseNo: e.target.value})} className="rounded-xl" /></div>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Street</Label><Input value={accountInfo.street} onChange={(e) => setAccountInfo({...accountInfo, street: e.target.value})} className="rounded-xl" /></div>
                        </div>
-                       
-                       <div className="space-y-2">
-                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark</Label>
-                         <Input value={accountInfo.landmark} onChange={(e) => setAccountInfo({...accountInfo, landmark: e.target.value})} placeholder="Near Public Park" className="rounded-xl" />
-                       </div>
-
                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
-                           <Input value={accountInfo.city} onChange={(e) => setAccountInfo({...accountInfo, city: e.target.value})} className="rounded-xl" />
-                         </div>
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
-                           <Input value={accountInfo.pincode} onChange={(e) => setAccountInfo({...accountInfo, pincode: e.target.value})} className="rounded-xl" />
-                         </div>
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
-                           <Select value={accountInfo.state} onValueChange={(v) => setAccountInfo({...accountInfo, state: v})}>
-                             <SelectTrigger className="rounded-xl">
-                               <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent>
-                               {stateList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                             </SelectContent>
-                           </Select>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label><Input value={accountInfo.city} onChange={(e) => setAccountInfo({...accountInfo, city: e.target.value})} className="rounded-xl" /></div>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label><Input value={accountInfo.pincode} onChange={(e) => setAccountInfo({...accountInfo, pincode: e.target.value})} className="rounded-xl" /></div>
+                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
+                           <Select value={accountInfo.state} onValueChange={(v) => setAccountInfo({...accountInfo, state: v})}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{stateList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                          </div>
                        </div>
                      </div>
-
-                     <Button type="submit" className="w-full gap-2 font-bold" disabled={isUpdatingAccount}>
-                       {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Personal Changes
-                     </Button>
+                     <Button type="submit" className="w-full gap-2 font-bold" disabled={isUpdatingAccount}>{isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Personal Changes</Button>
                    </form>
                  </CardContent>
                </Card>
-
                <Card className="border-destructive/20 bg-destructive/5">
                  <CardHeader><CardTitle className="text-destructive text-sm flex items-center gap-2"><Lock className="h-4 w-4" /> Account Security</CardTitle></CardHeader>
                  <CardContent className="flex items-center justify-between">
                    <p className="text-xs text-muted-foreground">Hum aapke email par password reset link bhejenge.</p>
-                   <Button variant="outline" size="sm" onClick={handlePasswordReset} disabled={isResettingPassword} className="font-black text-[10px] uppercase">
-                     {isResettingPassword ? "Sending..." : "Reset Password"}
-                   </Button>
+                   <Button variant="outline" size="sm" onClick={handlePasswordReset} disabled={isResettingPassword} className="font-black text-[10px] uppercase">{isResettingPassword ? "Sending..." : "Reset Password"}</Button>
                  </CardContent>
                </Card>
              </TabsContent>
@@ -700,7 +616,7 @@ export default function DashboardPage() {
                  {qrUrl ? <Image src={qrUrl} alt="QR Code" width={200} height={200} /> : <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg" />}
                </div>
                <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={downloadQRCode}><Download className="h-4 w-4 mr-2" /> Download QR</Button>
-               <Button variant="ghost" className="w-full text-white hover:bg-white/10" onClick={shareOnWhatsAppStatus}><MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Status</Button>
+               <Button variant="ghost" className="w-full text-white hover:bg-white/10" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent('Swagat hai hamari dukan ' + shopProfile.shopName + ' par! Online dekhein: ' + origin + '/business/' + user?.uid)}`, '_blank')}><MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Status</Button>
              </CardContent>
            </Card>
         </div>
