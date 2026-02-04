@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,51 +13,55 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isModerator() {
+      return isSignedIn() && (getUserData().role == 'moderator' || getUserData().role == 'admin');
     }
 
     function isOwner(userId) {
       return isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    function isExistingOwner(ownerId) {
-      return isSignedIn() && (request.auth.uid == ownerId || isAdmin());
-    }
-
     function ownsBusiness(businessId) {
-      return isSignedIn() && (get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId == request.auth.uid || isAdmin());
+      return isSignedIn() && (get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId == request.auth.uid || isModerator());
     }
 
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get, list: if isOwner(userId) || isAdmin();
+      allow get, list: if isOwner(userId) || isModerator();
       allow create: if isSignedIn();
-      allow update, delete: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /businesses/{businessId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isModerator());
       
-      // ALLOW owner/admin to update anything OR allow anyone to update ONLY the 'views' field
-      allow update: if (isExistingOwner(resource.data.ownerId) || isAdmin()) || 
+      allow update: if (isOwner(resource.data.ownerId) || isModerator()) || 
                       (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']));
       
-      allow delete: if isExistingOwner(resource.data.ownerId) || isAdmin();
+      allow delete: if isOwner(resource.data.ownerId) || isModerator();
     }
 
     match /products/{productId} {
       allow get, list: if true;
-      allow create: if ownsBusiness(request.resource.data.businessId) || isAdmin();
-      allow update, delete: if resource != null && (ownsBusiness(resource.data.businessId) || isAdmin());
+      allow create: if ownsBusiness(request.resource.data.businessId) || isModerator();
+      allow update, delete: if resource != null && (ownsBusiness(resource.data.businessId) || isModerator());
     }
 
     match /reviews/{reviewId} {
       allow get, list: if true;
       allow create: if isSignedIn();
-      allow delete: if isAdmin();
+      allow delete: if isModerator();
     }
 
     match /config/{configId} {

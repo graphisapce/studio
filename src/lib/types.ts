@@ -1,3 +1,4 @@
+
 export type BusinessCategory = 
   | 'Food' 
   | 'Groceries' 
@@ -78,7 +79,7 @@ export interface UserProfile {
   email: string;
   phone?: string;
   photoURL?: string;
-  role: 'customer' | 'business' | 'admin';
+  role: 'customer' | 'business' | 'admin' | 'moderator';
   createdAt: string;
   favorites?: string[]; // Array of business IDs
 }

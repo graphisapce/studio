@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -7,7 +8,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string", "enum": ["customer", "business", "admin"] },
+        "role": { "type": "string", "enum": ["customer", "business", "admin", "moderator"] },
         "email": { "type": "string", "format": "email" }
       },
       "required": ["id", "name", "role"]
