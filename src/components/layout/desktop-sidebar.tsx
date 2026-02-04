@@ -1,7 +1,7 @@
 
 "use client";
 import Link from "next/link";
-import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert, UserCircle, Truck } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert, UserCircle, Truck, Package } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +30,12 @@ export function DesktopSidebar() {
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <span className="text-xs">Syncing profile...</span>
           </div>
+        )}
+
+        {user && !isBusiness && !isDelivery && (
+          <Button variant="ghost" className="justify-start gap-3" asChild>
+            <Link href="/orders"><Package className="h-5 w-5" /><span>My Orders</span></Link>
+          </Button>
         )}
 
         {user && isBusiness && (

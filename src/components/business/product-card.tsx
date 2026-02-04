@@ -25,10 +25,11 @@ interface ProductCardProps {
   product: Product;
   shopWhatsApp?: string;
   shopName?: string;
+  shopAddress?: string;
   isPremium?: boolean;
 }
 
-export function ProductCard({ product, shopWhatsApp, shopName, isPremium = false }: ProductCardProps) {
+export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPremium = false }: ProductCardProps) {
   const { user, userProfile } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -67,6 +68,7 @@ export function ProductCard({ product, shopWhatsApp, shopName, isPremium = false
         businessId: product.businessId,
         shopName: shopName || "Local Shop",
         shopPhone: shopWhatsApp || "",
+        shopAddress: shopAddress || "",
         productId: product.id,
         productTitle: product.title,
         price: product.price,
