@@ -45,7 +45,7 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || isModerator());
       allow update: if (isOwner(resource.data.ownerId) || isModerator()) || 
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']));
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'callCount', 'whatsappCount']));
       allow delete: if isOwner(resource.data.ownerId) || isModerator();
     }
 
