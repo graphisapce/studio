@@ -84,30 +84,54 @@ export default function AdminDashboardPage() {
   const firestore = useFirestore();
   const [announcementText, setAnnouncementText] = useState("");
 
+  const isAdminOrModerator = useMemo(() => {
+    return user && userProfile && ['admin', 'moderator'].includes(userProfile.role);
+  }, [user, userProfile]);
+
   // Redirect if not admin or moderator
   useEffect(() => {
     if (!authLoading) {
-      if (!user) router.push("/login");
-      else if (userProfile && !['admin', 'moderator'].includes(userProfile.role)) router.push("/");
+      if (!user) {
+        router.push("/login");
+      } else if (userProfile && !['admin', 'moderator'].includes(userProfile.role)) {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You do not have permission to view the Admin Panel."
+        });
+        router.push("/");
+      }
     }
-  }, [user, userProfile, authLoading, router]);
+  }, [user, userProfile, authLoading, router, toast]);
 
-  // Platform Configuration
-  const configRef = useMemoFirebase(() => doc(firestore, "config", "platform"), [firestore]);
+  // Platform Configuration - Only fetch if authorized
+  const configRef = useMemoFirebase(() => 
+    isAdminOrModerator ? doc(firestore, "config", "platform") : null, 
+    [firestore, isAdminOrModerator]
+  );
   const { data: config } = useDoc<PlatformConfig>(configRef);
 
   useEffect(() => {
     if (config?.announcement) setAnnouncementText(config.announcement);
   }, [config]);
 
-  // Data Collections
-  const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
+  // Data Collections - Crucial: Only fetch if authorized to prevent permission errors
+  const businessesRef = useMemoFirebase(() => 
+    isAdminOrModerator ? collection(firestore, "businesses") : null, 
+    [firestore, isAdminOrModerator]
+  );
   const { data: businesses, isLoading: loadingBusinesses } = useCollection<Business>(businessesRef);
 
-  const usersRef = useMemoFirebase(() => collection(firestore, "users"), [firestore]);
+  const usersRef = useMemoFirebase(() => 
+    isAdminOrModerator ? collection(firestore, "users") : null, 
+    [firestore, isAdminOrModerator]
+  );
   const { data: allUsers, isLoading: loadingUsers } = useCollection<UserProfile>(usersRef);
 
-  const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
+  const productsRef = useMemoFirebase(() => 
+    isAdminOrModerator ? collection(firestore, "products") : null, 
+    [firestore, isAdminOrModerator]
+  );
   const { data: products, isLoading: loadingProducts } = useCollection<Product>(productsRef);
 
   const isFullAdmin = userProfile?.role === 'admin';
@@ -192,14 +216,17 @@ export default function AdminDashboardPage() {
     toast({ title: "Business Deleted", description: "Shop profile removed from platform." });
   };
 
-  if (authLoading || loadingBusinesses || loadingUsers || loadingProducts) {
+  if (authLoading || (user && !userProfile)) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Opening Control Center...</p>
+        <p className="text-muted-foreground">Verifying access...</p>
       </div>
     );
   }
+
+  // Final check to prevent rendering sensitive UI if somehow still not authorized
+  if (!isAdminOrModerator) return null;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -222,13 +249,19 @@ export default function AdminDashboardPage() {
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardDescription className="font-bold uppercase text-[10px]">Total Businesses</CardDescription>
-              <CardTitle className="text-3xl flex items-center gap-2"><Store className="h-6 w-6 text-blue-500" />{businesses?.length || 0}</CardTitle>
+              <CardTitle className="text-3xl flex items-center gap-2">
+                {loadingBusinesses ? <Loader2 className="h-6 w-6 animate-spin" /> : <Store className="h-6 w-6 text-blue-500" />}
+                {businesses?.length || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardDescription className="font-bold uppercase text-[10px]">Total Users</CardDescription>
-              <CardTitle className="text-3xl flex items-center gap-2"><UsersIcon className="h-6 w-6 text-purple-500" />{allUsers?.length || 0}</CardTitle>
+              <CardTitle className="text-3xl flex items-center gap-2">
+                {loadingUsers ? <Loader2 className="h-6 w-6 animate-spin" /> : <UsersIcon className="h-6 w-6 text-purple-500" />}
+                {allUsers?.length || 0}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card className="shadow-sm bg-primary/5 border-primary/20">
@@ -278,76 +311,80 @@ export default function AdminDashboardPage() {
               <CardDescription>Update roles or remove accounts from the platform.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User Identity</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Manage</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allUsers?.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-bold flex items-center gap-2">
-                            <UserIcon className="h-3 w-3 text-muted-foreground" /> {u.name}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-2 w-2" /> {u.email}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'moderator' ? 'default' : 'secondary'} className="uppercase text-[10px]">
-                          {u.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Select 
-                            defaultValue={u.role} 
-                            onValueChange={(val: any) => handleUpdateUserRole(u.id, val)}
-                          >
-                            <SelectTrigger className="w-[120px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="customer">Customer</SelectItem>
-                              <SelectItem value="business">Business</SelectItem>
-                              <SelectItem value="moderator">Moderator</SelectItem>
-                              {isFullAdmin && <SelectItem value="admin">Admin</SelectItem>}
-                            </SelectContent>
-                          </Select>
-                          
-                          {isFullAdmin && u.id !== user?.uid && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete User Profile?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will remove {u.name} from the platform permanently. This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
-                      </TableCell>
+              {loadingUsers ? (
+                <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User Identity</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-right">Manage</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {allUsers?.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-bold flex items-center gap-2">
+                              <UserIcon className="h-3 w-3 text-muted-foreground" /> {u.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-2 w-2" /> {u.email}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'moderator' ? 'default' : 'secondary'} className="uppercase text-[10px]">
+                            {u.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Select 
+                              defaultValue={u.role} 
+                              onValueChange={(val: any) => handleUpdateUserRole(u.id, val)}
+                            >
+                              <SelectTrigger className="w-[120px] h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="customer">Customer</SelectItem>
+                                <SelectItem value="business">Business</SelectItem>
+                                <SelectItem value="moderator">Moderator</SelectItem>
+                                {isFullAdmin && <SelectItem value="admin">Admin</SelectItem>}
+                              </SelectContent>
+                            </Select>
+                            
+                            {isFullAdmin && u.id !== user?.uid && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete User Profile?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will remove {u.name} from the platform permanently. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -378,7 +415,9 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader><CardTitle>Item Approval Queue</CardTitle></CardHeader>
             <CardContent>
-              {pendingProducts.length === 0 ? (
+              {loadingProducts ? (
+                <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : pendingProducts.length === 0 ? (
                 <div className="text-center py-10 opacity-50">No products waiting for approval.</div>
               ) : (
                 <Table>
@@ -410,67 +449,71 @@ export default function AdminDashboardPage() {
         <TabsContent value="businesses">
           <Card>
             <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Shop Info</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Performance</TableHead>
-                    <TableHead className="text-right">Moderation</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {businesses?.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{b.shopName}</span>
-                          {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">Owner ID: {b.ownerId}</div>
-                      </TableCell>
-                      <TableCell>
-                        {b.isPaid ? <Badge className="bg-green-500 text-[10px]">Premium</Badge> : <Badge variant="secondary" className="text-[10px]">Free</Badge>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-primary">{b.views || 0} Views</span>
-                          <span className="text-[10px] text-muted-foreground">{(b.callCount || 0) + (b.whatsappCount || 0)} Leads</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
-                            {b.isVerified ? "Unverify" : "Verify"}
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
-                            {b.isPaid ? "Revoke" : "Grant"} Premium
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Business Profile?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently remove the shop <strong>{b.shopName}</strong>. This cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteBusiness(b.id)} className="bg-destructive text-destructive-foreground">Remove Shop</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
+              {loadingBusinesses ? (
+                <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Shop Info</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Performance</TableHead>
+                      <TableHead className="text-right">Moderation</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {businesses?.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{b.shopName}</span>
+                            {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">Owner ID: {b.ownerId}</div>
+                        </TableCell>
+                        <TableCell>
+                          {b.isPaid ? <Badge className="bg-green-500 text-[10px]">Premium</Badge> : <Badge variant="secondary" className="text-[10px]">Free</Badge>}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-primary">{b.views || 0} Views</span>
+                            <span className="text-[10px] text-muted-foreground">{(b.callCount || 0) + (b.whatsappCount || 0)} Leads</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleToggleVerify(b.id, !!b.isVerified)}>
+                              {b.isVerified ? "Unverify" : "Verify"}
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => handleTogglePremium(b.id, !!b.isPaid)}>
+                              {b.isPaid ? "Revoke" : "Grant"} Premium
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Business Profile?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently remove the shop <strong>{b.shopName}</strong>. This cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteBusiness(b.id)} className="bg-destructive text-destructive-foreground">Remove Shop</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
