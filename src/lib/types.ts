@@ -78,13 +78,21 @@ export interface UserProfile {
   name: string;
   email: string;
   phone?: string;
-  address?: string; 
   photoURL?: string;
   role: 'customer' | 'business' | 'admin' | 'moderator';
   createdAt: string;
   favorites?: string[]; 
-  deliveryId?: string; // NEW: Unique Delivery ID for logistics
-  areaCode?: string; // NEW: Short code for the area (e.g., JHP)
+  deliveryId?: string; // Unique Delivery ID for logistics
+  areaCode?: string; // Short code for the area (e.g., JHP)
+  
+  // Structured Address
+  houseNo?: string;
+  street?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
 }
 
 export interface Review {

@@ -59,7 +59,8 @@ import {
   Save,
   MapPin,
   Mail,
-  Phone
+  Phone,
+  Building2
 } from "lucide-react";
 import {
   Dialog,
@@ -97,6 +98,11 @@ const categoryList: BusinessCategory[] = [
   'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 
   'Advocate', 'Loha Welding', 'Bike Seat Cover', 'Bike Repair', 'Car Repair', 'Car Painter',
   'Others'
+];
+
+const stateList = [
+  "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "Bihar", 
+  "West Bengal", "Gujarat", "Rajasthan", "Punjab", "Haryana", "Madhya Pradesh", "Others"
 ];
 
 export default function DashboardPage() {
@@ -145,7 +151,13 @@ export default function DashboardPage() {
   const [accountInfo, setAccountInfo] = useState({
     name: "",
     phone: "",
-    address: ""
+    houseNo: "",
+    street: "",
+    landmark: "",
+    city: "",
+    state: "",
+    pincode: "",
+    country: "India"
   });
 
   const hasPremium = isBusinessPremium(businessData);
@@ -178,7 +190,13 @@ export default function DashboardPage() {
       setAccountInfo({
         name: userProfile.name || "",
         phone: userProfile.phone || "",
-        address: userProfile.address || ""
+        houseNo: userProfile.houseNo || "",
+        street: userProfile.street || "",
+        landmark: userProfile.landmark || "",
+        city: userProfile.city || "",
+        state: userProfile.state || "Delhi",
+        pincode: userProfile.pincode || "",
+        country: userProfile.country || "India"
       });
     }
   }, [businessData, userProfile]);
@@ -189,6 +207,26 @@ export default function DashboardPage() {
       else if (userProfile && userProfile.role !== "business") router.push("/");
     }
   }, [user, userProfile, authLoading, router]);
+
+  const handleUpdateAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsUpdatingAccount(true);
+    const userRef = doc(firestore, "users", user.uid);
+    updateDocumentNonBlocking(userRef, {
+      name: accountInfo.name,
+      phone: accountInfo.phone,
+      houseNo: accountInfo.houseNo,
+      street: accountInfo.street,
+      landmark: accountInfo.landmark,
+      city: accountInfo.city,
+      state: accountInfo.state,
+      pincode: accountInfo.pincode,
+      country: accountInfo.country
+    });
+    toast({ title: "Account Updated", description: "Personal details and professional address successfully save ho gayi hain." });
+    setIsUpdatingAccount(false);
+  };
 
   const handleAIDescription = async () => {
     if (!newProduct.title) {
@@ -285,17 +323,14 @@ export default function DashboardPage() {
       toast({ 
         variant: "destructive", 
         title: "Photo too large!", 
-        description: "Product photo 300KB se kam honi chahiye. Kripya compress karke try karein." 
+        description: "Product photo 300KB se kam honi chahiye." 
       });
-      e.target.value = ""; // Clear input
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setNewProduct(prev => ({ ...prev, imageUrl: base64String }));
-      toast({ title: "Photo Selected", description: "Product photo successfully load ho gayi hai." });
+      setNewProduct(prev => ({ ...prev, imageUrl: reader.result as string }));
     };
     reader.readAsDataURL(file);
   };
@@ -308,7 +343,7 @@ export default function DashboardPage() {
       toast({ 
         variant: "destructive", 
         title: "Limit Reached!", 
-        description: "Free account mein aap sirf 3 items add kar sakte hain. Unlimited items ke liye Premium join karein!" 
+        description: "Free account mein aap sirf 3 items add kar sakte hain." 
       });
       return;
     }
@@ -334,7 +369,7 @@ export default function DashboardPage() {
   const handleUpdateProductBadge = (productId: string, badge: any) => {
     const productRef = doc(firestore, "products", productId);
     updateDocumentNonBlocking(productRef, { badge });
-    toast({ title: "Badge Updated", description: "Product highlight badal diya gaya hai." });
+    toast({ title: "Badge Updated" });
   };
 
   const handleUpdateShopProfile = (e?: React.FormEvent) => {
@@ -363,62 +398,28 @@ export default function DashboardPage() {
     setIsUpdatingProfile(false);
   };
 
-  const handleUpdateAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setIsUpdatingAccount(true);
-    const userRef = doc(firestore, "users", user.uid);
-    updateDocumentNonBlocking(userRef, {
-      name: accountInfo.name,
-      phone: accountInfo.phone,
-      address: accountInfo.address
-    });
-    toast({ title: "Profile Updated", description: "Personal details successfully save ho gayi hain." });
-    setIsUpdatingAccount(false);
-  };
-
   const handlePasswordReset = async () => {
     if (!user?.email) return;
     setIsResettingPassword(true);
     try {
       await sendPasswordResetEmail(auth, user.email);
-      toast({ title: "Reset Link Sent", description: "Aapki email par password badalne ka link bhej diya gaya hai." });
+      toast({ title: "Reset Link Sent" });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error", description: "Reset email nahi bheja ja saka." });
+      toast({ variant: "destructive", title: "Error" });
     } finally {
       setIsResettingPassword(false);
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied!", description: "WhatsApp status par paste karein." });
-  };
-
   const downloadQRCode = async () => {
     if (!origin || !user?.uid) return;
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(origin + '/business/' + user.uid)}`;
-    
-    try {
-      const response = await fetch(qrImageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `LocalVyapar-QR-${shopProfile.shopName.replace(/\s+/g, '-')}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast({ title: "Download Started", description: "Aapka Shop QR code download ho raha hai." });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Download Failed", description: "QR code download nahi ho paya." });
-    }
+    window.open(qrImageUrl, '_blank');
   };
 
   const shareOnWhatsAppStatus = () => {
     if (!origin || !user?.uid) return;
-    const message = `Swagat hai hamari dukan *${shopProfile.shopName}* par! 🙏 Hamari saari products aur latest deals ab online dekhein LocalVyapar par: \n\n${origin}/business/${user.uid}`;
+    const message = `Swagat hai hamari dukan *${shopProfile.shopName}* par! 🙏 Ab online dekhein: \n\n${origin}/business/${user.uid}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -466,7 +467,7 @@ export default function DashboardPage() {
                 </DialogHeader>
                 <div className="grid gap-4">
                   <div className="space-y-2">
-                    <Label>Product Photo (Max 300KB)</Label>
+                    <Label>Product Photo</Label>
                     <div className="flex flex-col gap-3">
                       {newProduct.imageUrl ? (
                         <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
@@ -476,7 +477,7 @@ export default function DashboardPage() {
                       ) : (
                         <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg bg-muted/50 text-muted-foreground">
                           <ImageIcon className="h-8 w-8 mb-2 opacity-20" />
-                          <Label htmlFor="product-image" className="cursor-pointer text-xs font-bold text-primary hover:underline">Select Photo from Device</Label>
+                          <Label htmlFor="product-image" className="cursor-pointer text-xs font-bold text-primary hover:underline">Select Photo</Label>
                           <Input id="product-image" type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
                         </div>
                       )}
@@ -503,7 +504,7 @@ export default function DashboardPage() {
                     <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
                   </div>
                 </div>
-                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit for Approval</Button></DialogFooter>
+                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -517,18 +518,18 @@ export default function DashboardPage() {
                <TabsList className="bg-transparent gap-4 overflow-x-auto no-scrollbar justify-start w-full">
                  <TabsTrigger value="inventory" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Inventory</TabsTrigger>
                  <TabsTrigger value="marketing" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Marketing</TabsTrigger>
-                 <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Shop Settings</TabsTrigger>
-                 <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Account</TabsTrigger>
+                 <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Shop Profile</TabsTrigger>
+                 <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Personal Account</TabsTrigger>
                </TabsList>
              </div>
 
              <TabsContent value="inventory" className="space-y-6">
                 {!products || products.length === 0 ? (
-                  <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50"><Package className="h-12 w-12 mx-auto mb-4" /><p>Koi items nahi hain. Pehla product add karein!</p></div>
+                  <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50"><Package className="h-12 w-12 mx-auto mb-4" /><p>No items added yet.</p></div>
                 ) : (
                   <div className="grid sm:grid-cols-2 gap-6">
                     {products.map((p) => (
-                      <Card key={p.id} className="overflow-hidden group">
+                      <Card key={p.id} className="overflow-hidden">
                         <div className="relative aspect-video bg-muted">
                           <Image src={p.imageUrl || `https://picsum.photos/seed/p-${p.id}/400/300`} alt={p.title} fill className="object-cover" />
                           <div className="absolute top-2 left-2 flex gap-1">
@@ -537,18 +538,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <CardHeader className="p-4 pb-0"><div className="flex justify-between font-bold"><span>{p.title}</span><span className="text-primary">₹{p.price}</span></div></CardHeader>
-                        <CardContent className="p-4 py-2 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted-foreground font-bold">Highlight:</span>
-                            <div className="flex gap-1">
-                              {['best-seller', 'new', 'limited', 'sale'].map(b => (
-                                <button key={b} onClick={() => handleUpdateProductBadge(p.id, b === p.badge ? null : b)} className={`px-2 py-0.5 rounded-full text-[8px] font-bold border ${p.badge === b ? 'bg-primary text-white border-primary' : 'bg-transparent border-muted-foreground/30 text-muted-foreground'}`}>{b.replace('-', ' ')}</button>
-                              ))}
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleGenerateCaption(p)}><Share2 className="h-3 w-3 mr-2" /> Share on Social</Button>
-                        </CardContent>
-                        <CardFooter className="p-4 pt-0">
+                        <CardFooter className="p-4 pt-4">
                           <Button variant="destructive" size="sm" className="w-full" onClick={() => deleteDocumentNonBlocking(doc(firestore, "products", p.id))}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
                         </CardFooter>
                       </Card>
@@ -561,91 +551,55 @@ export default function DashboardPage() {
                 <div className="grid sm:grid-cols-2 gap-6">
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
-                    <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate Offer</Button></CardContent>
+                    <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate</Button></CardContent>
                   </Card>
                   <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payment Settings</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payments</CardTitle></CardHeader>
                     <CardContent className="space-y-4 pt-2">
-                      <Input placeholder="UPI ID (e.g. name@upi)" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
-                      <Label htmlFor="qr-upload" className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer hover:bg-gray-50 text-xs font-bold">
-                        <Upload className="h-3 w-3" /> {shopProfile.paymentQrUrl ? "Change QR Image" : "Upload QR Code"}
-                      </Label>
+                      <Input placeholder="UPI ID" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
+                      <Label htmlFor="qr-upload" className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer text-xs font-bold"><Upload className="h-3 w-3" /> QR Image</Label>
                       <Input type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
                       <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateShopProfile()}>Save Payment</Button>
                     </CardContent>
                   </Card>
                 </div>
-                <Card>
-                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Share2 className="h-5 w-5" /> Social Presence</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Input placeholder="Instagram Link" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
-                      <Input placeholder="Facebook Link" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
-                    </div>
-                    <Button className="w-full" onClick={() => handleUpdateShopProfile()}>Update Social Links</Button>
-                  </CardContent>
-                </Card>
              </TabsContent>
 
              <TabsContent value="settings" className="space-y-6">
                <Card>
-                 <CardHeader><CardTitle>Shop Profile Settings</CardTitle></CardHeader>
+                 <CardHeader><CardTitle>Shop Branding & Details</CardTitle></CardHeader>
                  <CardContent>
                     <form onSubmit={handleUpdateShopProfile} className="space-y-6">
-                      {/* Visuals Section */}
-                      <div className="grid sm:grid-cols-2 gap-6 pb-6 border-b">
+                      <div className="grid sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label className="text-xs font-black uppercase text-muted-foreground">Shop Logo</Label>
+                          <Label className="text-xs font-black uppercase text-muted-foreground">Logo</Label>
                           <div className="flex items-center gap-4">
-                            <Avatar className="h-20 w-20 border-2 border-primary/10">
+                            <Avatar className="h-16 w-16 border">
                               <AvatarImage src={shopProfile.shopLogoUrl} className="object-cover" />
-                              <AvatarFallback className="bg-primary/5 text-primary"><Store className="h-8 w-8" /></AvatarFallback>
+                              <AvatarFallback><Store /></AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
-                              <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary hover:underline flex items-center gap-2 bg-primary/5 p-2 rounded-lg w-fit">
-                                <Upload className="h-4 w-4" /> Change Logo
-                              </Label>
-                              <Input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                              <p className="text-[10px] text-muted-foreground mt-2">Square image (Max 200KB) works best for the circular icon.</p>
-                            </div>
+                            <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary bg-primary/5 p-2 rounded-lg"><Upload className="h-3 w-3 inline mr-1" /> Change Logo</Label>
+                            <Input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-xs font-black uppercase text-muted-foreground">Shop Banner (Cover Photo)</Label>
-                          <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-dashed border-primary/10 bg-muted/30">
-                            {shopProfile.shopImageUrl ? (
-                              <Image src={shopProfile.shopImageUrl} alt="Banner" fill className="object-cover" />
-                            ) : (
-                              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-                                <ImageIcon className="h-8 w-8 opacity-20" />
-                                <span className="text-[10px] font-bold">No banner uploaded</span>
-                              </div>
-                            )}
-                            <Label htmlFor="banner-upload" className="absolute bottom-3 right-3 bg-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg cursor-pointer hover:bg-primary hover:text-white transition-all flex items-center gap-2">
-                              <ImageIcon className="h-3.5 w-3.5" /> {shopProfile.shopImageUrl ? "Update Banner" : "Upload Banner"}
-                            </Label>
+                          <Label className="text-xs font-black uppercase text-muted-foreground">Banner</Label>
+                          <div className="relative aspect-video rounded-xl overflow-hidden border bg-muted">
+                            {shopProfile.shopImageUrl && <Image src={shopProfile.shopImageUrl} alt="Banner" fill className="object-cover" />}
+                            <Label htmlFor="banner-upload" className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-[10px] font-bold shadow-lg cursor-pointer"><ImageIcon className="h-3 w-3 inline mr-1" /> Update Banner</Label>
                             <Input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-2">High resolution wide image (Max 500KB) for shop top header.</p>
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
                         <div className="space-y-2">
                           <Label>Category</Label>
                           <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Opening Time</Label><Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} /></div>
-                        <div className="space-y-2"><Label>Closing Time</Label><Input type="time" value={shopProfile.closingTime} onChange={(e) => setShopProfile({...shopProfile, closingTime: e.target.value})} /></div>
-                      </div>
-                      <div className="space-y-2"><Label>Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} className="min-h-[120px]" /></div>
-                      <Button type="submit" className="w-full h-12 rounded-xl shadow-lg" disabled={isUpdatingProfile}>
-                        {isUpdatingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                        Update Shop Profile
-                      </Button>
+                      <div className="space-y-2"><Label>Shop Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
+                      <Button type="submit" className="w-full" disabled={isUpdatingProfile}>Save Shop Profile</Button>
                     </form>
                  </CardContent>
                </Card>
@@ -654,31 +608,75 @@ export default function DashboardPage() {
              <TabsContent value="account" className="space-y-6">
                <Card>
                  <CardHeader>
-                   <CardTitle>Personal Details</CardTitle>
-                   <CardDescription>Aapka personal naam aur contact info.</CardDescription>
+                   <CardTitle>Personal Account Details</CardTitle>
+                   <CardDescription>Aapka personal naam aur professional delivery address.</CardDescription>
                  </CardHeader>
                  <CardContent>
-                   <form onSubmit={handleUpdateAccount} className="space-y-4">
+                   <form onSubmit={handleUpdateAccount} className="space-y-6">
                      <div className="grid sm:grid-cols-2 gap-4">
                        <div className="space-y-2"><Label>Full Name</Label><Input value={accountInfo.name} onChange={(e) => setAccountInfo({...accountInfo, name: e.target.value})} /></div>
                        <div className="space-y-2"><Label>Phone Number</Label><Input value={accountInfo.phone} onChange={(e) => setAccountInfo({...accountInfo, phone: e.target.value})} /></div>
                      </div>
-                     <div className="space-y-2"><Label>Personal Email</Label><Input value={userProfile?.email} disabled className="bg-muted" /></div>
-                     <div className="space-y-2"><Label>Personal Address</Label><Textarea value={accountInfo.address} onChange={(e) => setAccountInfo({...accountInfo, address: e.target.value})} placeholder="Home address for delivery..." /></div>
-                     <Button type="submit" className="w-full gap-2" disabled={isUpdatingAccount}>
-                       {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Account Details
+                     
+                     <div className="space-y-4 pt-4 border-t">
+                       <div className="flex items-center gap-2 pb-2">
+                         <Building2 className="h-4 w-4 text-primary" />
+                         <span className="text-sm font-black uppercase tracking-tight">Structured Address</span>
+                       </div>
+                       
+                       <div className="grid sm:grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat / Floor</Label>
+                           <Input value={accountInfo.houseNo} onChange={(e) => setAccountInfo({...accountInfo, houseNo: e.target.value})} placeholder="A-123" className="rounded-xl" />
+                         </div>
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Colony / Area</Label>
+                           <Input value={accountInfo.street} onChange={(e) => setAccountInfo({...accountInfo, street: e.target.value})} placeholder="Main Road" className="rounded-xl" />
+                         </div>
+                       </div>
+                       
+                       <div className="space-y-2">
+                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark</Label>
+                         <Input value={accountInfo.landmark} onChange={(e) => setAccountInfo({...accountInfo, landmark: e.target.value})} placeholder="Near Public Park" className="rounded-xl" />
+                       </div>
+
+                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
+                           <Input value={accountInfo.city} onChange={(e) => setAccountInfo({...accountInfo, city: e.target.value})} className="rounded-xl" />
+                         </div>
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
+                           <Input value={accountInfo.pincode} onChange={(e) => setAccountInfo({...accountInfo, pincode: e.target.value})} className="rounded-xl" />
+                         </div>
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
+                           <Select value={accountInfo.state} onValueChange={(v) => setAccountInfo({...accountInfo, state: v})}>
+                             <SelectTrigger className="rounded-xl">
+                               <SelectValue />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {stateList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                             </SelectContent>
+                           </Select>
+                         </div>
+                       </div>
+                     </div>
+
+                     <Button type="submit" className="w-full gap-2 font-bold" disabled={isUpdatingAccount}>
+                       {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Personal Changes
                      </Button>
                    </form>
                  </CardContent>
                </Card>
 
-               <Card className="border-destructive/20">
-                 <CardHeader><CardTitle className="text-destructive flex items-center gap-2"><Lock className="h-5 w-5" /> Account Security</CardTitle></CardHeader>
-                 <CardContent>
-                   <div className="bg-muted/50 p-4 rounded-xl flex items-center justify-between gap-4">
-                     <div><p className="text-sm font-bold">Change Password</p><p className="text-xs text-muted-foreground">Reset link aapki email par bheja jayega.</p></div>
-                     <Button variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword}>{isResettingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Link"}</Button>
-                   </div>
+               <Card className="border-destructive/20 bg-destructive/5">
+                 <CardHeader><CardTitle className="text-destructive text-sm flex items-center gap-2"><Lock className="h-4 w-4" /> Account Security</CardTitle></CardHeader>
+                 <CardContent className="flex items-center justify-between">
+                   <p className="text-xs text-muted-foreground">Hum aapke email par password reset link bhejenge.</p>
+                   <Button variant="outline" size="sm" onClick={handlePasswordReset} disabled={isResettingPassword} className="font-black text-[10px] uppercase">
+                     {isResettingPassword ? "Sending..." : "Reset Password"}
+                   </Button>
                  </CardContent>
                </Card>
              </TabsContent>
@@ -690,8 +688,8 @@ export default function DashboardPage() {
              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Live Insights</CardTitle></CardHeader>
              <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                   <div className="bg-white p-3 rounded-lg shadow-sm border"><p className="text-[10px] uppercase font-bold text-muted-foreground">Views</p><p className="text-xl font-black">{businessData?.views || 0}</p></div>
-                   <div className="bg-white p-3 rounded-lg shadow-sm border"><p className="text-[10px] uppercase font-bold text-muted-foreground">Leads</p><p className="text-xl font-black">{(businessData?.callCount || 0) + (businessData?.whatsappCount || 0)}</p></div>
+                   <div className="bg-white p-3 rounded-lg shadow-sm border text-center"><p className="text-[10px] uppercase font-bold text-muted-foreground">Views</p><p className="text-xl font-black">{businessData?.views || 0}</p></div>
+                   <div className="bg-white p-3 rounded-lg shadow-sm border text-center"><p className="text-[10px] uppercase font-bold text-muted-foreground">Leads</p><p className="text-xl font-black">{(businessData?.callCount || 0) + (businessData?.whatsappCount || 0)}</p></div>
                 </div>
              </CardContent>
            </Card>
@@ -701,8 +699,8 @@ export default function DashboardPage() {
                <div className="aspect-square bg-white rounded-xl flex items-center justify-center p-4">
                  {qrUrl ? <Image src={qrUrl} alt="QR Code" width={200} height={200} /> : <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg" />}
                </div>
-               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={downloadQRCode}><Download className="h-4 w-4 mr-2" /> Download Shop QR</Button>
-               <Button variant="ghost" className="w-full text-white hover:bg-white/10" onClick={shareOnWhatsAppStatus}><MessageCircle className="h-4 w-4 mr-2" /> Share on WhatsApp</Button>
+               <Button className="w-full bg-white text-primary hover:bg-white/90 font-bold" onClick={downloadQRCode}><Download className="h-4 w-4 mr-2" /> Download QR</Button>
+               <Button variant="ghost" className="w-full text-white hover:bg-white/10" onClick={shareOnWhatsAppStatus}><MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Status</Button>
              </CardContent>
            </Card>
         </div>

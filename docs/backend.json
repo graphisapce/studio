@@ -4,32 +4,43 @@
     "User": {
       "title": "User",
       "type": "object",
-      "description": "Represents a user.",
+      "description": "Represents a user with structured address and delivery information.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "role": { "type": "string", "enum": ["customer", "business", "admin", "moderator"] },
         "email": { "type": "string", "format": "email" },
         "phone": { "type": "string" },
-        "address": { "type": "string" }
+        "photoURL": { "type": "string" },
+        "deliveryId": { "type": "string" },
+        "areaCode": { "type": "string" },
+        "houseNo": { "type": "string" },
+        "street": { "type": "string" },
+        "landmark": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "pincode": { "type": "string" },
+        "country": { "type": "string" }
       },
       "required": ["id", "name", "role"]
     },
     "Business": {
       "title": "Business",
       "type": "object",
-      "description": "Represents a business.",
+      "description": "Represents a business profile.",
       "properties": {
         "id": { "type": "string" },
         "ownerId": { "type": "string" },
         "shopName": { "type": "string" },
+        "category": { "type": "string" },
         "views": { "type": "number" },
         "isPaid": { "type": "boolean" },
         "imageUrl": { "type": "string", "description": "Shop Banner image" },
         "logoUrl": { "type": "string", "description": "Shop Logo image" },
         "paymentQrUrl": { "type": "string", "description": "Payment QR Code Image" },
         "instagramUrl": { "type": "string" },
-        "facebookUrl": { "type": "string" }
+        "facebookUrl": { "type": "string" },
+        "flashDeal": { "type": "string" }
       }
     },
     "Review": {
