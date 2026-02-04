@@ -16,6 +16,12 @@ export type BusinessCategory =
   | 'Hardware' 
   | 'Pharmacy' 
   | 'Stationery' 
+  | 'Advocate'
+  | 'Loha Welding'
+  | 'Bike Seat Cover'
+  | 'Bike Repair'
+  | 'Car Repair'
+  | 'Car Painter'
   | 'Others';
 
 export interface Business {

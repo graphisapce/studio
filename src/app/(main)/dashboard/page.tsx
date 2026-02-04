@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -51,7 +50,11 @@ import {
   Upload,
   Image as ImageIcon,
   Download,
-  AlertCircle
+  AlertCircle,
+  Scale,
+  Hammer,
+  Bike,
+  Car
 } from "lucide-react";
 import {
   Dialog,
@@ -76,7 +79,6 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { isBusinessPremium } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
 import { generateSocialCaption } from "@/ai/flows/social-caption-flow";
@@ -86,7 +88,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
   'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
-  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
+  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 
+  'Advocate', 'Loha Welding', 'Bike Seat Cover', 'Bike Repair', 'Car Repair', 'Car Painter',
+  'Others'
 ];
 
 export default function DashboardPage() {

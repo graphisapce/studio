@@ -8,7 +8,24 @@ import type { Business, BusinessCategory, PlatformConfig, Product } from "@/lib/
 import { getDistanceFromLatLonInKm, isBusinessPremium } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Navigation, Star, ShieldCheck, Megaphone, Utensils, Zap, ShoppingCart, Wrench, Info } from "lucide-react";
+import { 
+  Search, 
+  MapPin, 
+  Navigation, 
+  Star, 
+  ShieldCheck, 
+  Megaphone, 
+  Utensils, 
+  Zap, 
+  ShoppingCart, 
+  Wrench, 
+  Info,
+  Scale,
+  Hammer,
+  Bike,
+  Car,
+  Brush
+} from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +33,9 @@ import { Badge } from "@/components/ui/badge";
 const categories: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
   'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
-  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 'Others'
+  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 
+  'Advocate', 'Loha Welding', 'Bike Seat Cover', 'Bike Repair', 'Car Repair', 'Car Painter',
+  'Others'
 ];
 
 interface BusinessGridProps {
@@ -156,13 +175,14 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
         </div>
 
         <div className="flex justify-center gap-4 py-2 overflow-x-auto no-scrollbar px-4">
-          {['Food', 'Groceries', 'Repairs', 'Electronics'].map((cat) => (
+          {['Food', 'Groceries', 'Advocate', 'Bike Repair', 'Car Repair'].map((cat) => (
             <Button key={cat} variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 shrink-0" onClick={() => setSelectedCategory(cat as any)}>
               <div className="p-3 rounded-full bg-primary/10 text-primary">
                 {cat === 'Food' && <Utensils className="h-6 w-6" />}
                 {cat === 'Groceries' && <ShoppingCart className="h-6 w-6" />}
-                {cat === 'Repairs' && <Wrench className="h-6 w-6" />}
-                {cat === 'Electronics' && <Zap className="h-6 w-6" />}
+                {cat === 'Advocate' && <Scale className="h-6 w-6" />}
+                {cat === 'Bike Repair' && <Bike className="h-6 w-6" />}
+                {cat === 'Car Repair' && <Car className="h-6 w-6" />}
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest">{cat}</span>
             </Button>
@@ -178,6 +198,26 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-8 justify-center">
+        <Badge 
+          variant={selectedCategory === null ? "default" : "outline"} 
+          className="cursor-pointer px-4 py-1"
+          onClick={() => setSelectedCategory(null)}
+        >
+          All
+        </Badge>
+        {categories.slice(0, 10).map((cat) => (
+          <Badge 
+            key={cat} 
+            variant={selectedCategory === cat ? "default" : "outline"} 
+            className="cursor-pointer px-4 py-1"
+            onClick={() => setSelectedCategory(cat)}
+          >
+            {cat}
+          </Badge>
+        ))}
       </div>
 
       {loadingRealData ? (
