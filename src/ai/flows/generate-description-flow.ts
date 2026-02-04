@@ -21,10 +21,6 @@ const DescriptionOutputSchema = z.object({
 export type DescriptionOutput = z.infer<typeof DescriptionOutputSchema>;
 
 export async function generateProductDescription(input: DescriptionInput): Promise<DescriptionOutput> {
-  if (!process.env.GOOGLE_GENAI_API_KEY) {
-    throw new Error("API Key missing in environment variables. Please check your .env file.");
-  }
-  
   try {
     return await generateDescriptionFlow(input);
   } catch (error: any) {
@@ -56,7 +52,8 @@ const generateDescriptionFlow = ai.defineFlow(
     outputSchema: DescriptionOutputSchema,
   },
   async input => {
-    const { output } = await prompt(input);
+    const response = await prompt(input);
+    const output = response.output;
     if (!output) throw new Error("AI could not generate description.");
     return output;
   }

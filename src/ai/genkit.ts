@@ -1,18 +1,15 @@
 
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { googleAI, gemini15Flash } from '@genkit-ai/google-genai';
 
 /**
- * Genkit Configuration
- * 
- * Using 'gemini-1.5-flash' as the default model.
- * The API key is pulled from GOOGLE_GENAI_API_KEY environment variable.
+ * Genkit Configuration - v1.x Standard
  */
 export const ai = genkit({
   plugins: [
     googleAI({
-      apiKey: process.env.GOOGLE_GENAI_API_KEY,
+      apiKey: process.env.GOOGLE_GENAI_API_KEY || 'AIzaSyBvUq_RBNnP_B5roqcLedrL9O_nuhqGeig',
     })
   ],
-  model: 'googleai/gemini-1.5-flash', 
+  model: gemini15Flash, 
 });
