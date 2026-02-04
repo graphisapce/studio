@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -24,18 +25,49 @@ import {
   Hammer,
   Bike,
   Car,
-  Brush
+  Brush,
+  Laptop,
+  HeartPulse,
+  GraduationCap,
+  Gift,
+  Sofa,
+  Shirt,
+  Gem,
+  Pill,
+  Book,
+  Scissors,
+  Flame,
+  LayoutGrid
 } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
-const categories: BusinessCategory[] = [
-  'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
-  'Beauty', 'Health', 'Education', 'Automobile', 'Gifts', 'Home Decor', 
-  'Clothing', 'Jewelry', 'Hardware', 'Pharmacy', 'Stationery', 
-  'Advocate', 'Loha Welding', 'Bike Seat Cover', 'Bike Repair', 'Car Repair', 'Car Painter',
-  'Others'
+const categoriesData: { name: BusinessCategory, icon: any }[] = [
+  { name: 'Food', icon: Utensils },
+  { name: 'Groceries', icon: ShoppingCart },
+  { name: 'Advocate', icon: Scale },
+  { name: 'Bike Repair', icon: Bike },
+  { name: 'Car Repair', icon: Car },
+  { name: 'Loha Welding', icon: Hammer },
+  { name: 'Car Painter', icon: Brush },
+  { name: 'Electronics', icon: Laptop },
+  { name: 'Repairs', icon: Wrench },
+  { name: 'Services', icon: LayoutGrid },
+  { name: 'Beauty', icon: Scissors },
+  { name: 'Health', icon: HeartPulse },
+  { name: 'Education', icon: GraduationCap },
+  { name: 'Automobile', icon: Car },
+  { name: 'Gifts', icon: Gift },
+  { name: 'Home Decor', icon: Sofa },
+  { name: 'Clothing', icon: Shirt },
+  { name: 'Jewelry', icon: Gem },
+  { name: 'Hardware', icon: Hammer },
+  { name: 'Pharmacy', icon: Pill },
+  { name: 'Stationery', icon: Book },
+  { name: 'Bike Seat Cover', icon: Bike },
+  { name: 'Retail', icon: ShoppingCart },
+  { name: 'Others', icon: Info },
 ];
 
 interface BusinessGridProps {
@@ -174,50 +206,65 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
            </p>
         </div>
 
-        <div className="flex justify-center gap-4 py-2 overflow-x-auto no-scrollbar px-4">
-          {['Food', 'Groceries', 'Advocate', 'Bike Repair', 'Car Repair'].map((cat) => (
-            <Button key={cat} variant="ghost" className="flex flex-col h-auto gap-2 p-4 hover:bg-primary/5 shrink-0" onClick={() => setSelectedCategory(cat as any)}>
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                {cat === 'Food' && <Utensils className="h-6 w-6" />}
-                {cat === 'Groceries' && <ShoppingCart className="h-6 w-6" />}
-                {cat === 'Advocate' && <Scale className="h-6 w-6" />}
-                {cat === 'Bike Repair' && <Bike className="h-6 w-6" />}
-                {cat === 'Car Repair' && <Car className="h-6 w-6" />}
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest">{cat}</span>
-            </Button>
-          ))}
-        </div>
-
         <div className="relative max-w-2xl mx-auto px-4">
           <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
           <Input
-            placeholder="Search Shops or Products (e.g. Pizza, Milk)"
-            className="pl-14 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10"
+            placeholder="Search Shops or Products (e.g. Pizza, Advocate, Repair)"
+            className="pl-14 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10 focus-visible:ring-primary"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {/* Categories Explorer Section */}
+        <div className="space-y-6 mt-12">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-black font-headline">Explore Categories</h2>
+            {selectedCategory && (
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(null)} className="text-primary font-bold">
+                Clear Filter
+              </Button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 px-2">
+            {categoriesData.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = selectedCategory === cat.name;
+              return (
+                <button
+                  key={cat.name}
+                  onClick={() => setSelectedCategory(isActive ? null : cat.name)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 group ${
+                    isActive 
+                      ? 'bg-primary text-white shadow-lg scale-105' 
+                      : 'bg-white border hover:border-primary/50 hover:shadow-md'
+                  }`}
+                >
+                  <div className={`p-3 rounded-full transition-colors ${
+                    isActive ? 'bg-white/20' : 'bg-primary/5 text-primary group-hover:bg-primary/10'
+                  }`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <span className={`text-[10px] font-bold text-center uppercase tracking-tight line-clamp-1 ${
+                    isActive ? 'text-white' : 'text-muted-foreground'
+                  }`}>
+                    {cat.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-8 justify-center">
-        <Badge 
-          variant={selectedCategory === null ? "default" : "outline"} 
-          className="cursor-pointer px-4 py-1"
-          onClick={() => setSelectedCategory(null)}
-        >
-          All
-        </Badge>
-        {categories.slice(0, 10).map((cat) => (
-          <Badge 
-            key={cat} 
-            variant={selectedCategory === cat ? "default" : "outline"} 
-            className="cursor-pointer px-4 py-1"
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </Badge>
-        ))}
+      <div className="mt-12 flex items-center justify-between mb-6 px-2">
+        <h2 className="text-2xl font-black font-headline">
+          {selectedCategory ? `${selectedCategory} Shops` : "Nearby Shops"}
+        </h2>
+        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+          <Navigation className="h-3 w-3" /> Jahangirpuri, Delhi
+        </div>
       </div>
 
       {loadingRealData ? (
@@ -230,13 +277,21 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {sortedAndFilteredBusinesses.map((business) => {
-            let distance = null;
-            if (userLocation && business.latitude && business.longitude) {
-              distance = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, business.latitude, business.longitude);
-            }
-            return <BusinessCard key={business.id} business={{ ...business, distance }} />;
-          })}
+          {sortedAndFilteredBusinesses.length > 0 ? (
+            sortedAndFilteredBusinesses.map((business) => {
+              let distance = null;
+              if (userLocation && business.latitude && business.longitude) {
+                distance = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, business.latitude, business.longitude);
+              }
+              return <BusinessCard key={business.id} business={{ ...business, distance }} />;
+            })
+          ) : (
+            <div className="col-span-full py-20 text-center opacity-50 border-2 border-dashed rounded-3xl">
+              <Info className="h-12 w-12 mx-auto mb-4" />
+              <p className="font-bold">No shops found in this category.</p>
+              <Button variant="link" onClick={() => setSelectedCategory(null)}>View all shops</Button>
+            </div>
+          )}
         </div>
       )}
     </div>
