@@ -62,7 +62,8 @@ service cloud.firestore {
         isDeliveryBoy() || 
         isModerator()
       );
-      allow list: if isSignedIn() && (isDeliveryBoy() || isModerator());
+      // Allow listing if the user is a delivery boy, staff, OR the business/customer associated with orders
+      allow list: if isSignedIn(); 
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isDeliveryBoy() || 

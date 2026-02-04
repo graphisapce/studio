@@ -152,9 +152,22 @@ export default function BusinessDetailPage() {
     }
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Link Copied!", description: "Share it with your friends!" });
+  const copyToClipboard = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ title: "Link Copied!", description: "Share it with your friends!" });
+      } else {
+        throw new Error("Clipboard not supported");
+      }
+    } catch (err) {
+      console.error("Clipboard Error:", err);
+      toast({ 
+        variant: "destructive", 
+        title: "Copy Failed", 
+        description: "Browser ne copy block kiya hai. Kripya manual link share karein." 
+      });
+    }
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -169,7 +182,7 @@ export default function BusinessDetailPage() {
         businessId: id,
         userId: user.uid,
         userName: userProfile.name,
-        userPhotoURL: userProfile.photoURL || "", // Store photo for display
+        userPhotoURL: userProfile.photoURL || "", 
         rating,
         comment,
         createdAt: new Date().toISOString()
@@ -196,7 +209,6 @@ export default function BusinessDetailPage() {
 
   return (
     <div className="container mx-auto max-w-6xl pb-12 px-4">
-      {/* Back Navigation */}
       <div className="pt-4 mb-4 flex justify-between items-center">
         <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" /> Back
