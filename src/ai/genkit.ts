@@ -1,10 +1,9 @@
-
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
 /**
  * Genkit Configuration - v1.x Standard
- * Fixed: Removed invalid direct model import and used string ID instead.
+ * Fixed: Explicitly using environment variable for API Key to avoid 'undefined' at runtime.
  */
 export const ai = genkit({
   plugins: [
