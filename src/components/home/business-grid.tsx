@@ -37,11 +37,18 @@ import {
   Book,
   Scissors,
   Flame,
-  LayoutGrid
+  LayoutGrid,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { BusinessCard } from "./business-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const categoriesData: { name: BusinessCategory, icon: any }[] = [
   { name: 'Food', icon: Utensils },
@@ -80,6 +87,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
+  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
   const firestore = useFirestore();
 
   const businessesRef = useMemoFirebase(() => collection(firestore, "businesses"), [firestore]);
@@ -172,6 +180,9 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
     return filtered;
   }, [searchTerm, selectedCategory, userLocation, realBusinesses, loadingRealData, allProducts]);
 
+  const mainCategories = categoriesData.slice(0, 6);
+  const remainingCategories = categoriesData.slice(6);
+
   return (
     <div className="container mx-auto px-4 py-8 pb-20">
       {/* Live Flash Deals Ticker */}
@@ -217,7 +228,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
         </div>
 
         {/* Categories Explorer Section */}
-        <div className="space-y-6 mt-12">
+        <div className="space-y-6 mt-12 max-w-4xl mx-auto">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xl font-black font-headline">Explore Categories</h2>
             {selectedCategory && (
@@ -227,34 +238,79 @@ export function BusinessGrid({ externalCategory, externalSearch }: BusinessGridP
             )}
           </div>
           
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 px-2">
-            {categoriesData.map((cat) => {
-              const Icon = cat.icon;
-              const isActive = selectedCategory === cat.name;
-              return (
-                <button
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(isActive ? null : cat.name)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 group ${
-                    isActive 
-                      ? 'bg-primary text-white shadow-lg scale-105' 
-                      : 'bg-white border hover:border-primary/50 hover:shadow-md'
-                  }`}
-                >
-                  <div className={`p-3 rounded-full transition-colors ${
-                    isActive ? 'bg-white/20' : 'bg-primary/5 text-primary group-hover:bg-primary/10'
-                  }`}>
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <span className={`text-[10px] font-bold text-center uppercase tracking-tight line-clamp-1 ${
-                    isActive ? 'text-white' : 'text-muted-foreground'
-                  }`}>
-                    {cat.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <Collapsible open={isCategoriesExpanded} onOpenChange={setIsCategoriesExpanded} className="space-y-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 px-2">
+              {mainCategories.map((cat) => {
+                const Icon = cat.icon;
+                const isActive = selectedCategory === cat.name;
+                return (
+                  <button
+                    key={cat.name}
+                    onClick={() => setSelectedCategory(isActive ? null : cat.name)}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 group ${
+                      isActive 
+                        ? 'bg-primary text-white shadow-lg scale-105' 
+                        : 'bg-white border hover:border-primary/50 hover:shadow-md'
+                    }`}
+                  >
+                    <div className={`p-3 rounded-full transition-colors ${
+                      isActive ? 'bg-white/20' : 'bg-primary/5 text-primary group-hover:bg-primary/10'
+                    }`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span className={`text-[10px] font-bold text-center uppercase tracking-tight line-clamp-1 ${
+                      isActive ? 'text-white' : 'text-muted-foreground'
+                    }`}>
+                      {cat.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <CollapsibleContent className="space-y-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 px-2">
+                {remainingCategories.map((cat) => {
+                  const Icon = cat.icon;
+                  const isActive = selectedCategory === cat.name;
+                  return (
+                    <button
+                      key={cat.name}
+                      onClick={() => setSelectedCategory(isActive ? null : cat.name)}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 group ${
+                        isActive 
+                          ? 'bg-primary text-white shadow-lg scale-105' 
+                          : 'bg-white border hover:border-primary/50 hover:shadow-md'
+                      }`}
+                    >
+                      <div className={`p-3 rounded-full transition-colors ${
+                        isActive ? 'bg-white/20' : 'bg-primary/5 text-primary group-hover:bg-primary/10'
+                      }`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <span className={`text-[10px] font-bold text-center uppercase tracking-tight line-clamp-1 ${
+                        isActive ? 'text-white' : 'text-muted-foreground'
+                      }`}>
+                        {cat.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+
+            <div className="flex justify-center mt-4">
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full gap-2 border-primary/20 text-muted-foreground hover:text-primary transition-colors">
+                  {isCategoriesExpanded ? (
+                    <>Show Less <ChevronUp className="h-4 w-4" /></>
+                  ) : (
+                    <>See All Categories <ChevronDown className="h-4 w-4" /></>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </Collapsible>
         </div>
       </div>
 
