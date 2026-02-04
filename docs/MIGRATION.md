@@ -1,6 +1,6 @@
 # Project Migration Guide (LocalVyapar)
 
-Aapne apna project safaltapoorvak taiyar kar liya hai. Ise naye editor (Antigravity/VS Code) mein le jaane ke liye niche diye gaye steps follow karein:
+Aapne apna project safaltapoorvak taiyar kar liya hai. Ise naye editor (VS Code / Cursor) mein le jaane ke liye niche diye gaye steps follow karein:
 
 ## Step 1: Code Download Karein
 Saare files ko ek folder mein download karein. Isme `src`, `public`, `package.json`, `tsconfig.json`, aur `next.config.ts` jaise mukhya folders honge.
@@ -20,6 +20,7 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+GOOGLE_GENAI_API_KEY=your_gemini_key
 ```
 
 ## Step 4: Firestore Rules
@@ -31,4 +32,4 @@ Terminal khol kar ye commands chalayein:
 2. `npm run dev` (Project start karne ke liye)
 
 ---
-**Note:** Dashboard ka option tabhi dikhega jab aap login karenge aur aapka role 'business' hoga. Role sync hone mein 1-2 second lag sakte hain.
+**Note:** Dashboard ka option tabhi dikhega jab aap login karenge aur aapka role 'business' ya 'delivery-boy' hoga.

@@ -14,7 +14,7 @@ Sabse pehle apne is project ko GitHub par ek nayi repository mein upload karein.
 6. Deployment settings ko default rehne dein aur **Finish** par click karein.
 
 ## Step 3: Environment Variables
-Agar aapne `.env.local` mein koi API keys rakhi hain, to unhe Firebase Console mein App Hosting ki settings mein **Environment Variables** tab mein add karein.
+Agar aapne `.env.local` mein koi API keys rakhi hain (jaise `GOOGLE_GENAI_API_KEY`), to unhe Firebase Console mein App Hosting ki settings mein **Environment Variables** tab mein add karein.
 
 ## Step 4: Live URL
 Ek baar deployment khatam hone ke baad, Firebase aapko ek `web.app` wala link dega jahan aapki website poori duniya ke liye live hogi!
