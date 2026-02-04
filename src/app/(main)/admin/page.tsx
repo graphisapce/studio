@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { collection, doc, setDoc } from "firebase/firestore";
+import Link from "next/link";
 import { 
   useFirestore, 
   useCollection, 
@@ -39,7 +40,9 @@ import {
   Search,
   CheckCircle2,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
+  Eye
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -454,6 +457,13 @@ export default function AdminDashboardPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {u.role === 'business' && (
+                              <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                                <Link href={`/business/${u.id}`} target="_blank">
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
                             <Select 
                               disabled={(u.role === 'admin' && !isFullAdmin) || (u.id === user?.uid && !isFullAdmin)}
                               defaultValue={u.role} 
@@ -543,7 +553,14 @@ export default function AdminDashboardPage() {
                     {pendingProducts.map((p) => (
                       <TableRow key={p.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell className="font-medium">
-                          {p.title}
+                          <div className="flex items-center gap-2">
+                            {p.title}
+                            <Button asChild variant="ghost" size="icon" className="h-6 w-6 text-primary">
+                              <Link href={`/business/${p.businessId}`} target="_blank">
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                          </div>
                           <div className="text-[10px] text-muted-foreground">Shop ID: {p.businessId}</div>
                         </TableCell>
                         <TableCell className="font-black text-primary">₹{p.price}</TableCell>
@@ -580,7 +597,10 @@ export default function AdminDashboardPage() {
                       <TableRow key={b.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold">{b.shopName}</span>
+                            <Link href={`/business/${b.id}`} target="_blank" className="font-bold hover:text-primary transition-colors flex items-center gap-2">
+                              {b.shopName}
+                              <ExternalLink className="h-3 w-3 opacity-50" />
+                            </Link>
                             {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
                           </div>
                           <div className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
