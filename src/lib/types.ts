@@ -78,6 +78,7 @@ export interface UserProfile {
   name: string;
   email: string;
   phone?: string;
+  address?: string; // Added address for customers
   photoURL?: string;
   role: 'customer' | 'business' | 'admin' | 'moderator';
   createdAt: string;

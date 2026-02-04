@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useState, useMemo } from "react";
-import { Home, LayoutDashboard, LogIn, LogOut, Menu, Loader2, ShieldAlert } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Menu, Loader2, ShieldAlert, UserCircle } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,6 +79,15 @@ export function MobileHeader() {
                   <Link href="/dashboard">
                     <LayoutDashboard className="h-6 w-6" />
                     <span>My Dashboard</span>
+                  </Link>
+                </Button>
+              )}
+
+              {user && userProfile?.role === 'customer' && (
+                <Button variant="ghost" className="justify-start gap-4 p-4 text-left text-lg bg-primary/5 text-primary" asChild onClick={() => setOpen(false)}>
+                  <Link href="/customer-dashboard">
+                    <UserCircle className="h-6 w-6" />
+                    <span>My Account</span>
                   </Link>
                 </Button>
               )}

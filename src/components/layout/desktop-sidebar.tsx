@@ -1,7 +1,7 @@
 
 "use client";
 import Link from "next/link";
-import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert } from "lucide-react";
+import { Home, LayoutDashboard, LogIn, LogOut, Loader2, ShieldAlert, UserCircle } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -39,6 +39,12 @@ export function DesktopSidebar() {
         {user && isBusiness && (
           <Button variant="ghost" className="justify-start gap-3 bg-primary/5 text-primary hover:bg-primary/10" asChild>
             <Link href="/dashboard"><LayoutDashboard className="h-5 w-5" /><span>My Dashboard</span></Link>
+          </Button>
+        )}
+
+        {user && userProfile?.role === 'customer' && (
+          <Button variant="ghost" className="justify-start gap-3 bg-primary/5 text-primary hover:bg-primary/10" asChild>
+            <Link href="/customer-dashboard"><UserCircle className="h-5 w-5" /><span>My Account</span></Link>
           </Button>
         )}
 

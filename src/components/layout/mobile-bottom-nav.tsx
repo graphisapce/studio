@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -12,6 +13,12 @@ export function MobileBottomNav() {
   const { user, userProfile, loading, isSyncing } = useAuth();
 
   const isBusiness = useMemo(() => userProfile?.role === 'business', [userProfile]);
+
+  const profileLink = useMemo(() => {
+    if (!user) return "/login";
+    if (isBusiness) return "/dashboard";
+    return "/customer-dashboard";
+  }, [user, isBusiness]);
 
   return (
     <nav className="fixed bottom-0 z-10 w-full border-t bg-background/95 backdrop-blur-sm md:hidden">
@@ -33,9 +40,9 @@ export function MobileBottomNav() {
           </Link>
         )}
 
-        <Link href={user ? (isBusiness ? "/dashboard" : "/login") : "/login"} className="flex flex-col items-center gap-1">
-          <UserCircle className={cn("h-6 w-6", pathname === "/login" ? "text-primary" : "text-muted-foreground")} />
-          <span className={cn("text-xs font-medium", pathname === "/login" ? "text-primary" : "text-muted-foreground")}>
+        <Link href={profileLink} className="flex flex-col items-center gap-1">
+          <UserCircle className={cn("h-6 w-6", pathname === profileLink ? "text-primary" : "text-muted-foreground")} />
+          <span className={cn("text-xs font-medium", pathname === profileLink ? "text-primary" : "text-muted-foreground")}>
             {user ? "Profile" : "Login"}
           </span>
         </Link>

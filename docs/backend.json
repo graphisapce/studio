@@ -9,7 +9,9 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "role": { "type": "string", "enum": ["customer", "business", "admin", "moderator"] },
-        "email": { "type": "string", "format": "email" }
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
       },
       "required": ["id", "name", "role"]
     },
