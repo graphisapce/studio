@@ -44,7 +44,8 @@ import {
   ExternalLink,
   Eye,
   ArrowLeft,
-  Truck
+  Truck,
+  Package
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -318,17 +319,19 @@ export default function AdminDashboardPage() {
                 <CardTitle className="text-xl">Account Moderation</CardTitle>
                 <CardDescription>Manage roles and platform access.</CardDescription>
               </div>
-              <Select value={userRoleFilter} onValueChange={(v: any) => setUserRoleFilter(v)}>
-                <SelectTrigger className="w-[150px] rounded-full">
-                  <SelectValue placeholder="Role Filter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Profiles</SelectItem>
-                  <SelectItem value="customer">Customers</SelectItem>
-                  <SelectItem value="delivery">Delivery Boys</SelectItem>
-                  <SelectItem value="staff">Admins/Staff</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={userRoleFilter} onValueChange={(v: any) => setUserRoleFilter(v)}>
+                  <SelectTrigger className="w-[150px] rounded-full">
+                    <SelectValue placeholder="Role Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Profiles</SelectItem>
+                    <SelectItem value="customer">Customers</SelectItem>
+                    <SelectItem value="delivery">Delivery Boys</SelectItem>
+                    <SelectItem value="staff">Admins/Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingUsers ? (
@@ -401,12 +404,131 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="approvals">
-          {/* Approval Queue Table same as before */}
+           <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Product Approval Queue</CardTitle>
+                  <CardDescription>Review and approve items uploaded by shops.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingProducts ? (
+                    <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                  ) : pendingProducts.length === 0 ? (
+                    <div className="text-center py-10 opacity-30">No pending approvals.</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead>Business</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingProducts.map((p) => {
+                          const shop = businesses?.find(b => b.id === p.businessId);
+                          return (
+                            <TableRow key={p.id}>
+                              <TableCell className="font-bold">{p.title}</TableCell>
+                              <TableCell>
+                                <Link href={`/business/${p.businessId}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+                                  {shop?.shopName || "Unknown Shop"} <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              </TableCell>
+                              <TableCell>₹{p.price}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <Button size="sm" variant="outline" className="text-green-600 border-green-600/20 hover:bg-green-50" onClick={() => updateDocumentNonBlocking(doc(firestore, "products", p.id), { status: 'approved' })}>Approve</Button>
+                                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => updateDocumentNonBlocking(doc(firestore, "products", p.id), { status: 'rejected' })}>Reject</Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+           </div>
         </TabsContent>
 
         <TabsContent value="businesses">
-          {/* Active Shops Table same as before */}
+           <Card>
+              <CardHeader>
+                <CardTitle>Active Businesses</CardTitle>
+                <CardDescription>Monitor listed shops and their performance.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingBusinesses ? (
+                  <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Shop Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Stats</TableHead>
+                        <TableHead className="text-right">Access</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {businesses?.map((b) => (
+                        <TableRow key={b.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">{b.shopName}</span>
+                              {b.isVerified && <ShieldCheck className="h-4 w-4 text-blue-500" />}
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{b.category}</Badge></TableCell>
+                          <TableCell>
+                             <div className="flex gap-3 text-[10px] font-black uppercase opacity-60">
+                               <span>{b.views || 0} Views</span>
+                               <span>{(b.callCount || 0) + (b.whatsappCount || 0)} Leads</span>
+                             </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                             <Button asChild size="sm" variant="ghost" className="gap-2 text-primary">
+                               <Link href={`/business/${b.id}`}>
+                                 <Eye className="h-4 w-4" /> View Shop
+                               </Link>
+                             </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+           </Card>
         </TabsContent>
+
+        {isFullAdmin && (
+          <TabsContent value="config">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Configuration</CardTitle>
+                <CardDescription>Global settings for the platform.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Platform-wide Announcement</Label>
+                  <Textarea 
+                    placeholder="e.g. Server Maintenance tonight at 12 AM" 
+                    value={announcementText}
+                    onChange={(e) => setAnnouncementText(e.target.value)}
+                  />
+                  <p className="text-[10px] text-muted-foreground uppercase font-black">Yeh text sabhi users ko home screen par dikhega.</p>
+                </div>
+                <Button onClick={handleUpdateConfig} className="gap-2">
+                  <Save className="h-4 w-4" /> Save Configuration
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
