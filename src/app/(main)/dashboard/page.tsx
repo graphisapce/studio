@@ -148,7 +148,13 @@ export default function DashboardPage() {
     paymentQrUrl: "",
     flashDeal: "",
     instagramUrl: "",
-    facebookUrl: ""
+    facebookUrl: "",
+    // Structured Address Fields for Shop
+    shopHouseNo: "",
+    shopStreet: "",
+    shopCity: "",
+    shopState: "Delhi",
+    shopPincode: ""
   });
 
   const [accountInfo, setAccountInfo] = useState({
@@ -173,6 +179,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (businessData) {
+      // Logic to attempt parsing address if it's already structured in some way, 
+      // otherwise we just use what we have in the document
       setShopProfile({
         shopName: businessData.shopName || "",
         shopCategory: businessData.category || "",
@@ -186,7 +194,12 @@ export default function DashboardPage() {
         paymentQrUrl: businessData.paymentQrUrl || "",
         flashDeal: businessData.flashDeal || "",
         instagramUrl: businessData.instagramUrl || "",
-        facebookUrl: businessData.facebookUrl || ""
+        facebookUrl: businessData.facebookUrl || "",
+        shopHouseNo: (businessData as any).shopHouseNo || "",
+        shopStreet: (businessData as any).shopStreet || "",
+        shopCity: (businessData as any).shopCity || "",
+        shopState: (businessData as any).shopState || "Delhi",
+        shopPincode: (businessData as any).shopPincode || ""
       });
     }
     if (userProfile) {
@@ -316,7 +329,9 @@ export default function DashboardPage() {
     if (!user) return;
     setIsUpdatingProfile(true);
     
-    // Sync shop data with user's area code for listing visibility
+    // Build combined address string from structured fields
+    const combinedAddress = `${shopProfile.shopHouseNo}, ${shopProfile.shopStreet}, ${shopProfile.shopCity}, ${shopProfile.shopState} - ${shopProfile.shopPincode}`;
+
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
@@ -334,8 +349,14 @@ export default function DashboardPage() {
       flashDeal: shopProfile.flashDeal,
       instagramUrl: shopProfile.instagramUrl,
       facebookUrl: shopProfile.facebookUrl,
-      areaCode: userProfile?.areaCode || "Global", // Important: Ensures shop is visible in its area
-      address: `${accountInfo.houseNo}, ${accountInfo.street}, ${accountInfo.city}, ${accountInfo.state}` // Sync address from account
+      areaCode: userProfile?.areaCode || "Global", 
+      address: combinedAddress,
+      // Store structured fields too
+      shopHouseNo: shopProfile.shopHouseNo,
+      shopStreet: shopProfile.shopStreet,
+      shopCity: shopProfile.shopCity,
+      shopState: shopProfile.shopState,
+      shopPincode: shopProfile.shopPincode
     }, { merge: true });
     
     toast({ title: "Updated", description: "Shop details saved successfully." });
@@ -533,6 +554,7 @@ export default function DashboardPage() {
                     <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
                     <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate</Button></CardContent>
                   </Card>
+                  
                   <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
                     <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payments</CardTitle></CardHeader>
                     <CardContent className="space-y-4 pt-2">
@@ -540,6 +562,23 @@ export default function DashboardPage() {
                       <Label htmlFor="qr-upload" className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer text-xs font-bold"><Upload className="h-3 w-3" /> QR Image</Label>
                       <Input type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
                       <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateShopProfile()}>Save Payment</Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="sm:col-span-2 border-primary/10">
+                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Share2 className="h-4 w-4 text-primary" /> Social Media Links</CardTitle></CardHeader>
+                    <CardContent className="grid sm:grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                         <Label className="flex items-center gap-2"><Instagram className="h-4 w-4 text-pink-600" /> Instagram URL</Label>
+                         <Input placeholder="https://instagram.com/yourshop" value={shopProfile.instagramUrl} onChange={(e) => setShopProfile({...shopProfile, instagramUrl: e.target.value})} />
+                       </div>
+                       <div className="space-y-2">
+                         <Label className="flex items-center gap-2"><Facebook className="h-4 w-4 text-blue-600" /> Facebook URL</Label>
+                         <Input placeholder="https://facebook.com/yourshop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
+                       </div>
+                       <div className="sm:col-span-2">
+                         <Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Update Social Links</Button>
+                       </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -579,7 +618,39 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="space-y-2"><Label>Shop Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
-                      <Button type="submit" className="w-full" disabled={isUpdatingProfile}>Save Shop Profile</Button>
+                      
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="flex items-center gap-2 pb-2"><Building2 className="h-4 w-4 text-primary" /><span className="text-sm font-black uppercase tracking-tight">Professional Shop Address</span></div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Shop / Plot / Unit No.</Label>
+                            <Input value={shopProfile.shopHouseNo} onChange={(e) => setShopProfile({...shopProfile, shopHouseNo: e.target.value})} placeholder="e.g. Shop No. 4" className="rounded-xl" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Market / Area</Label>
+                            <Input value={shopProfile.shopStreet} onChange={(e) => setShopProfile({...shopProfile, shopStreet: e.target.value})} placeholder="e.g. Main Market Road" className="rounded-xl" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
+                            <Input value={shopProfile.shopCity} onChange={(e) => setShopProfile({...shopProfile, shopCity: e.target.value})} className="rounded-xl" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
+                            <Input value={shopProfile.shopPincode} onChange={(e) => setShopProfile({...shopProfile, shopPincode: e.target.value})} className="rounded-xl" />
+                          </div>
+                          <div className="space-y-2 col-span-2 sm:col-span-1">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
+                            <Select value={shopProfile.shopState} onValueChange={(v) => setShopProfile({...shopProfile, shopState: v})}>
+                              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                              <SelectContent>{stateList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button type="submit" className="w-full" disabled={isUpdatingProfile}>Save Shop Profile & Address</Button>
                     </form>
                  </CardContent>
                </Card>
@@ -595,7 +666,7 @@ export default function DashboardPage() {
                        <div className="space-y-2"><Label>Phone Number</Label><Input value={accountInfo.phone} onChange={(e) => setAccountInfo({...accountInfo, phone: e.target.value})} /></div>
                      </div>
                      <div className="space-y-4 pt-4 border-t">
-                       <div className="flex items-center gap-2 pb-2"><Building2 className="h-4 w-4 text-primary" /><span className="text-sm font-black uppercase tracking-tight">Structured Address</span></div>
+                       <div className="flex items-center gap-2 pb-2"><Building2 className="h-4 w-4 text-primary" /><span className="text-sm font-black uppercase tracking-tight">Structured Personal Address</span></div>
                        <div className="grid sm:grid-cols-2 gap-4">
                          <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">House No</Label><Input value={accountInfo.houseNo} onChange={(e) => setAccountInfo({...accountInfo, houseNo: e.target.value})} className="rounded-xl" /></div>
                          <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Street</Label><Input value={accountInfo.street} onChange={(e) => setAccountInfo({...accountInfo, street: e.target.value})} className="rounded-xl" /></div>
@@ -608,7 +679,10 @@ export default function DashboardPage() {
                          </div>
                        </div>
                      </div>
-                     <Button type="submit" className="w-full gap-2 font-bold" disabled={isUpdatingAccount}>{isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Personal Changes</Button>
+                     <Button type="submit" className="w-full gap-2 font-bold" disabled={isUpdatingAccount}>
+                       {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 
+                       Save Personal Changes
+                     </Button>
                    </form>
                  </CardContent>
                </Card>
