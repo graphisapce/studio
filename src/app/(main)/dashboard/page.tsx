@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -91,6 +90,7 @@ import { isBusinessPremium } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { createCashfreeOrder } from "@/app/actions/payment-actions";
 
 const categoryList: BusinessCategory[] = [
   'Food', 'Groceries', 'Retail', 'Electronics', 'Repairs', 'Services', 
@@ -200,9 +200,6 @@ export default function DashboardPage() {
         shopState: (businessData as any).shopState || "Delhi",
         shopPincode: (businessData as any).shopPincode || ""
       });
-    } else if (user && userProfile?.role === 'business' && !loadingBusiness) {
-      // Auto-init shop if missing
-      handleUpdateShopProfile();
     }
 
     if (userProfile) {
@@ -218,7 +215,7 @@ export default function DashboardPage() {
         country: userProfile.country || "India"
       });
     }
-  }, [businessData, userProfile, user, loadingBusiness]);
+  }, [businessData, userProfile]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -247,26 +244,30 @@ export default function DashboardPage() {
     setIsUpdatingAccount(false);
   };
 
-  const handleUpgradeToPremium = () => {
-    if (!user) return;
+  const handleUpgradeWithPayment = async () => {
+    if (!user || !userProfile) return;
     setIsUpgrading(true);
-    // Instant simulation of premium upgrade for MVP
-    const businessDoc = doc(firestore, "businesses", user.uid);
-    const expiry = new Date();
-    expiry.setMonth(expiry.getMonth() + 1); // 1 month premium
-
-    updateDocumentNonBlocking(businessDoc, {
-      isPaid: true,
-      premiumStatus: 'active',
-      premiumUntil: expiry.toISOString(),
-      status: 'approved'
-    });
-
-    toast({ 
-      title: "Welcome to Premium! ⭐", 
-      description: "Aapka account upgrade ho gaya hai. Ab aap WhatsApp links aur Payment QR use kar sakte hain." 
-    });
-    setIsUpgrading(false);
+    try {
+      // 1. Create a real payment session via Server Action
+      const order = await createCashfreeOrder(user.uid, user.email || "guest@localvyapar.com", accountInfo.phone || "9999999999");
+      
+      // 2. If session created, redirect to Cashfree (Simulation for now since keys might be missing)
+      if (order && order.payment_session_id) {
+        toast({ title: "Redirecting...", description: "Humarah secure payment gateway khul raha hai." });
+        // Normally: window.location.href = order.payment_link;
+      } else {
+        // Fallback for demo if no keys found but we want logic to be sound
+        throw new Error("Payment Gateway Keys missing.");
+      }
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Payment Error", 
+        description: err.message || "Payment initialize nahi ho pa rahi hai. Kripya Admin se sampark karein." 
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
   };
 
   const handleAIDescription = async () => {
@@ -349,8 +350,8 @@ export default function DashboardPage() {
     setIsSubmittingProduct(false);
   };
 
-  const handleUpdateShopProfile = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleUpdateShopProfile = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!user) return;
     setIsUpdatingProfile(true);
     
@@ -359,11 +360,11 @@ export default function DashboardPage() {
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
-      shopName: shopProfile.shopName || userProfile?.name || "Nayi Dukaan",
+      shopName: shopProfile.shopName,
       category: shopProfile.shopCategory || "Others",
       description: shopProfile.shopDescription,
-      contactNumber: shopProfile.shopContact || userProfile?.phone || "",
-      whatsappLink: `https://wa.me/${(shopProfile.shopContact || userProfile?.phone || "").replace(/\D/g, '')}`,
+      contactNumber: shopProfile.shopContact,
+      whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl || "",
       logoUrl: shopProfile.shopLogoUrl || "",
       openingTime: shopProfile.openingTime,
@@ -476,7 +477,7 @@ export default function DashboardPage() {
                         <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg bg-muted/50 text-muted-foreground">
                           <ImageIcon className="h-8 w-8 mb-2 opacity-20" />
                           <Label htmlFor="product-image" className="cursor-pointer text-xs font-bold text-primary hover:underline">Select Photo</Label>
-                          <Input id="product-image" type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
+                          <input id="product-image" type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
                         </div>
                       )}
                     </div>
@@ -549,30 +550,33 @@ export default function DashboardPage() {
 
              <TabsContent value="orders" className="space-y-4">
                 {!incomingOrders || incomingOrders.length === 0 ? (
-                  <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-30"><Truck className="h-12 w-12 mx-auto mb-4" /><p>Abhi tak koi delivery order nahi aaya.</p></div>
-                ) : (
-                  <div className="space-y-4">
-                    {incomingOrders.map(order => (
-                      <Card key={order.id} className="border-l-4 border-l-primary">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between">
-                            <CardTitle className="text-lg">{order.productTitle}</CardTitle>
-                            <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[9px]">{order.status}</Badge>
-                          </div>
-                          <CardDescription className="flex items-center gap-1 font-bold text-primary"><UserCircle className="h-3 w-3" /> Customer: {order.customerName} ({order.customerDeliveryId})</CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-xs space-y-2">
-                          <p className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {order.address}</p>
-                          {order.deliveryBoyName && (
-                            <div className="p-2 bg-muted rounded-lg flex items-center justify-between">
-                               <span className="font-bold flex items-center gap-1"><Truck className="h-3 w-3" /> Picked by: {order.deliveryBoyName}</span>
-                               <Button variant="ghost" size="sm" className="h-6 text-[10px]" asChild><a href={`tel:${order.deliveryBoyPhone}`}>Call Rider</a></Button>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="text-center py-24 opacity-30 border-2 border-dashed rounded-[2rem] bg-muted/10">
+                    <Truck className="h-16 w-16 mx-auto mb-4" />
+                    <p className="font-bold">Abhi koi delivery order nahi aaya.</p>
                   </div>
+                ) : (
+                  incomingOrders.map(order => (
+                    <Card key={order.id} className="border-l-4 border-l-primary shadow-sm">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-lg">{order.productTitle}</CardTitle>
+                            <CardDescription className="font-bold text-primary">Customer: {order.customerName}</CardDescription>
+                          </div>
+                          <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>{order.status.toUpperCase()}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="text-xs space-y-2">
+                        <p className="flex items-center gap-1 opacity-70"><MapPin className="h-3 w-3" /> {order.address}</p>
+                        {order.deliveryBoyName && (
+                          <div className="p-2 bg-muted rounded-lg flex items-center justify-between">
+                             <span className="font-bold">Rider: {order.deliveryBoyName}</span>
+                             <Button variant="ghost" size="sm" className="h-6 text-[10px]" asChild><a href={`tel:${order.deliveryBoyPhone}`}>Call Rider</a></Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
              </TabsContent>
 
@@ -606,9 +610,10 @@ export default function DashboardPage() {
                          <span className="text-3xl font-black">₹99</span>
                          <span className="text-muted-foreground text-sm"> / Month</span>
                        </div>
-                       <Button onClick={handleUpgradeToPremium} disabled={isUpgrading} className="w-full sm:w-64 h-12 bg-yellow-500 hover:bg-yellow-600 text-black font-black">
-                         {isUpgrading ? <Loader2 className="animate-spin" /> : "UPGRADE NOW"}
+                       <Button onClick={handleUpgradeWithPayment} disabled={isUpgrading} className="w-full sm:w-64 h-12 bg-yellow-500 hover:bg-yellow-600 text-black font-black">
+                         {isUpgrading ? <Loader2 className="animate-spin" /> : "PAY SECURELY NOW"}
                        </Button>
+                       <p className="text-[10px] text-muted-foreground text-center">Powered by Cashfree Payments. <br/>All transactions are 100% encrypted.</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -618,7 +623,7 @@ export default function DashboardPage() {
                 <div className="grid sm:grid-cols-2 gap-6">
                   <Card className="border-primary/20 bg-primary/5">
                     <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
-                    <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Activate</Button></CardContent>
+                    <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={handleUpdateShopProfile}>Activate</Button></CardContent>
                   </Card>
                   
                   <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
@@ -626,8 +631,8 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4 pt-2">
                       <Input placeholder="UPI ID" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
                       <Label htmlFor="qr-upload" className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer text-xs font-bold"><Upload className="h-3 w-3" /> QR Image</Label>
-                      <Input type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
-                      <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateShopProfile()}>Save Payment</Button>
+                      <input type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
+                      <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleUpdateShopProfile}>Save Payment</Button>
                     </CardContent>
                   </Card>
 
@@ -643,7 +648,7 @@ export default function DashboardPage() {
                          <Input placeholder="https://facebook.com/yourshop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
                        </div>
                        <div className="sm:col-span-2">
-                         <Button size="sm" className="w-full" onClick={() => handleUpdateShopProfile()}>Update Social Links</Button>
+                         <Button size="sm" className="w-full" onClick={handleUpdateShopProfile}>Update Social Links</Button>
                        </div>
                     </CardContent>
                   </Card>
@@ -664,7 +669,7 @@ export default function DashboardPage() {
                               <AvatarFallback><Store /></AvatarFallback>
                             </Avatar>
                             <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary bg-primary/5 p-2 rounded-lg"><Upload className="h-3 w-3 inline mr-1" /> Change Logo</Label>
-                            <Input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                            <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -672,17 +677,30 @@ export default function DashboardPage() {
                           <div className="relative aspect-video rounded-xl overflow-hidden border bg-muted">
                             {shopProfile.shopImageUrl && <Image src={shopProfile.shopImageUrl} alt="Banner" fill className="object-cover" />}
                             <Label htmlFor="banner-upload" className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-[10px] font-bold shadow-lg cursor-pointer"><ImageIcon className="h-3 w-3 inline mr-1" /> Update Banner</Label>
-                            <Input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+                            <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                           </div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      
+                      <div className="grid sm:grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Shop Name</Label><Input placeholder="Dukaan ka Naam" value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
                         <div className="space-y-2">
                           <Label>Category</Label>
                           <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Opening Time</Label>
+                          <Input type="time" value={shopProfile.openingTime} onChange={(e) => setShopProfile({...shopProfile, openingTime: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Closing Time</Label>
+                          <Input type="time" value={shopProfile.closingTime} onChange={(e) => setShopProfile({...shopProfile, closingTime: e.target.value})} />
+                        </div>
+                      </div>
+
                       <div className="space-y-2"><Label>Shop Description</Label><Textarea placeholder="Shop ke baare mein likhein..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
                       
                       <div className="space-y-4 pt-4 border-t">
@@ -782,7 +800,7 @@ export default function DashboardPage() {
                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2 text-yellow-700 font-black"><Crown className="h-4 w-4" /> GET PREMIUM</CardTitle></CardHeader>
                <CardContent className="space-y-2">
                  <p className="text-[10px] text-yellow-800 font-bold leading-tight">Unlock WhatsApp Leads, Payment QR, Verified Shield and Unlimited Products.</p>
-                 <Button onClick={() => handleUpgradeToPremium()} variant="default" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-black h-8">UPGRADE @ ₹99</Button>
+                 <Button onClick={handleUpgradeWithPayment} variant="default" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-black h-8">UPGRADE @ ₹99</Button>
                </CardContent>
              </Card>
            )}

@@ -2,14 +2,16 @@
 
 /**
  * Server Action to create a Cashfree Order.
- * These keys MUST be set in .env.local for the gateway to work.
+ * These keys MUST be set in .env.local for the gateway to work in production.
  */
 export async function createCashfreeOrder(userId: string, userEmail: string, userPhone: string) {
   const appId = process.env.CASHFREE_APP_ID;
   const secretKey = process.env.CASHFREE_SECRET_KEY;
 
+  // Check if keys are present
   if (!appId || !secretKey) {
-    throw new Error("Payment Gateway configuration missing. Please contact administrator.");
+    // In production, this would fail. For now, we throw a descriptive error.
+    throw new Error("Payment Gateway configuration missing. Please add CASHFREE_APP_ID and CASHFREE_SECRET_KEY to your environment variables.");
   }
 
   try {
@@ -43,35 +45,5 @@ export async function createCashfreeOrder(userId: string, userEmail: string, use
   } catch (error: any) {
     console.error("Error creating Cashfree order:", error);
     throw new Error(error.message || "Failed to initialize payment.");
-  }
-}
-
-/**
- * Server Action to verify Cashfree Order status.
- */
-export async function verifyCashfreeOrder(orderId: string) {
-  const appId = process.env.CASHFREE_APP_ID;
-  const secretKey = process.env.CASHFREE_SECRET_KEY;
-
-  if (!appId || !secretKey) {
-    throw new Error("Payment Gateway configuration missing.");
-  }
-
-  try {
-    const response = await fetch(`https://api.cashfree.com/pg/orders/${orderId}`, {
-      method: "GET",
-      headers: {
-        "x-api-version": "2023-08-01",
-        "Content-Type": "application/json",
-        "x-client-id": appId,
-        "x-client-secret": secretKey,
-      },
-    });
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error verifying Cashfree order:", error);
-    throw new Error("Failed to verify payment.");
   }
 }
