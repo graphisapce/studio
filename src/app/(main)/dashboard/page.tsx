@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -248,15 +249,10 @@ export default function DashboardPage() {
     if (!user || !userProfile) return;
     setIsUpgrading(true);
     try {
-      // 1. Create a real payment session via Server Action
       const order = await createCashfreeOrder(user.uid, user.email || "guest@localvyapar.com", accountInfo.phone || "9999999999");
-      
-      // 2. If session created, redirect to Cashfree (Simulation for now since keys might be missing)
       if (order && order.payment_session_id) {
         toast({ title: "Redirecting...", description: "Humarah secure payment gateway khul raha hai." });
-        // Normally: window.location.href = order.payment_link;
       } else {
-        // Fallback for demo if no keys found but we want logic to be sound
         throw new Error("Payment Gateway Keys missing.");
       }
     } catch (err: any) {
@@ -457,13 +453,20 @@ export default function DashboardPage() {
            <Button variant="outline" onClick={() => typeof window !== 'undefined' && window.print()}><Printer className="mr-2 h-4 w-4" /> Flyer</Button>
            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
             <DialogTrigger asChild>
-              <Button disabled={!hasPremium && products && products.length >= 3}>
+              <Button disabled={!hasPremium && (products?.length || 0) >= 3}>
                 <PlusCircle className="mr-2 h-5 w-5" /> Add Product
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <form onSubmit={handleAddProduct} className="space-y-4">
-                <DialogHeader><DialogTitle>New Product</DialogTitle></DialogHeader>
+                <DialogHeader>
+                  <DialogTitle>New Product</DialogTitle>
+                  {!hasPremium && (
+                    <DialogDescription className="text-xs text-orange-600 font-bold">
+                      Aap free plan par hain. Sirf 3 products add kar sakte hain. ({products?.length || 0}/3 used)
+                    </DialogDescription>
+                  )}
+                </DialogHeader>
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label>Product Photo</Label>
@@ -583,26 +586,34 @@ export default function DashboardPage() {
              <TabsContent value="premium" className="space-y-6">
                 <Card className="border-yellow-400 bg-yellow-50/20">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Crown className="h-6 w-6 text-yellow-500" /> LocalVyapar Premium</CardTitle>
-                    <CardDescription>Dukan ko digital banayein aur sales badhayein.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Crown className="h-6 w-6 text-yellow-500" /> LocalVyapar Premium Benefits</CardTitle>
+                    <CardDescription>Upgrade karke ye exclusive features unlock karein:</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
                         <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                        <div><p className="text-sm font-bold">Unlimited Listings</p><p className="text-xs text-muted-foreground">Free plan mein sirif 3 products allowed hain.</p></div>
+                        <div><p className="text-sm font-bold">Unlimited Listings</p><p className="text-xs text-muted-foreground">Jitne chahein utne products add karein.</p></div>
                       </div>
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                        <div><p className="text-sm font-bold">Verified Badge</p><p className="text-xs text-muted-foreground">Customers ka bharosa badhayein (Shield Icon).</p></div>
+                        <ShieldCheck className="h-5 w-5 text-blue-500 shrink-0" />
+                        <div><p className="text-sm font-bold">Verified Badge</p><p className="text-xs text-muted-foreground">Customers ka trust badhayein blue badge se.</p></div>
                       </div>
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                        <div><p className="text-sm font-bold">WhatsApp Buttons</p><p className="text-xs text-muted-foreground">Customers aapko direct message kar payenge.</p></div>
+                        <MessageCircle className="h-5 w-5 text-green-500 shrink-0" />
+                        <div><p className="text-sm font-bold">WhatsApp Direct</p><p className="text-xs text-muted-foreground">Customers aapse direct chat kar sakenge.</p></div>
                       </div>
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
-                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                        <div><p className="text-sm font-bold">Payment QR & UPI</p><p className="text-xs text-muted-foreground">Digital payment accept karein bina kisi extra fee ke.</p></div>
+                        <QrCode className="h-5 w-5 text-purple-500 shrink-0" />
+                        <div><p className="text-sm font-bold">QR Payments</p><p className="text-xs text-muted-foreground">Online payment accept karein shop page par.</p></div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
+                        <Rocket className="h-5 w-5 text-orange-500 shrink-0" />
+                        <div><p className="text-sm font-bold">Top Rankings</p><p className="text-xs text-muted-foreground">Search results mein aap sabse upar dikhenge.</p></div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
+                        <Zap className="h-5 w-5 text-yellow-500 shrink-0" />
+                        <div><p className="text-sm font-bold">Flash Deals</p><p className="text-xs text-muted-foreground">Limited time offers highlight karein.</p></div>
                       </div>
                     </div>
                     <div className="pt-4 border-t flex flex-col items-center gap-4">
@@ -611,9 +622,9 @@ export default function DashboardPage() {
                          <span className="text-muted-foreground text-sm"> / Month</span>
                        </div>
                        <Button onClick={handleUpgradeWithPayment} disabled={isUpgrading} className="w-full sm:w-64 h-12 bg-yellow-500 hover:bg-yellow-600 text-black font-black">
-                         {isUpgrading ? <Loader2 className="animate-spin" /> : "PAY SECURELY NOW"}
+                         {isUpgrading ? <Loader2 className="animate-spin" /> : "UPGRADE NOW"}
                        </Button>
-                       <p className="text-[10px] text-muted-foreground text-center">Powered by Cashfree Payments. <br/>All transactions are 100% encrypted.</p>
+                       <p className="text-[10px] text-muted-foreground text-center">Secure Payment via Cashfree.</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -622,17 +633,22 @@ export default function DashboardPage() {
              <TabsContent value="marketing" className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-6">
                   <Card className="border-primary/20 bg-primary/5">
-                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal</CardTitle></CardHeader>
-                    <CardContent className="space-y-4"><Input placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} /><Button size="sm" className="w-full" onClick={handleUpdateShopProfile}>Activate</Button></CardContent>
+                    <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal (Premium)</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <Input disabled={!hasPremium} placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} />
+                      <Button disabled={!hasPremium} size="sm" className="w-full" onClick={handleUpdateShopProfile}>Activate</Button>
+                      {!hasPremium && <p className="text-[9px] text-orange-600 font-bold uppercase">Upgrade to activate Flash Deals</p>}
+                    </CardContent>
                   </Card>
                   
                   <Card className="border-blue-200 bg-blue-50/20 shadow-sm">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payments</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-blue-500" /> Payments (Premium)</CardTitle></CardHeader>
                     <CardContent className="space-y-4 pt-2">
-                      <Input placeholder="UPI ID" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
-                      <Label htmlFor="qr-upload" className="flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer text-xs font-bold"><Upload className="h-3 w-3" /> QR Image</Label>
-                      <input type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
-                      <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleUpdateShopProfile}>Save Payment</Button>
+                      <Input disabled={!hasPremium} placeholder="UPI ID" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
+                      <Label htmlFor="qr-upload" className={`flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer text-xs font-bold ${!hasPremium && 'opacity-50 cursor-not-allowed'}`}><Upload className="h-3 w-3" /> QR Image</Label>
+                      <input disabled={!hasPremium} type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
+                      <Button disabled={!hasPremium} size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleUpdateShopProfile}>Save Payment</Button>
+                      {!hasPremium && <p className="text-[9px] text-blue-600 font-bold uppercase">Upgrade to show Payment QR</p>}
                     </CardContent>
                   </Card>
 
@@ -734,6 +750,11 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
+                      <div className="space-y-2 pt-4 border-t">
+                        <Label>Shop Contact Number</Label>
+                        <Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} placeholder="99xxxxxx" />
+                      </div>
+
                       <Button type="submit" className="w-full h-12 gap-2" disabled={isUpdatingProfile}>
                         {isUpdatingProfile ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Shop Profile & Address
@@ -796,11 +817,11 @@ export default function DashboardPage() {
            </Card>
            
            {!hasPremium && (
-             <Card className="bg-yellow-50 border-yellow-200">
+             <Card className="bg-yellow-50 border-yellow-200 shadow-lg">
                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2 text-yellow-700 font-black"><Crown className="h-4 w-4" /> GET PREMIUM</CardTitle></CardHeader>
                <CardContent className="space-y-2">
-                 <p className="text-[10px] text-yellow-800 font-bold leading-tight">Unlock WhatsApp Leads, Payment QR, Verified Shield and Unlimited Products.</p>
-                 <Button onClick={handleUpgradeWithPayment} variant="default" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-black h-8">UPGRADE @ ₹99</Button>
+                 <p className="text-[10px] text-yellow-800 font-bold leading-tight">Unlock WhatsApp Leads, Digital Payments, Blue Badge and Unlimited Products.</p>
+                 <Button onClick={handleUpgradeWithPayment} variant="default" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-black h-8 shadow-sm">UPGRADE @ ₹99</Button>
                </CardContent>
              </Card>
            )}
