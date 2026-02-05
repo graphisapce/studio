@@ -34,11 +34,19 @@
         "shopName": { "type": "string" },
         "category": { "type": "string" },
         "views": { "type": "number" },
+        "callCount": { "type": "number" },
+        "whatsappCount": { "type": "number" },
         "isPaid": { "type": "boolean" },
         "imageUrl": { "type": "string" },
         "logoUrl": { "type": "string" },
         "paymentQrUrl": { "type": "string" },
-        "flashDeal": { "type": "string" }
+        "flashDeal": { "type": "string" },
+        "openingTime": { "type": "string" },
+        "closingTime": { "type": "string" },
+        "performanceHistory": {
+          "type": "object",
+          "description": "Historical performance data keyed by month-year."
+        }
       }
     },
     "Order": {

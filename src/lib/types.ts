@@ -33,7 +33,7 @@ export interface Business {
   shopName: string;
   category: BusinessCategory;
   address: string;
-  areaCode?: string; // New: Area matching
+  areaCode?: string; 
   contactNumber: string;
   whatsappLink: string;
   imageUrl: string;
@@ -61,6 +61,7 @@ export interface Business {
   facebookUrl?: string;
   flashDeal?: string;
   flashDealExpiry?: string;
+  performanceHistory?: Record<string, { views: number; leads: number }>;
 }
 
 export interface Product {
