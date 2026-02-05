@@ -149,7 +149,6 @@ export default function DashboardPage() {
     flashDeal: "",
     instagramUrl: "",
     facebookUrl: "",
-    // Structured Address Fields for Shop
     shopHouseNo: "",
     shopStreet: "",
     shopCity: "",
@@ -179,8 +178,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (businessData) {
-      // Logic to attempt parsing address if it's already structured in some way, 
-      // otherwise we just use what we have in the document
       setShopProfile({
         shopName: businessData.shopName || "",
         shopCategory: businessData.category || "",
@@ -329,7 +326,6 @@ export default function DashboardPage() {
     if (!user) return;
     setIsUpdatingProfile(true);
     
-    // Build combined address string from structured fields
     const combinedAddress = `${shopProfile.shopHouseNo}, ${shopProfile.shopStreet}, ${shopProfile.shopCity}, ${shopProfile.shopState} - ${shopProfile.shopPincode}`;
 
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
@@ -351,7 +347,6 @@ export default function DashboardPage() {
       facebookUrl: shopProfile.facebookUrl,
       areaCode: userProfile?.areaCode || "Global", 
       address: combinedAddress,
-      // Store structured fields too
       shopHouseNo: shopProfile.shopHouseNo,
       shopStreet: shopProfile.shopStreet,
       shopCity: shopProfile.shopCity,

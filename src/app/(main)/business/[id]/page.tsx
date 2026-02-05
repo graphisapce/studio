@@ -154,6 +154,11 @@ export default function BusinessDetailPage() {
     }
   };
 
+  const openSocialLink = (url: string) => {
+    const finalUrl = url.startsWith('http') ? url : `https://${url}`;
+    window.open(finalUrl, '_blank');
+  };
+
   const copyToClipboard = async () => {
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
@@ -340,7 +345,7 @@ export default function BusinessDetailPage() {
                     <div className="relative pt-2"><Button variant="outline" className="w-full h-11 opacity-50" disabled><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp (Premium Only)</Button></div>
                   )}
 
-                  {/* Social Media Links Section */}
+                  {/* Social Media Links Section - Visible to ALL users */}
                   {(business.instagramUrl || business.facebookUrl) && (
                     <div className="flex flex-col gap-2 pt-2 border-t mt-2">
                       <p className="text-[10px] font-black uppercase text-muted-foreground opacity-60 px-1">Social Profiles</p>
@@ -350,7 +355,7 @@ export default function BusinessDetailPage() {
                             variant="outline" 
                             size="sm" 
                             className="flex-1 gap-2 border-pink-500 text-pink-600 hover:bg-pink-50 text-[10px] h-9" 
-                            onClick={() => window.open(business.instagramUrl, '_blank')}
+                            onClick={() => openSocialLink(business.instagramUrl!)}
                           >
                             <Instagram className="h-3.5 w-3.5" /> Instagram
                           </Button>
@@ -360,7 +365,7 @@ export default function BusinessDetailPage() {
                             variant="outline" 
                             size="sm" 
                             className="flex-1 gap-2 border-blue-500 text-blue-600 hover:bg-blue-50 text-[10px] h-9" 
-                            onClick={() => window.open(business.facebookUrl, '_blank')}
+                            onClick={() => openSocialLink(business.facebookUrl!)}
                           >
                             <Facebook className="h-3.5 w-3.5" /> Facebook
                           </Button>
