@@ -62,7 +62,8 @@ import {
   Phone,
   Building2,
   Truck,
-  ShieldCheck
+  ShieldCheck,
+  TrendingUp
 } from "lucide-react";
 import {
   Dialog,
@@ -419,6 +420,8 @@ export default function DashboardPage() {
       toast({ variant: "destructive", title: "Download failed", description: "QR code download nahi ho paya." });
     }
   };
+
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
 
   if (authLoading || loadingBusiness || loadingProducts || loadingOrders) {
     return (
@@ -806,12 +809,42 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-8">
-           <Card className="border-primary/20 bg-primary/5">
-             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Live Insights</CardTitle></CardHeader>
+           <Card className="border-primary/20 bg-primary/5 shadow-lg">
+             <CardHeader className="pb-2">
+               <div className="flex justify-between items-center">
+                 <CardTitle className="text-sm flex items-center gap-2">
+                   <History className="h-4 w-4 text-primary" /> Performance Insights
+                 </CardTitle>
+                 <Badge variant="outline" className="bg-primary/10 text-primary text-[8px] font-black uppercase">
+                   {currentMonthName}
+                 </Badge>
+               </div>
+             </CardHeader>
              <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                   <div className="bg-white p-3 rounded-lg shadow-sm border text-center"><p className="text-[10px] uppercase font-bold text-muted-foreground">Views</p><p className="text-xl font-black">{businessData?.views || 0}</p></div>
-                   <div className="bg-white p-3 rounded-lg shadow-sm border text-center"><p className="text-[10px] uppercase font-bold text-muted-foreground">Leads</p><p className="text-xl font-black">{(businessData?.callCount || 0) + (businessData?.whatsappCount || 0)}</p></div>
+                   <div className="bg-white p-4 rounded-xl shadow-sm border text-center relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-1 bg-green-50 text-green-600 rounded-bl-lg">
+                        <TrendingUp className="h-3 w-3" />
+                      </div>
+                      <p className="text-[9px] uppercase font-black text-muted-foreground mb-1">Views</p>
+                      <p className="text-2xl font-black text-primary">{businessData?.views || 0}</p>
+                      <p className="text-[8px] text-green-600 font-bold uppercase mt-1">This Month</p>
+                   </div>
+                   <div className="bg-white p-4 rounded-xl shadow-sm border text-center relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-1 bg-blue-50 text-blue-600 rounded-bl-lg">
+                        <MessageCircle className="h-3 w-3" />
+                      </div>
+                      <p className="text-[9px] uppercase font-black text-muted-foreground mb-1">Leads</p>
+                      <p className="text-2xl font-black text-primary">
+                        {(businessData?.callCount || 0) + (businessData?.whatsappCount || 0)}
+                      </p>
+                      <p className="text-[8px] text-blue-600 font-bold uppercase mt-1">This Month</p>
+                   </div>
+                </div>
+                <div className="p-3 bg-white/50 rounded-lg border border-dashed border-primary/20">
+                   <p className="text-[9px] text-muted-foreground text-center font-bold">
+                     Aapki shop performance real-time update ho rahi hai.
+                   </p>
                 </div>
              </CardContent>
            </Card>
