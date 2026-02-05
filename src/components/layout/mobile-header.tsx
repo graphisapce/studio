@@ -10,6 +10,8 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetTitle,
+  SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
@@ -41,6 +43,10 @@ export function MobileHeader() {
           </SheetTrigger>
           <SheetContent side="right">
             <SheetHeader className="mb-8 border-b pb-4">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <SheetDescription className="sr-only">
+                Access your dashboard, profile, and app navigation.
+              </SheetDescription>
               <Logo />
               {user && (
                 <div className="mt-4 text-left px-2">
