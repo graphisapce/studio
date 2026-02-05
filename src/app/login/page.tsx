@@ -45,17 +45,6 @@ import { Logo } from "@/components/logo";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { Label } from "@/components/ui/label";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { UserRole } from "@/lib/types";
 
 const loginSchema = z.object({
@@ -68,10 +57,6 @@ const signupSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   phone: z.string().min(10, { message: "Enter a valid 10-digit phone number." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-});
-
-const forgotPasswordSchema = z.object({
-    email: z.string().email({ message: "Please enter a valid email address." }),
 });
 
 export default function LoginPage() {
@@ -98,19 +83,16 @@ export default function LoginPage() {
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", phone: "", password: "" },
   });
-  
-  const forgotPasswordForm = useForm<z.infer<typeof forgotPasswordSchema>>({
-    resolver: zodResolver(forgotPasswordSchema),
-    defaultValues: { email: "" },
-  });
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({ title: "Welcome back!", description: "Aap safaltapoorvak login ho gaye hain." });
       router.push("/");
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Login Failed", description: "Email/Password galat hai." });
+      console.error(error);
+      toast({ variant: "destructive", title: "Login Failed", description: "Email ya Password galat hai." });
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +104,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
+      // Crucial: Wait for the profile to be created
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -129,10 +112,13 @@ export default function LoginPage() {
         phone: values.phone,
         role: role,
         createdAt: new Date().toISOString(),
+        favorites: []
       });
 
+      toast({ title: "Account Created!", description: "Ab aap LocalVyapar use kar sakte hain." });
       router.push("/");
     } catch (error: any) {
+      console.error(error);
       toast({ variant: "destructive", title: "Sign Up Failed", description: error.message });
     } finally {
       setIsLoading(false);
@@ -155,25 +141,16 @@ export default function LoginPage() {
             photoURL: newUser.photoURL || '',
             role: role,
             createdAt: new Date().toISOString(),
+            favorites: []
         });
       }
+      toast({ title: "Google Sign-In Success" });
       router.push("/");
     } catch (error: any) {
+      console.error(error);
       toast({ variant: "destructive", title: "Google Sign-In Failed", description: error.message });
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  async function onForgotPasswordSubmit(values: z.infer<typeof forgotPasswordSchema>) {
-    setIsLoading(true);
-    try {
-        await sendPasswordResetEmail(auth, values.email);
-        toast({ title: "Success", description: "Reset link sent to your email." });
-    } catch (error: any) {
-        toast({ variant: "destructive", title: "Error", description: "Failed to send reset email." });
-    } finally {
-        setIsLoading(false);
     }
   }
 
@@ -233,8 +210,8 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent>
                 <div className="mb-6 space-y-3 p-4 bg-muted/50 rounded-xl">
-                    <Label className="text-xs font-black uppercase text-muted-foreground">Main Role</Label>
-                    <RadioGroup defaultValue={role} onValueChange={(v: any) => setRole(v)} className="grid grid-cols-3 gap-2">
+                    <Label className="text-xs font-black uppercase text-muted-foreground">Choose Your Main Purpose</Label>
+                    <RadioGroup value={role} onValueChange={(v: any) => setRole(v)} className="grid grid-cols-3 gap-2">
                         <div className="flex items-center space-x-2 bg-white p-2 rounded-lg border">
                             <RadioGroupItem value="customer" id="customer" />
                             <Label htmlFor="customer" className="text-[10px] font-bold">User</Label>
@@ -279,7 +256,7 @@ export default function LoginPage() {
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <Button type="submit" className="w-full" disabled={isLoading}>Create Account</Button>
+                    <Button type="submit" className="w-full" disabled={isLoading}>Create {role === 'business' ? 'Business' : role === 'delivery-boy' ? 'Delivery' : 'Customer'} Account</Button>
                   </form>
                 </Form>
               </CardContent>

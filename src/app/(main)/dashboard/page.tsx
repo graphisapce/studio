@@ -61,7 +61,8 @@ import {
   Mail,
   Phone,
   Building2,
-  Truck
+  Truck,
+  ShieldCheck
 } from "lucide-react";
 import {
   Dialog,
@@ -117,6 +118,7 @@ export default function DashboardPage() {
   const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [origin, setOrigin] = useState("");
   
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
@@ -198,7 +200,11 @@ export default function DashboardPage() {
         shopState: (businessData as any).shopState || "Delhi",
         shopPincode: (businessData as any).shopPincode || ""
       });
+    } else if (user && userProfile?.role === 'business' && !loadingBusiness) {
+      // Auto-init shop if missing
+      handleUpdateShopProfile();
     }
+
     if (userProfile) {
       setAccountInfo({
         name: userProfile.name || "",
@@ -212,7 +218,7 @@ export default function DashboardPage() {
         country: userProfile.country || "India"
       });
     }
-  }, [businessData, userProfile]);
+  }, [businessData, userProfile, user, loadingBusiness]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -239,6 +245,28 @@ export default function DashboardPage() {
     });
     toast({ title: "Account Updated", description: "Personal details successfully save ho gayi hain." });
     setIsUpdatingAccount(false);
+  };
+
+  const handleUpgradeToPremium = () => {
+    if (!user) return;
+    setIsUpgrading(true);
+    // Instant simulation of premium upgrade for MVP
+    const businessDoc = doc(firestore, "businesses", user.uid);
+    const expiry = new Date();
+    expiry.setMonth(expiry.getMonth() + 1); // 1 month premium
+
+    updateDocumentNonBlocking(businessDoc, {
+      isPaid: true,
+      premiumStatus: 'active',
+      premiumUntil: expiry.toISOString(),
+      status: 'approved'
+    });
+
+    toast({ 
+      title: "Welcome to Premium! ⭐", 
+      description: "Aapka account upgrade ho gaya hai. Ab aap WhatsApp links aur Payment QR use kar sakte hain." 
+    });
+    setIsUpgrading(false);
   };
 
   const handleAIDescription = async () => {
@@ -326,16 +354,16 @@ export default function DashboardPage() {
     if (!user) return;
     setIsUpdatingProfile(true);
     
-    const combinedAddress = `${shopProfile.shopHouseNo}, ${shopProfile.shopStreet}, ${shopProfile.shopCity}, ${shopProfile.shopState} - ${shopProfile.shopPincode}`;
+    const combinedAddress = `${shopProfile.shopHouseNo || ''}, ${shopProfile.shopStreet || ''}, ${shopProfile.shopCity || ''}, ${shopProfile.shopState || 'Delhi'} - ${shopProfile.shopPincode || ''}`;
 
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
-      shopName: shopProfile.shopName,
-      category: shopProfile.shopCategory,
+      shopName: shopProfile.shopName || userProfile?.name || "Nayi Dukaan",
+      category: shopProfile.shopCategory || "Others",
       description: shopProfile.shopDescription,
-      contactNumber: shopProfile.shopContact,
-      whatsappLink: `https://wa.me/${shopProfile.shopContact.replace(/\D/g, '')}`,
+      contactNumber: shopProfile.shopContact || userProfile?.phone || "",
+      whatsappLink: `https://wa.me/${(shopProfile.shopContact || userProfile?.phone || "").replace(/\D/g, '')}`,
       imageUrl: shopProfile.shopImageUrl || "",
       logoUrl: shopProfile.shopLogoUrl || "",
       openingTime: shopProfile.openingTime,
@@ -416,7 +444,11 @@ export default function DashboardPage() {
              <h1 className="text-3xl font-bold font-headline">{businessData?.shopName || "My Business"}</h1>
              <div className="flex items-center gap-2 mt-1">
                <Badge variant="outline" className="text-[10px] uppercase">{businessData?.category}</Badge>
-               {hasPremium && <Badge className="bg-yellow-500 text-[10px]"><Crown className="h-3 w-3 mr-1" /> Premium</Badge>}
+               {hasPremium ? (
+                 <Badge className="bg-yellow-500 text-[10px]"><Crown className="h-3 w-3 mr-1" /> Premium Plan</Badge>
+               ) : (
+                 <Badge variant="secondary" className="text-[10px]">Free Plan</Badge>
+               )}
              </div>
            </div>
         </div>
@@ -449,9 +481,9 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="space-y-2"><Label>Item Name</Label><Input required value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Item Name</Label><Input required placeholder="e.g. Special Pizza" value={newProduct.title} onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })} /></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" required placeholder="0.00" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
                     <div className="space-y-2">
                       <Label>Highlight</Label>
                       <Select value={newProduct.badge} onValueChange={(v) => setNewProduct({ ...newProduct, badge: v })}>
@@ -467,10 +499,10 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center"><Label>Description</Label><Button type="button" variant="ghost" size="sm" className="text-primary h-6 text-xs" onClick={handleAIDescription} disabled={isGeneratingAI}><Sparkles className="h-3 w-3 mr-1" /> AI Write</Button></div>
-                    <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+                    <Textarea placeholder="Describe your product..." value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
                   </div>
                 </div>
-                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit</Button></DialogFooter>
+                <DialogFooter><Button type="submit" disabled={isSubmittingProduct} className="w-full">Submit for Approval</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -484,6 +516,7 @@ export default function DashboardPage() {
                <TabsList className="bg-transparent gap-4 overflow-x-auto no-scrollbar justify-start w-full">
                  <TabsTrigger value="inventory" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Inventory</TabsTrigger>
                  <TabsTrigger value="orders" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Orders</TabsTrigger>
+                 {!hasPremium && <TabsTrigger value="premium" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none text-yellow-600 font-bold">⭐ Upgrade</TabsTrigger>}
                  <TabsTrigger value="marketing" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Marketing</TabsTrigger>
                  <TabsTrigger value="settings" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Shop Profile</TabsTrigger>
                  <TabsTrigger value="account" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent shadow-none">Personal Account</TabsTrigger>
@@ -541,6 +574,44 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 )}
+             </TabsContent>
+
+             <TabsContent value="premium" className="space-y-6">
+                <Card className="border-yellow-400 bg-yellow-50/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Crown className="h-6 w-6 text-yellow-500" /> LocalVyapar Premium</CardTitle>
+                    <CardDescription>Dukan ko digital banayein aur sales badhayein.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                        <div><p className="text-sm font-bold">Unlimited Listings</p><p className="text-xs text-muted-foreground">Free plan mein sirif 3 products allowed hain.</p></div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                        <div><p className="text-sm font-bold">Verified Badge</p><p className="text-xs text-muted-foreground">Customers ka bharosa badhayein (Shield Icon).</p></div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                        <div><p className="text-sm font-bold">WhatsApp Buttons</p><p className="text-xs text-muted-foreground">Customers aapko direct message kar payenge.</p></div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                        <div><p className="text-sm font-bold">Payment QR & UPI</p><p className="text-xs text-muted-foreground">Digital payment accept karein bina kisi extra fee ke.</p></div>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t flex flex-col items-center gap-4">
+                       <div className="text-center">
+                         <span className="text-3xl font-black">₹99</span>
+                         <span className="text-muted-foreground text-sm"> / Month</span>
+                       </div>
+                       <Button onClick={handleUpgradeToPremium} disabled={isUpgrading} className="w-full sm:w-64 h-12 bg-yellow-500 hover:bg-yellow-600 text-black font-black">
+                         {isUpgrading ? <Loader2 className="animate-spin" /> : "UPGRADE NOW"}
+                       </Button>
+                    </div>
+                  </CardContent>
+                </Card>
              </TabsContent>
 
              <TabsContent value="marketing" className="space-y-6">
@@ -606,13 +677,13 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Shop Name</Label><Input value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
+                        <div className="space-y-2"><Label>Shop Name</Label><Input placeholder="Dukaan ka Naam" value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
                         <div className="space-y-2">
                           <Label>Category</Label>
                           <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                         </div>
                       </div>
-                      <div className="space-y-2"><Label>Shop Description</Label><Textarea value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
+                      <div className="space-y-2"><Label>Shop Description</Label><Textarea placeholder="Shop ke baare mein likhein..." value={shopProfile.shopDescription} onChange={(e) => setShopProfile({...shopProfile, shopDescription: e.target.value})} /></div>
                       
                       <div className="space-y-4 pt-4 border-t">
                         <div className="flex items-center gap-2 pb-2"><Building2 className="h-4 w-4 text-primary" /><span className="text-sm font-black uppercase tracking-tight">Professional Shop Address</span></div>
@@ -629,23 +700,26 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
-                            <Input value={shopProfile.shopCity} onChange={(e) => setShopProfile({...shopProfile, shopCity: e.target.value})} className="rounded-xl" />
+                            <Input value={shopProfile.shopCity} onChange={(e) => setShopProfile({...shopProfile, shopCity: e.target.value})} placeholder="e.g. Delhi" className="rounded-xl" />
                           </div>
                           <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
-                            <Input value={shopProfile.shopPincode} onChange={(e) => setShopProfile({...shopProfile, shopPincode: e.target.value})} className="rounded-xl" />
+                            <Input value={shopProfile.shopPincode} onChange={(e) => setShopProfile({...shopProfile, shopPincode: e.target.value})} placeholder="1100xx" className="rounded-xl" />
                           </div>
                           <div className="space-y-2 col-span-2 sm:col-span-1">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
                             <Select value={shopProfile.shopState} onValueChange={(v) => setShopProfile({...shopProfile, shopState: v})}>
-                              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="rounded-xl"><SelectValue placeholder="State" /></SelectTrigger>
                               <SelectContent>{stateList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                             </Select>
                           </div>
                         </div>
                       </div>
 
-                      <Button type="submit" className="w-full" disabled={isUpdatingProfile}>Save Shop Profile & Address</Button>
+                      <Button type="submit" className="w-full h-12 gap-2" disabled={isUpdatingProfile}>
+                        {isUpdatingProfile ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
+                        Save Shop Profile & Address
+                      </Button>
                     </form>
                  </CardContent>
                </Card>
@@ -702,6 +776,17 @@ export default function DashboardPage() {
                 </div>
              </CardContent>
            </Card>
+           
+           {!hasPremium && (
+             <Card className="bg-yellow-50 border-yellow-200">
+               <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2 text-yellow-700 font-black"><Crown className="h-4 w-4" /> GET PREMIUM</CardTitle></CardHeader>
+               <CardContent className="space-y-2">
+                 <p className="text-[10px] text-yellow-800 font-bold leading-tight">Unlock WhatsApp Leads, Payment QR, Verified Shield and Unlimited Products.</p>
+                 <Button onClick={() => handleUpgradeToPremium()} variant="default" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-black h-8">UPGRADE @ ₹99</Button>
+               </CardContent>
+             </Card>
+           )}
+
            <Card className="bg-gradient-to-br from-primary to-blue-600 text-white border-none shadow-xl">
              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4" /> Marketing Kit</CardTitle></CardHeader>
              <CardContent className="space-y-4">
