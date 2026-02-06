@@ -44,22 +44,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      // Important: We keep loading = true until the profile is fetched from Firestore
       setIsSyncing(true);
       const userDocRef = doc(db, "users", firebaseUser.uid);
       
-      // Using real-time listener to keep profile in sync across browsers
       unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as UserProfile;
           setUserProfile({ ...data, id: snapshot.id });
         } else {
-          // If user exists in Auth but not in Firestore, we still stop loading
+          // If Auth exists but profile doesn't, we still set profile to null
+          // but allow the system to stop loading so registration can happen
           setUserProfile(null);
         }
         setLoading(false);
         setIsSyncing(false);
       }, (error) => {
-        console.warn("Profile synchronization warning:", error.message);
+        console.warn("Profile sync error:", error.message);
         setUserProfile(null);
         setLoading(false);
         setIsSyncing(false);

@@ -34,7 +34,6 @@ import {
   Building2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
 import { 
   Select, 
   SelectContent, 
@@ -50,7 +49,7 @@ const states = [
 ];
 
 export default function CustomerDashboardPage() {
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading, isSyncing } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -72,12 +71,13 @@ export default function CustomerDashboardPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-  // Initialize form with Firestore data only when userProfile is fully loaded
+  // Robust bridge: Wait for both auth and profile synchronization
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && !isSyncing) {
       if (!user) {
         router.push("/login");
       } else if (userProfile && !isFormInitialized) {
+        // Bridging Firestore data to the Local State
         setFormData({
           name: userProfile.name || "",
           phone: userProfile.phone || "",
@@ -92,7 +92,7 @@ export default function CustomerDashboardPage() {
         setIsFormInitialized(true);
       }
     }
-  }, [user, userProfile, authLoading, router, isFormInitialized]);
+  }, [user, userProfile, authLoading, isSyncing, router, isFormInitialized]);
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +101,7 @@ export default function CustomerDashboardPage() {
     setIsUpdating(true);
     const userRef = doc(firestore, "users", user.uid);
     
-    // Using merge: true to avoid losing metadata like favorites or role
+    // Explicitly update only form fields, preserve other data like deliveryId
     setDocumentNonBlocking(userRef, {
       name: formData.name,
       phone: formData.phone,
@@ -133,17 +133,9 @@ export default function CustomerDashboardPage() {
       const userRef = doc(firestore, "users", user.uid);
       setDocumentNonBlocking(userRef, { photoURL: compressedBase64 }, { merge: true });
       
-      toast({
-        title: "Photo Updated",
-        description: "Aapka naya profile picture save ho gaya hai.",
-      });
+      toast({ title: "Photo Updated" });
     } catch (err) {
-      console.error("Photo processing failed:", err);
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: "Photo update nahi ho payi. Dobara try karein." 
-      });
+      toast({ variant: "destructive", title: "Error", description: "Photo optimize nahi ho payi." });
     }
   };
 
@@ -152,26 +144,20 @@ export default function CustomerDashboardPage() {
     setIsResettingPassword(true);
     try {
       await sendPasswordResetEmail(auth, user.email);
-      toast({
-        title: "Reset Link Sent",
-        description: "Aapki email par password badalne ka link bhej diya gaya hai.",
-      });
+      toast({ title: "Reset Link Sent", description: "Email check karein." });
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Reset email nahi bheja ja saka.",
-      });
+      toast({ variant: "destructive", title: "Error" });
     } finally {
       setIsResettingPassword(false);
     }
   };
 
-  if (authLoading || (user && !userProfile && !isFormInitialized)) {
+  // Loading state prevents the "Broken Bridge" by not showing empty fields
+  if (authLoading || isSyncing || (user && !userProfile && !isFormInitialized)) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Synchronizing data with Firestore...</p>
+        <p className="text-muted-foreground animate-pulse">Syncing your details with LocalVyapar...</p>
       </div>
     );
   }
@@ -242,7 +228,7 @@ export default function CustomerDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2 flex items-center justify-between">
-              <p className="text-xs font-bold text-muted-foreground">Password Reset</p>
+              <p className="text-xs font-bold text-muted-foreground">Password Update</p>
               <Button size="sm" variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword} className="h-7 text-[10px] uppercase font-black">
                 {isResettingPassword ? "Sending..." : "Reset"}
               </Button>
@@ -327,7 +313,7 @@ export default function CustomerDashboardPage() {
 
                 <Button type="submit" className="w-full h-12 rounded-xl gap-2 font-bold shadow-lg" disabled={isUpdating || !isFormInitialized}>
                   {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save Profile Changes
+                  Save Profile Permanent
                 </Button>
               </form>
             </CardContent>

@@ -103,7 +103,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
-      // Create User Profile - Initial signup always creates doc
+      // Robust Creation: Only write if not exists, but for signup it's always new
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -122,29 +122,23 @@ export default function LoginPage() {
           shopName: `${values.name}'s Shop`,
           category: "Others",
           contactNumber: values.phone,
-          whatsappLink: `https://wa.me/${values.phone.replace(/\D/g, '')}`,
-          address: "Address not set",
           status: "pending",
           views: 0,
           callCount: 0,
           whatsappCount: 0,
           isPaid: false,
           areaCode: "Global",
-          imageUrl: "",
-          logoUrl: "",
-          openingTime: "09:00",
-          closingTime: "21:00",
           createdAt: new Date().toISOString()
         }, { merge: true });
       }
 
-      toast({ title: "Account Created!", description: "Aapka data Firestore mein save ho gaya hai." });
+      toast({ title: "Account Created!" });
       router.push("/");
     } catch (error: any) {
       console.error(error);
       let errMsg = "Sign Up fail ho gaya.";
       if (error.code === 'auth/email-already-in-use') {
-        errMsg = "Ye email pehle se register hai. Kripya Sign In karein.";
+        errMsg = "Ye email pehle se register hai.";
       }
       toast({ variant: "destructive", title: "Registration Error", description: errMsg });
     } finally {
@@ -159,12 +153,12 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const newUser = result.user;
 
-      // CRITICAL FIX: Check if user document already exists before overwriting defaults
+      // THE BRIDGE FIX: Check if user document already exists before overwriting defaults
       const userDocRef = doc(db, "users", newUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
-        // Only set defaults for NEW Google users
+        // Only set defaults for BRAND NEW Google users
         await setDoc(userDocRef, {
             id: newUser.uid,
             name: newUser.displayName || 'New User',
@@ -182,24 +176,18 @@ export default function LoginPage() {
             ownerId: newUser.uid,
             shopName: `${newUser.displayName || 'New'}'s Shop`,
             category: "Others",
-            address: "Address not set",
             status: "pending",
             views: 0,
             callCount: 0,
             whatsappCount: 0,
             isPaid: false,
             areaCode: "Global",
-            imageUrl: "",
-            logoUrl: "",
             createdAt: new Date().toISOString()
           }, { merge: true });
         }
       } else {
-        // If user exists, we might want to ensure basic info is synced but NOT overwrite areaCode or favorites
+        // If user exists, we preserve EVERYTHING and just update last login
         await setDoc(userDocRef, {
-          id: newUser.uid,
-          name: newUser.displayName || userDocSnap.data().name,
-          photoURL: newUser.photoURL || userDocSnap.data().photoURL,
           lastLoginAt: new Date().toISOString()
         }, { merge: true });
       }
@@ -208,7 +196,7 @@ export default function LoginPage() {
       router.push("/");
     } catch (error: any) {
       console.error(error);
-      toast({ variant: "destructive", title: "Google Sign-In Failed", description: error.message });
+      toast({ variant: "destructive", title: "Google Sign-In Failed" });
     } finally {
       setIsLoading(false);
     }
