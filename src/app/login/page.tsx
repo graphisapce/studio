@@ -115,7 +115,7 @@ export default function LoginPage() {
         areaCode: "Global"
       });
 
-      // 2. If business, create initial business record IMMEDIATELY to prevent "disappearing" shops
+      // 2. If business, create initial business record IMMEDIATELY
       if (role === 'business') {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
@@ -132,6 +132,8 @@ export default function LoginPage() {
           isPaid: false,
           premiumStatus: "none",
           areaCode: "Global",
+          imageUrl: "",
+          logoUrl: "",
           createdAt: new Date().toISOString()
         });
       }
@@ -189,6 +191,8 @@ export default function LoginPage() {
           isPaid: false,
           premiumStatus: "none",
           areaCode: "Global",
+          imageUrl: "",
+          logoUrl: "",
           createdAt: new Date().toISOString()
         });
       }

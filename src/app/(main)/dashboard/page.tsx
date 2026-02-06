@@ -183,7 +183,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Form Initializer - Runs ONLY ONCE when data is ready
   useEffect(() => {
     if (businessData && !isFormInitialized) {
       setShopProfile({
@@ -292,44 +291,44 @@ export default function DashboardPage() {
     }
   };
 
+  const validateAndUploadImage = (file: File, callback: (base64: string) => void) => {
+    if (file.size > 200 * 1024) { // 200KB Limit for Firestore documents
+      toast({ 
+        variant: "destructive", 
+        title: "File too large", 
+        description: "Image 200KB se kam honi chahiye taaki database save kar sake." 
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      callback(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setShopProfile(prev => ({ ...prev, paymentQrUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    validateAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, paymentQrUrl: base64 })));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setShopProfile(prev => ({ ...prev, shopLogoUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    validateAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, shopLogoUrl: base64 })));
   };
 
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setShopProfile(prev => ({ ...prev, shopImageUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    validateAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, shopImageUrl: base64 })));
   };
 
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setNewProduct(prev => ({ ...prev, imageUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    validateAndUploadImage(file, (base64) => setNewProduct(prev => ({ ...prev, imageUrl: base64 })));
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
@@ -716,6 +715,7 @@ export default function DashboardPage() {
                             <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary bg-primary/5 p-2 rounded-lg"><Upload className="h-3 w-3 inline mr-1" /> Change Logo</Label>
                             <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                           </div>
+                          <p className="text-[9px] text-muted-foreground">Max 200KB. Squared size recommended.</p>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs font-black uppercase text-muted-foreground">Banner</Label>
@@ -724,6 +724,7 @@ export default function DashboardPage() {
                             <Label htmlFor="banner-upload" className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-[10px] font-bold shadow-lg cursor-pointer"><ImageIcon className="h-3 w-3 inline mr-1" /> Update Banner</Label>
                             <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                           </div>
+                          <p className="text-[9px] text-muted-foreground">Max 200KB. 1200x400 recommended.</p>
                         </div>
                       </div>
                       
