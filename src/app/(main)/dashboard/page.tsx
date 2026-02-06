@@ -431,7 +431,6 @@ export default function DashboardPage() {
       const year = d.getFullYear();
       const key = `${monthName}-${year}`;
       
-      // Current values for this month, 0 for past (placeholder logic)
       const views = i === 0 ? (businessData?.views || 0) : (businessData?.performanceHistory?.[key]?.views || 0);
       const leads = i === 0 
         ? ((businessData?.callCount || 0) + (businessData?.whatsappCount || 0)) 

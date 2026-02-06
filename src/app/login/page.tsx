@@ -11,7 +11,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  sendPasswordResetEmail,
   GoogleAuthProvider,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -104,7 +103,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
-      // Crucial: Wait for the profile to be created
+      // Create main user profile
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -114,6 +113,25 @@ export default function LoginPage() {
         createdAt: new Date().toISOString(),
         favorites: []
       });
+
+      // If business, initialize a business document automatically
+      if (role === 'business') {
+        await setDoc(doc(db, "businesses", newUser.uid), {
+          id: newUser.uid,
+          ownerId: newUser.uid,
+          shopName: `${values.name}'s Shop`,
+          category: "Others",
+          contactNumber: values.phone,
+          whatsappLink: `https://wa.me/${values.phone.replace(/\D/g, '')}`,
+          address: "Address not set",
+          status: "pending",
+          views: 0,
+          callCount: 0,
+          whatsappCount: 0,
+          isPaid: false,
+          premiumStatus: "none"
+        });
+      }
 
       toast({ title: "Account Created!", description: "Ab aap LocalVyapar use kar sakte hain." });
       router.push("/");
@@ -143,6 +161,24 @@ export default function LoginPage() {
             createdAt: new Date().toISOString(),
             favorites: []
         });
+
+        if (role === 'business') {
+          await setDoc(doc(db, "businesses", newUser.uid), {
+            id: newUser.uid,
+            ownerId: newUser.uid,
+            shopName: `${newUser.displayName || 'New'}'s Shop`,
+            category: "Others",
+            contactNumber: "",
+            whatsappLink: "",
+            address: "Address not set",
+            status: "pending",
+            views: 0,
+            callCount: 0,
+            whatsappCount: 0,
+            isPaid: false,
+            premiumStatus: "none"
+          });
+        }
       }
       toast({ title: "Google Sign-In Success" });
       router.push("/");
