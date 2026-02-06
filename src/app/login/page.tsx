@@ -115,7 +115,7 @@ export default function LoginPage() {
         areaCode: "Global"
       });
 
-      // 2. If business, create initial business record IMMEDIATELY
+      // 2. If business, create initial business record IMMEDIATELY to prevent "disappearing" shops
       if (role === 'business') {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
@@ -140,7 +140,11 @@ export default function LoginPage() {
       router.push("/");
     } catch (error: any) {
       console.error(error);
-      toast({ variant: "destructive", title: "Sign Up Failed", description: error.message });
+      let errMsg = "Sign Up fail ho gaya.";
+      if (error.code === 'auth/email-already-in-use') {
+        errMsg = "Ye email pehle se register hai. Kripya Sign In karein.";
+      }
+      toast({ variant: "destructive", title: "Registration Error", description: errMsg });
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +173,6 @@ export default function LoginPage() {
         });
       }
 
-      // Ensure business doc exists for Google sign-in users choosing business role
       if (role === 'business' && !businessDoc.exists()) {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,

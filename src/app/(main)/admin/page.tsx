@@ -36,7 +36,8 @@ import {
   Truck,
   ClipboardList,
   User as UserIcon,
-  AlertCircle
+  AlertCircle,
+  Info
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AdminDashboardPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -175,7 +182,9 @@ export default function AdminDashboardPage() {
   const handleDeleteUser = (userId: string) => {
     if (!isFullAdmin) return;
     deleteDocumentNonBlocking(doc(firestore, "users", userId));
-    toast({ title: "User Deleted" });
+    // Important: Delete shop too if it exists
+    deleteDocumentNonBlocking(doc(firestore, "businesses", userId));
+    toast({ title: "Firestore Records Deleted", description: "Remember to delete the login account from Firebase Auth Console." });
   };
 
   if (authLoading || (user && !userProfile)) {
@@ -212,6 +221,17 @@ export default function AdminDashboardPage() {
           />
         </div>
       </div>
+
+      {/* Critical Info Banner */}
+      {isFullAdmin && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+          <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-800 leading-relaxed">
+            <span className="font-bold">Zaroori Sochna:</span> Yahan se user delete karne par sirf uska profile aur shop data Firestore se hat-ta hai. 
+            Agar aap chahte hain ki wo dobara register kar sake, toh aapko **Firebase Console > Authentication** tab mein jaakar uska email wahan se bhi permanent delete karna hoga.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <Card className={cn("cursor-pointer transition-all", activeTab === 'businesses' && "ring-2 ring-primary")} onClick={() => setActiveTab("businesses")}>
@@ -401,9 +421,18 @@ export default function AdminDashboardPage() {
                             </Select>
                             
                             {isFullAdmin && u.id !== user?.uid && (
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteUser(u.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteUser(u.id)}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Firestore se data delete karein.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </TableCell>

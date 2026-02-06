@@ -124,7 +124,6 @@ export default function DashboardPage() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [origin, setOrigin] = useState("");
   
-  // Real-time listener for business data
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
 
@@ -142,7 +141,6 @@ export default function DashboardPage() {
 
   const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "", badge: "" });
   
-  // Local state for the form inputs
   const [shopProfile, setShopProfile] = useState({ 
     shopName: "", 
     shopCategory: "" as BusinessCategory | "", 
@@ -184,7 +182,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Sync DB data to local state only when DB data is loaded and local state is empty (initial load)
   useEffect(() => {
     if (businessData) {
       setShopProfile(prev => ({
@@ -358,7 +355,6 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user || loadingBusiness) return;
     
-    // Critical protection: If shop name is empty but we know it was previously set, block save.
     if (!shopProfile.shopName && businessData?.shopName) {
        toast({ variant: "destructive", title: "Shop name cannot be empty." });
        return;
@@ -367,7 +363,6 @@ export default function DashboardPage() {
     setIsUpdatingProfile(true);
     const combinedAddress = `${shopProfile.shopHouseNo || ''}, ${shopProfile.shopStreet || ''}, ${shopProfile.shopCity || ''}, ${shopProfile.shopState || 'Delhi'} - ${shopProfile.shopPincode || ''}`;
 
-    // Always use setDoc with merge: true to ensure id and ownerId are preserved
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
