@@ -89,7 +89,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessCategory, Business, Product, Order } from "@/lib/types";
-import { isBusinessPremium } from "@/lib/utils";
+import { isBusinessPremium, compressImage } from "@/lib/utils";
 import { generateProductDescription } from "@/ai/flows/generate-description-flow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -291,44 +291,45 @@ export default function DashboardPage() {
     }
   };
 
-  const validateAndUploadImage = (file: File, callback: (base64: string) => void) => {
-    if (file.size > 500 * 1024) { // Increased to 500KB Limit for Firestore documents
+  const processAndUploadImage = async (file: File, callback: (base64: string) => void) => {
+    try {
+      toast({ title: "Optimizing Image...", description: "Kripya intezar karein, image size adjust ho rahi hai." });
+      // Automatically compress to under 500KB
+      const compressedBase64 = await compressImage(file, 500);
+      callback(compressedBase64);
+      toast({ title: "Image Optimized!", description: "Ab aap ise save kar sakte hain." });
+    } catch (err) {
+      console.error("Image optimization failed:", err);
       toast({ 
         variant: "destructive", 
-        title: "File too large", 
-        description: "Image 500KB se kam honi chahiye taaki database save kar sake." 
+        title: "Processing Failed", 
+        description: "Image optimize nahi ho payi. Kripya doosri photo try karein." 
       });
-      return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      callback(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    validateAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, paymentQrUrl: base64 })));
+    processAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, paymentQrUrl: base64 })));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    validateAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, shopLogoUrl: base64 })));
+    processAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, shopLogoUrl: base64 })));
   };
 
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    validateAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, shopImageUrl: base64 })));
+    processAndUploadImage(file, (base64) => setShopProfile(prev => ({ ...prev, shopImageUrl: base64 })));
   };
 
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    validateAndUploadImage(file, (base64) => setNewProduct(prev => ({ ...prev, imageUrl: base64 })));
+    processAndUploadImage(file, (base64) => setNewProduct(prev => ({ ...prev, imageUrl: base64 })));
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
@@ -715,7 +716,7 @@ export default function DashboardPage() {
                             <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary bg-primary/5 p-2 rounded-lg"><Upload className="h-3 w-3 inline mr-1" /> Change Logo</Label>
                             <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                           </div>
-                          <p className="text-[9px] text-muted-foreground">Max 500KB. Squared size recommended.</p>
+                          <p className="text-[9px] text-muted-foreground">Auto-compressed to under 500KB.</p>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs font-black uppercase text-muted-foreground">Banner</Label>
@@ -724,7 +725,7 @@ export default function DashboardPage() {
                             <Label htmlFor="banner-upload" className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-[10px] font-bold shadow-lg cursor-pointer"><ImageIcon className="h-3 w-3 inline mr-1" /> Update Banner</Label>
                             <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                           </div>
-                          <p className="text-[9px] text-muted-foreground">Max 500KB. 1200x400 recommended.</p>
+                          <p className="text-[9px] text-muted-foreground">Auto-compressed to under 500KB.</p>
                         </div>
                       </div>
                       

@@ -47,6 +47,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { compressImage } from "@/lib/utils";
 
 const states = [
   "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "Bihar", 
@@ -136,30 +137,30 @@ export default function CustomerDashboardPage() {
     setIsUpdating(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (file.size > 500 * 1024) { // Increased to 500KB
-      toast({
-        variant: "destructive",
-        title: "Photo too large",
-        description: "Profile photo 500KB se kam honi chahiye.",
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
+    try {
+      toast({ title: "Optimizing Photo...", description: "Kripya intezar karein." });
+      // Automatically compress to under 500KB
+      const compressedBase64 = await compressImage(file, 500);
+      
       const userRef = doc(firestore, "users", user.uid);
-      updateDocumentNonBlocking(userRef, { photoURL: base64String });
+      updateDocumentNonBlocking(userRef, { photoURL: compressedBase64 });
+      
       toast({
         title: "Photo Updated",
         description: "Aapka naya profile picture save ho gaya hai.",
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Photo processing failed:", err);
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: "Photo update nahi ho payi. Dobara try karein." 
+      });
+    }
   };
 
   const handlePasswordReset = async () => {

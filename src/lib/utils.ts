@@ -54,3 +54,56 @@ export function isShopOpen(business: Business | null | undefined): boolean {
 
   return currentTimeInMins >= openTimeInMins && currentTimeInMins <= closeTimeInMins;
 }
+
+/**
+ * Automatically compresses an image file to stay under a specific KB limit.
+ * Uses Canvas API for client-side processing.
+ */
+export async function compressImage(file: File, maxSizeKB: number = 500): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Max dimensions to keep file size reasonable
+        const MAX_DIM = 1200;
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Recursive quality reduction to hit the target size
+        let quality = 0.8;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        
+        // Approximate Base64 size check
+        while ((dataUrl.length * 0.75) / 1024 > maxSizeKB && quality > 0.1) {
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}

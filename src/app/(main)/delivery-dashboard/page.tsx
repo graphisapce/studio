@@ -63,6 +63,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { generateOrderVoiceBrief } from "@/ai/flows/order-summary-flow";
+import { compressImage } from "@/lib/utils";
 
 const states = [
   "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "Bihar", 
@@ -194,21 +195,21 @@ export default function DeliveryDashboardPage() {
     setIsUpdatingAccount(false);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     
-    if (file.size > 500 * 1024) { // Increased to 500KB
-      toast({ variant: "destructive", title: "File too large", description: "Image 500KB se kam honi chahiye." });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateDocumentNonBlocking(doc(firestore, "users", user.uid), { photoURL: reader.result as string });
+    try {
+      toast({ title: "Optimizing Photo...", description: "Image optimize ho rahi hai." });
+      // Automatically compress to under 500KB
+      const compressedBase64 = await compressImage(file, 500);
+      
+      updateDocumentNonBlocking(doc(firestore, "users", user.uid), { photoURL: compressedBase64 });
       toast({ title: "Photo Updated" });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Photo optimization failed:", err);
+      toast({ variant: "destructive", title: "Error", description: "Photo processing fail ho gayi." });
+    }
   };
 
   const handlePasswordReset = async () => {
