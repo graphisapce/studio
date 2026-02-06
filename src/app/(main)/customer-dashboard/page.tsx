@@ -75,12 +75,13 @@ export default function CustomerDashboardPage() {
   
   const [isUpdating, setIsUpdating] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
         router.push("/login");
-      } else if (userProfile) {
+      } else if (userProfile && !isFormInitialized) {
         setFormData({
           name: userProfile.name || "",
           phone: userProfile.phone || "",
@@ -96,9 +97,10 @@ export default function CustomerDashboardPage() {
         if (!userProfile.deliveryId) {
           generateDeliveryId();
         }
+        setIsFormInitialized(true);
       }
     }
-  }, [user, userProfile, authLoading, router]);
+  }, [user, userProfile, authLoading, router, isFormInitialized]);
 
   const generateDeliveryId = () => {
     if (!user) return;
@@ -113,7 +115,7 @@ export default function CustomerDashboardPage() {
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !isFormInitialized) return;
 
     setIsUpdating(true);
     const userRef = doc(firestore, "users", user.uid);
@@ -127,7 +129,8 @@ export default function CustomerDashboardPage() {
       city: formData.city,
       state: formData.state,
       pincode: formData.pincode,
-      country: formData.country
+      country: formData.country,
+      updatedAt: new Date().toISOString()
     });
 
     toast({
@@ -335,9 +338,9 @@ export default function CustomerDashboardPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full h-12 rounded-xl gap-2 font-bold shadow-lg" disabled={isUpdating}>
+                <Button type="submit" className="w-full h-12 rounded-xl gap-2 font-bold shadow-lg" disabled={isUpdating || !isFormInitialized}>
                   {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save Delivery Address
+                  Save Delivery Address Permanent
                 </Button>
               </form>
             </CardContent>
