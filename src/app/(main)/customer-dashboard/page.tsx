@@ -23,18 +23,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  UserCircle, 
   MapPin, 
   Lock, 
   Save, 
   Loader2, 
   Camera,
   Upload,
-  Truck,
-  Building2,
   Heart,
+  Building2,
   User as UserIcon,
-  Phone
+  Package,
+  LayoutDashboard
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -75,28 +74,30 @@ export default function CustomerDashboardPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-  // THE BRIDGE FIX: Robust initialization that waits for profile data
+  // THE BRIDGE FIX: Robust sync that forces form update when real profile data arrives
   useEffect(() => {
-    if (!authLoading && !isSyncing) {
-      if (!user) {
-        router.push("/login");
-      } else if (userProfile && !isFormInitialized) {
-        // Ensuring local state gets the data from Firestore context
-        setFormData({
-          name: userProfile.name || "",
-          phone: userProfile.phone || "",
-          houseNo: userProfile.houseNo || "",
-          street: userProfile.street || "",
-          landmark: userProfile.landmark || "",
-          city: userProfile.city || "",
-          state: userProfile.state || "Delhi",
-          pincode: userProfile.pincode || "",
-          country: userProfile.country || "India"
-        });
-        setIsFormInitialized(true);
-      }
+    if (!authLoading && userProfile && !isFormInitialized) {
+      setFormData({
+        name: userProfile.name || "",
+        phone: userProfile.phone || "",
+        houseNo: userProfile.houseNo || "",
+        street: userProfile.street || "",
+        landmark: userProfile.landmark || "",
+        city: userProfile.city || "",
+        state: userProfile.state || "Delhi",
+        pincode: userProfile.pincode || "",
+        country: userProfile.country || "India"
+      });
+      setIsFormInitialized(true);
     }
-  }, [user, userProfile, authLoading, isSyncing, router, isFormInitialized]);
+  }, [userProfile, authLoading, isFormInitialized]);
+
+  // Auth Guard
+  useEffect(() => {
+    if (!authLoading && !isSyncing && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, isSyncing, router]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +107,6 @@ export default function CustomerDashboardPage() {
     try {
       const userRef = doc(firestore, "users", user.uid);
       
-      // We use setDocument with merge: true to ensure the record is ALWAYS permanent
       await setDocumentNonBlocking(userRef, {
         name: formData.name,
         phone: formData.phone,
@@ -121,8 +121,8 @@ export default function CustomerDashboardPage() {
       }, { merge: true });
 
       toast({
-        title: "Details Saved Permanent!",
-        description: "Aapka profile Firestore mein update ho gaya hai.",
+        title: "Details Saved!",
+        description: "Aapka address Firestore mein update ho gaya hai.",
       });
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: "Save nahi ho paya." });
@@ -136,15 +136,13 @@ export default function CustomerDashboardPage() {
     if (!file || !user) return;
 
     try {
-      toast({ title: "Optimizing Photo...", description: "Kripya intezar karein." });
+      toast({ title: "Processing Photo..." });
       const compressedBase64 = await compressImage(file, 500);
-      
       const userRef = doc(firestore, "users", user.uid);
       setDocumentNonBlocking(userRef, { photoURL: compressedBase64 }, { merge: true });
-      
       toast({ title: "Photo Updated" });
     } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Photo optimize nahi ho payi." });
+      toast({ variant: "destructive", title: "Upload Failed" });
     }
   };
 
@@ -161,23 +159,44 @@ export default function CustomerDashboardPage() {
     }
   };
 
-  // Prevent UI flicker by waiting for sync
   if (authLoading || isSyncing || (user && !userProfile && !isFormInitialized)) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-bold">Connecting with Firestore Bridge...</p>
+        <p className="text-muted-foreground animate-pulse font-bold">Connecting with Firebase Bridge...</p>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
+      {/* Header Section - Matches User Screenshot */}
+      <div className="flex justify-between items-start mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 text-primary rounded-2xl shadow-sm">
+            <LayoutDashboard className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black font-headline tracking-tight">My Dashboard</h1>
+            <p className="text-muted-foreground text-sm">Manage your delivery settings.</p>
+          </div>
+        </div>
+        
+        {userProfile?.deliveryId && (
+          <div className="bg-primary text-white px-6 py-3 rounded-2xl shadow-xl shadow-primary/20 text-right">
+            <p className="text-[10px] font-black uppercase opacity-80 flex items-center justify-end gap-1">
+              <Package className="h-3 w-3" /> Delivery ID
+            </p>
+            <p className="text-xl font-black tracking-tighter">{userProfile.deliveryId}</p>
+          </div>
+        )}
+      </div>
+
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Profile Card (Matches User Screenshot) */}
+        {/* Left Column: Profile Card */}
         <div className="lg:col-span-4 space-y-6">
-          <Card className="text-center pt-8 overflow-hidden border-none shadow-md bg-white">
+          <Card className="text-center pt-8 overflow-hidden border-none shadow-xl bg-white rounded-2xl">
             <CardContent className="space-y-4">
               <div className="relative w-fit mx-auto">
                 <Avatar className="h-32 w-32 border-4 border-primary/10 shadow-lg">
@@ -196,7 +215,7 @@ export default function CustomerDashboardPage() {
               </div>
               
               <div>
-                <h2 className="text-2xl font-black font-headline tracking-tight">{userProfile?.name || "Noorul Isalam"}</h2>
+                <h2 className="text-2xl font-black font-headline tracking-tight">{userProfile?.name || "User"}</h2>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black opacity-60">
                   {userProfile?.role || 'customer'} Account
                 </p>
@@ -212,14 +231,14 @@ export default function CustomerDashboardPage() {
                   htmlFor="photo-upload" 
                   className="inline-flex items-center justify-center gap-2 text-[10px] font-black uppercase text-primary/60 cursor-pointer hover:text-primary transition-colors"
                 >
-                  <Upload className="h-3 w-3" /> Update Profile Photo
+                  <Upload className="h-3 w-3" /> Update Photo
                 </Label>
               </div>
             </CardContent>
           </Card>
 
           {/* Security Card */}
-          <Card className="border-destructive/10 bg-destructive/5 shadow-sm rounded-xl overflow-hidden">
+          <Card className="border-destructive/10 bg-destructive/5 shadow-sm rounded-2xl overflow-hidden">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-xs flex items-center gap-2 text-destructive uppercase font-black">
                 <Lock className="h-3.5 w-3.5" /> Security
@@ -234,10 +253,10 @@ export default function CustomerDashboardPage() {
           </Card>
         </div>
 
-        {/* Right Column: Information Form (Matches User Screenshot) */}
+        {/* Right Column: Information Form */}
         <div className="lg:col-span-8">
-          <Card className="shadow-xl border-none bg-white rounded-2xl">
-            <CardHeader className="border-b bg-muted/5 p-6">
+          <Card className="shadow-2xl border-none bg-white rounded-3xl overflow-hidden">
+            <CardHeader className="bg-muted/5 p-8 border-b border-dashed">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg text-primary">
                   <MapPin className="h-6 w-6" />
@@ -252,30 +271,28 @@ export default function CustomerDashboardPage() {
             </CardHeader>
             <CardContent className="p-8">
               <form onSubmit={handleUpdateProfile} className="space-y-8">
-                {/* Personal Section */}
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Full Name</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name</Label>
                     <Input 
                       value={formData.name} 
                       onChange={(e) => setFormData({...formData, name: e.target.value})} 
                       required 
-                      className="rounded-xl h-12 border-primary/10 focus:border-primary transition-all" 
-                      placeholder="Noorul Isalam"
+                      className="rounded-xl h-12 bg-muted/20 border-transparent focus:bg-white transition-all" 
+                      placeholder="e.g. Sumaiya Khatoon"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Phone Number</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Phone Number</Label>
                     <Input 
                       value={formData.phone} 
                       onChange={(e) => setFormData({...formData, phone: e.target.value})} 
                       placeholder="99xxxxxx" 
-                      className="rounded-xl h-12 border-primary/10 focus:border-primary transition-all" 
+                      className="rounded-xl h-12 bg-muted/20 border-transparent focus:bg-white transition-all" 
                     />
                   </div>
                 </div>
 
-                {/* Address Section */}
                 <div className="space-y-6 pt-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-dashed">
                     <Building2 className="h-4 w-4 text-primary" />
@@ -285,32 +302,32 @@ export default function CustomerDashboardPage() {
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat / Floor No.</Label>
-                      <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="e.g. A-123, 2nd Floor" className="rounded-xl h-12" />
+                      <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="e.g. A-123, 2nd Floor" className="rounded-xl h-12 bg-muted/20" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Colony / Area</Label>
-                      <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="e.g. Main Market, Block G" className="rounded-xl h-12" />
+                      <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="e.g. Main Market, Block G" className="rounded-xl h-12 bg-muted/20" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark (Optional)</Label>
-                    <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="e.g. Near Shiv Mandir" className="rounded-xl h-12" />
+                    <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="e.g. Near Shiv Mandir" className="rounded-xl h-12 bg-muted/20" />
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
-                      <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="e.g. Delhi" className="rounded-xl h-12" />
+                      <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="e.g. Delhi" className="rounded-xl h-12 bg-muted/20" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
-                      <Input value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} placeholder="1100xx" className="rounded-xl h-12" />
+                      <Input value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} placeholder="1100xx" className="rounded-xl h-12 bg-muted/20" />
                     </div>
                     <div className="space-y-2 col-span-2 sm:col-span-1">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
                       <Select value={formData.state} onValueChange={(v) => setFormData({...formData, state: v})}>
-                        <SelectTrigger className="rounded-xl h-12 border-primary/10">
+                        <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-transparent">
                           <SelectValue placeholder="Select State" />
                         </SelectTrigger>
                         <SelectContent>
@@ -322,11 +339,11 @@ export default function CustomerDashboardPage() {
                 </div>
 
                 <div className="pt-6">
-                  <Button type="submit" className="w-full h-14 rounded-2xl gap-3 font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all" disabled={isUpdating || !isFormInitialized}>
+                  <Button type="submit" className="w-full h-14 rounded-2xl gap-3 font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all bg-primary" disabled={isUpdating || !isFormInitialized}>
                     {isUpdating ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
-                    Save My Details Permanent
+                    Save Delivery Address
                   </Button>
-                  <p className="text-[10px] text-center mt-4 text-muted-foreground font-bold uppercase opacity-60">Data is securely stored in Google Firebase Cloud Firestore.</p>
+                  <p className="text-[10px] text-center mt-4 text-muted-foreground font-bold uppercase opacity-60">Data is securely synced with Google Firebase.</p>
                 </div>
               </form>
             </CardContent>
