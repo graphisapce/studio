@@ -61,6 +61,11 @@ export interface Business {
   facebookUrl?: string;
   flashDeal?: string;
   flashDealExpiry?: string;
+  shopHouseNo?: string;
+  shopStreet?: string;
+  shopCity?: string;
+  shopState?: string;
+  shopPincode?: string;
   performanceHistory?: Record<string, { views: number; leads: number }>;
 }
 

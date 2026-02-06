@@ -122,6 +122,7 @@ export default function DashboardPage() {
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [origin, setOrigin] = useState("");
   
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
@@ -182,46 +183,46 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Form Initializer - Runs ONLY ONCE when data is ready
   useEffect(() => {
-    if (businessData) {
-      setShopProfile(prev => ({
-        ...prev,
-        shopName: businessData.shopName || prev.shopName,
-        shopCategory: businessData.category || prev.shopCategory,
-        shopDescription: businessData.description || prev.shopDescription,
-        shopContact: businessData.contactNumber || prev.shopContact,
-        shopImageUrl: businessData.imageUrl || prev.shopImageUrl,
-        shopLogoUrl: businessData.logoUrl || prev.shopLogoUrl,
-        openingTime: businessData.openingTime || prev.openingTime,
-        closingTime: businessData.closingTime || prev.closingTime,
-        upiId: businessData.upiId || prev.upiId,
-        paymentQrUrl: businessData.paymentQrUrl || prev.paymentQrUrl,
-        flashDeal: businessData.flashDeal || prev.flashDeal,
-        instagramUrl: businessData.instagramUrl || prev.instagramUrl,
-        facebookUrl: businessData.facebookUrl || prev.facebookUrl,
-        shopHouseNo: (businessData as any).shopHouseNo || prev.shopHouseNo,
-        shopStreet: (businessData as any).shopStreet || prev.shopStreet,
-        shopCity: (businessData as any).shopCity || prev.shopCity,
-        shopState: (businessData as any).shopState || prev.shopState,
-        shopPincode: (businessData as any).shopPincode || prev.shopPincode
-      }));
+    if (businessData && !isFormInitialized) {
+      setShopProfile({
+        shopName: businessData.shopName || "",
+        shopCategory: businessData.category || "Others",
+        shopDescription: businessData.description || "",
+        shopContact: businessData.contactNumber || "",
+        shopImageUrl: businessData.imageUrl || "",
+        shopLogoUrl: businessData.logoUrl || "",
+        openingTime: businessData.openingTime || "09:00",
+        closingTime: businessData.closingTime || "21:00",
+        upiId: businessData.upiId || "",
+        paymentQrUrl: businessData.paymentQrUrl || "",
+        flashDeal: businessData.flashDeal || "",
+        instagramUrl: businessData.instagramUrl || "",
+        facebookUrl: businessData.facebookUrl || "",
+        shopHouseNo: businessData.shopHouseNo || "",
+        shopStreet: businessData.shopStreet || "",
+        shopCity: businessData.shopCity || "",
+        shopState: businessData.shopState || "Delhi",
+        shopPincode: businessData.shopPincode || ""
+      });
+      setIsFormInitialized(true);
     }
 
-    if (userProfile) {
-      setAccountInfo(prev => ({
-        ...prev,
-        name: userProfile.name || prev.name,
-        phone: userProfile.phone || prev.phone,
-        houseNo: userProfile.houseNo || prev.houseNo,
-        street: userProfile.street || prev.street,
-        landmark: userProfile.landmark || prev.landmark,
-        city: userProfile.city || prev.city,
-        state: userProfile.state || prev.state,
-        pincode: userProfile.pincode || prev.pincode,
-        country: userProfile.country || prev.country
-      }));
+    if (userProfile && !isFormInitialized) {
+      setAccountInfo({
+        name: userProfile.name || "",
+        phone: userProfile.phone || "",
+        houseNo: userProfile.houseNo || "",
+        street: userProfile.street || "",
+        landmark: userProfile.landmark || "",
+        city: userProfile.city || "",
+        state: userProfile.state || "Delhi",
+        pincode: userProfile.pincode || "",
+        country: userProfile.country || "India"
+      });
     }
-  }, [businessData, userProfile]);
+  }, [businessData, userProfile, isFormInitialized]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -355,7 +356,7 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!user || loadingBusiness) return;
     
-    if (!shopProfile.shopName && businessData?.shopName) {
+    if (!shopProfile.shopName && !businessData?.shopName) {
        toast({ variant: "destructive", title: "Shop name cannot be empty." });
        return;
     }
@@ -380,14 +381,12 @@ export default function DashboardPage() {
       flashDeal: shopProfile.flashDeal,
       instagramUrl: shopProfile.instagramUrl,
       facebookUrl: shopProfile.facebookUrl,
-      areaCode: userProfile?.areaCode || "Global", 
       address: combinedAddress,
       shopHouseNo: shopProfile.shopHouseNo,
       shopStreet: shopProfile.shopStreet,
       shopCity: shopProfile.shopCity,
       shopState: shopProfile.shopState,
       shopPincode: shopProfile.shopPincode,
-      status: businessData?.status || 'pending',
       updatedAt: new Date().toISOString()
     }, { merge: true });
     
