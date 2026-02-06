@@ -197,7 +197,6 @@ export default function DeliveryDashboardPage() {
       ctx?.drawImage(videoRef.current, 0, 0);
       const dataUrl = canvas.toDataURL('image/jpeg');
       
-      // Auto-compress proof photo
       const file = await (await fetch(dataUrl)).blob();
       const compressed = await compressImage(new File([file], "proof.jpg"), 300);
       setCapturedPhoto(compressed);
@@ -383,18 +382,21 @@ export default function DeliveryDashboardPage() {
                     </div>
                     <CardTitle className="text-lg">{order.productTitle}</CardTitle>
                     <CardDescription className="font-bold text-primary flex items-center gap-1">
-                      <Store className="h-3 w-3" /> Pickup: {order.shopName}
+                      <Store className="h-3 w-3" /> Shop: {order.shopName}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-4 pb-2">
-                     <div className="space-y-2">
-                        <div className="flex items-start gap-2 text-[10px] text-primary font-bold uppercase">
-                           <Store className="h-3 w-3 mt-0.5" />
-                           <p className="line-clamp-1">FROM: {order.shopAddress || "Address Loading..."}</p>
+                  <CardContent className="pt-4 pb-2 space-y-4">
+                     <div className="p-3 bg-muted/50 rounded-xl border border-dashed">
+                        <div className="flex items-center gap-2 mb-1">
+                           <Store className="h-3.5 w-3.5 text-primary" />
+                           <span className="text-[10px] font-black uppercase text-primary tracking-tight">Pickup Address (Dukan ka Pata)</span>
                         </div>
+                        <p className="text-xs font-bold leading-relaxed">{order.shopAddress || "Address loading..."}</p>
+                     </div>
+                     <div className="space-y-2">
                         <div className="flex items-start gap-2 text-[10px] text-orange-600 font-bold uppercase">
                            <MapPin className="h-3 w-3 mt-0.5" />
-                           <p className="line-clamp-1">TO: {order.address.split(',')[0]}...</p>
+                           <p className="line-clamp-1">Deliver To: {order.address.split(',')[0]}...</p>
                         </div>
                      </div>
                   </CardContent>
@@ -435,24 +437,24 @@ export default function DeliveryDashboardPage() {
                     </CardHeader>
                     <CardContent className="pt-6 space-y-6">
                        <div className="space-y-4">
-                          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 relative">
-                             <div className="flex items-center gap-2 mb-2">
-                                <Store className="h-4 w-4 text-primary" />
-                                <p className="text-[10px] font-black text-primary uppercase">Pickup From (Shop)</p>
+                          <div className="p-5 bg-primary/5 rounded-2xl border-2 border-primary/10 relative">
+                             <div className="flex items-center gap-2 mb-3">
+                                <Store className="h-5 w-5 text-primary" />
+                                <p className="text-xs font-black text-primary uppercase tracking-widest">Pickup From (Shop Address)</p>
                              </div>
-                             <p className="text-sm font-black mb-1">{order.shopName}</p>
-                             <p className="text-xs text-muted-foreground leading-relaxed mb-3">{order.shopAddress}</p>
-                             <Button variant="outline" size="sm" className="w-full h-9 gap-1 font-bold border-primary text-primary" asChild>
-                               <a href={`tel:${order.shopPhone}`}><Phone className="h-3.5 w-3.5" /> Call Shop Owner</a>
+                             <p className="text-lg font-black mb-1 text-navy">{order.shopName}</p>
+                             <p className="text-sm font-bold text-muted-foreground leading-relaxed mb-4 bg-white p-3 rounded-lg border border-dashed border-primary/20">{order.shopAddress || "Address check karein shop owner se."}</p>
+                             <Button variant="outline" size="sm" className="w-full h-10 gap-2 font-bold border-primary text-primary hover:bg-primary/10" asChild>
+                               <a href={`tel:${order.shopPhone}`}><Phone className="h-4 w-4" /> Call Shop Owner</a>
                              </Button>
                           </div>
 
-                          <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 relative">
+                          <div className="p-5 bg-orange-50 rounded-2xl border border-orange-100 relative">
                              <div className="flex items-center gap-2 mb-2">
                                 <User className="h-4 w-4 text-orange-600" />
                                 <p className="text-[10px] font-black text-orange-600 uppercase">Deliver To (Customer)</p>
                              </div>
-                             <p className="text-sm font-black mb-1">{order.customerName}</p>
+                             <p className="text-base font-black mb-1">{order.customerName}</p>
                              <p className="text-xs text-muted-foreground leading-relaxed mb-3">{order.address}</p>
                              <div className="grid grid-cols-2 gap-2">
                                <Button variant="outline" size="sm" className="h-9 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
