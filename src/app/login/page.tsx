@@ -13,7 +13,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +103,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
-      // 1. Create User Profile - Critical: Save to 'users' collection
+      // Create User Profile - Initial signup always creates doc
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -115,7 +115,6 @@ export default function LoginPage() {
         areaCode: "Global"
       }, { merge: true });
 
-      // 2. If business, create initial business record
       if (role === 'business') {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
@@ -160,34 +159,48 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const newUser = result.user;
 
-      // Ensure user document exists in 'users' collection with correct role
-      await setDoc(doc(db, "users", newUser.uid), {
-          id: newUser.uid,
-          name: newUser.displayName || 'New User',
-          email: newUser.email || '',
-          photoURL: newUser.photoURL || '',
-          role: role,
-          createdAt: new Date().toISOString(),
-          favorites: [],
-          areaCode: "Global"
-      }, { merge: true });
+      // CRITICAL FIX: Check if user document already exists before overwriting defaults
+      const userDocRef = doc(db, "users", newUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-      if (role === 'business') {
-        await setDoc(doc(db, "businesses", newUser.uid), {
+      if (!userDocSnap.exists()) {
+        // Only set defaults for NEW Google users
+        await setDoc(userDocRef, {
+            id: newUser.uid,
+            name: newUser.displayName || 'New User',
+            email: newUser.email || '',
+            photoURL: newUser.photoURL || '',
+            role: role,
+            createdAt: new Date().toISOString(),
+            favorites: [],
+            areaCode: "Global"
+        }, { merge: true });
+
+        if (role === 'business') {
+          await setDoc(doc(db, "businesses", newUser.uid), {
+            id: newUser.uid,
+            ownerId: newUser.uid,
+            shopName: `${newUser.displayName || 'New'}'s Shop`,
+            category: "Others",
+            address: "Address not set",
+            status: "pending",
+            views: 0,
+            callCount: 0,
+            whatsappCount: 0,
+            isPaid: false,
+            areaCode: "Global",
+            imageUrl: "",
+            logoUrl: "",
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      } else {
+        // If user exists, we might want to ensure basic info is synced but NOT overwrite areaCode or favorites
+        await setDoc(userDocRef, {
           id: newUser.uid,
-          ownerId: newUser.uid,
-          shopName: `${newUser.displayName || 'New'}'s Shop`,
-          category: "Others",
-          address: "Address not set",
-          status: "pending",
-          views: 0,
-          callCount: 0,
-          whatsappCount: 0,
-          isPaid: false,
-          areaCode: "Global",
-          imageUrl: "",
-          logoUrl: "",
-          createdAt: new Date().toISOString()
+          name: newUser.displayName || userDocSnap.data().name,
+          photoURL: newUser.photoURL || userDocSnap.data().photoURL,
+          lastLoginAt: new Date().toISOString()
         }, { merge: true });
       }
       

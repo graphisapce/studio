@@ -72,7 +72,7 @@ export default function CustomerDashboardPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-  // Initialize form with Firestore data only once when it's available
+  // Initialize form with Firestore data only when userProfile is fully loaded
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
@@ -101,7 +101,7 @@ export default function CustomerDashboardPage() {
     setIsUpdating(true);
     const userRef = doc(firestore, "users", user.uid);
     
-    // Explicitly update the 'users' collection with merge: true to avoid losing data
+    // Using merge: true to avoid losing metadata like favorites or role
     setDocumentNonBlocking(userRef, {
       name: formData.name,
       phone: formData.phone,
@@ -117,7 +117,7 @@ export default function CustomerDashboardPage() {
 
     toast({
       title: "Profile Updated!",
-      description: "Aapki details Firestore mein permanent save ho gayi hain.",
+      description: "Aapki details permanent save ho gayi hain.",
     });
     setIsUpdating(false);
   };
@@ -171,7 +171,7 @@ export default function CustomerDashboardPage() {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Synchronizing with Firestore...</p>
+        <p className="text-muted-foreground">Synchronizing data with Firestore...</p>
       </div>
     );
   }
