@@ -71,24 +71,32 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
     });
 
     const matchesSearch = (b: Business) => {
-      if (!searchTerm.trim()) return true;
-      const s = searchTerm.toLowerCase();
-      const matchName = (b.shopName || "").toLowerCase().includes(s);
-      const matchCat = (b.category || "").toLowerCase().includes(s);
-      const matchProd = allProducts?.some(p => 
+      const q = searchTerm.trim().toLowerCase();
+      if (!q) return true;
+      
+      const matchShopName = (b.shopName || "").toLowerCase().includes(q);
+      const matchCategory = (b.category || "").toLowerCase().includes(q);
+      
+      // Search in products associated with this business
+      const matchProducts = allProducts?.some(p => 
         p.businessId === b.id && 
         p.status === 'approved' && 
-        ((p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s))
+        (
+          (p.title || "").toLowerCase().includes(q) || 
+          (p.description || "").toLowerCase().includes(q)
+        )
       );
-      return matchName || matchCat || matchProd;
+
+      return matchShopName || matchCategory || matchProducts;
     };
 
     return list.filter(b => {
-      // Robust filter: Don't show shops with no name (incomplete)
+      // Robust filter: Don't show shops with no name (incomplete profiles)
       if (!b.shopName) return false;
 
       const matchesCat = !selectedCategory || b.category === selectedCategory;
       const matchesArea = !isMyAreaOnly || !userProfile?.areaCode || b.areaCode === userProfile.areaCode;
+      
       return matchesCat && matchesArea && matchesSearch(b);
     }).sort((a, b) => {
       // 1. Premium Priority
@@ -97,7 +105,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
       if (aPrem && !bPrem) return -1;
       if (!aPrem && bPrem) return 1;
 
-      // 2. Proximity Priority
+      // 2. Proximity Priority (if location is available)
       if (a.distance !== undefined && b.distance !== undefined) {
         return a.distance - b.distance;
       }
@@ -124,7 +132,12 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
         <div className="max-w-2xl mx-auto space-y-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
-            <Input placeholder="Search Shops or Products..." className="pl-12 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input 
+              placeholder="Search Shops or Products..." 
+              className="pl-12 h-16 text-lg rounded-2xl shadow-xl border-2 border-primary/10" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+            />
           </div>
           
           <div className="flex items-center justify-between px-2 bg-primary/5 p-3 rounded-xl border border-primary/10">
@@ -165,7 +178,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
           ) : (
             <div className="col-span-full py-20 text-center opacity-30 border-2 border-dashed rounded-[2rem]">
                <Store className="h-16 w-16 mx-auto mb-4" />
-               <p className="font-bold text-lg">No shops found in this area/category.</p>
+               <p className="font-bold text-lg">No shops found matching your search.</p>
             </div>
           )
         }
