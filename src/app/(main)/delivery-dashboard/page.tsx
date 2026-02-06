@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { collection, query, where, doc } from "firebase/firestore";
@@ -30,13 +30,8 @@ import {
   CheckCircle2, 
   Clock, 
   MapPin, 
-  Navigation2, 
   Phone, 
   BadgeCheck,
-  TrendingUp,
-  History,
-  AlertCircle,
-  UserCircle,
   Camera,
   Upload,
   Lock,
@@ -46,8 +41,9 @@ import {
   User,
   Hash,
   Volume2,
-  VolumeX,
-  MessageCircle
+  MessageCircle,
+  X,
+  ImageIcon
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -63,8 +59,16 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { generateOrderVoiceBrief } from "@/ai/flows/order-summary-flow";
 import { compressImage } from "@/lib/utils";
+import Image from "next/image";
 
 const states = [
   "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "Bihar", 
@@ -94,6 +98,15 @@ export default function DeliveryDashboardPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
+
+  // Photo Proof States
+  const [activeCameraOrder, setActiveCameraOrder] = useState<Order | null>(null);
+  const [cameraType, setCameraType] = useState<'pickup' | 'delivery' | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUpdatingPhoto] = useState(false);
 
   useEffect(() => {
     if (userProfile && !isFormInitialized) {
@@ -140,6 +153,82 @@ export default function DeliveryDashboardPage() {
     myOrders?.filter(o => o.status === "delivered") || [], 
     [myOrders]
   );
+
+  const openCamera = async (order: Order, type: 'pickup' | 'delivery') => {
+    setActiveCameraOrder(order);
+    setCameraType(type);
+    setCapturedPhoto(null);
+    setIsCameraOpen(true);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setHasCameraPermission(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Camera access denied:', err);
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Error',
+        description: 'Please allow camera access to take proof photos.',
+      });
+    }
+  };
+
+  const closeCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setIsCameraOpen(false);
+    setActiveCameraOrder(null);
+    setCameraType(null);
+    setCapturedPhoto(null);
+  };
+
+  const capturePhoto = async () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(videoRef.current, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      
+      // Auto-compress proof photo
+      const file = await (await fetch(dataUrl)).blob();
+      const compressed = await compressImage(new File([file], "proof.jpg"), 300);
+      setCapturedPhoto(compressed);
+    }
+  };
+
+  const handleSaveProof = async () => {
+    if (!activeCameraOrder || !capturedPhoto || !cameraType) return;
+    setIsUpdatingPhoto(true);
+    try {
+      const orderRef = doc(firestore, "orders", activeCameraOrder.id);
+      if (cameraType === 'pickup') {
+        updateDocumentNonBlocking(orderRef, { 
+          pickupPhoto: capturedPhoto, 
+          status: 'picked-up' 
+        });
+        toast({ title: "Order Picked Up!", description: "Proof photo saved successfully." });
+      } else {
+        updateDocumentNonBlocking(orderRef, { 
+          deliveryPhoto: capturedPhoto, 
+          status: 'delivered' 
+        });
+        toast({ title: "Order Delivered!", description: "Grahak ko delivery proof save ho gaya." });
+      }
+      closeCamera();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "Photo save nahi ho payi." });
+    } finally {
+      setIsUpdatingPhoto(false);
+    }
+  };
 
   const handleListenBrief = async (order: Order) => {
     setIsSummarizing(order.id);
@@ -298,7 +387,16 @@ export default function DeliveryDashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-4 pb-2">
-                     <p className="text-xs flex items-center gap-2 opacity-70"><MapPin className="h-3 w-3" /> {order.address.split(',')[0]}...</p>
+                     <div className="space-y-2">
+                        <div className="flex items-start gap-2 text-[10px] text-primary font-bold uppercase">
+                           <Store className="h-3 w-3 mt-0.5" />
+                           <p className="line-clamp-1">FROM: {order.shopAddress || "Address Loading..."}</p>
+                        </div>
+                        <div className="flex items-start gap-2 text-[10px] text-orange-600 font-bold uppercase">
+                           <MapPin className="h-3 w-3 mt-0.5" />
+                           <p className="line-clamp-1">TO: {order.address.split(',')[0]}...</p>
+                        </div>
+                     </div>
                   </CardContent>
                   <CardFooter className="pt-2 flex gap-2">
                     <Button onClick={() => handleAcceptOrder(order.id)} className="flex-1 font-bold h-10">Accept Order</Button>
@@ -336,37 +434,53 @@ export default function DeliveryDashboardPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-6">
-                       <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                             <p className="text-[10px] font-black text-primary uppercase mb-1">Dukan (Pickup)</p>
-                             <p className="text-sm font-bold truncate mb-2">{order.shopName}</p>
-                             <Button variant="outline" size="sm" className="w-full h-9 gap-1 font-bold" asChild>
-                               <a href={`tel:${order.shopPhone}`}><Phone className="h-3.5 w-3.5" /> Call Shop</a>
+                       <div className="space-y-4">
+                          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 relative">
+                             <div className="flex items-center gap-2 mb-2">
+                                <Store className="h-4 w-4 text-primary" />
+                                <p className="text-[10px] font-black text-primary uppercase">Pickup From (Shop)</p>
+                             </div>
+                             <p className="text-sm font-black mb-1">{order.shopName}</p>
+                             <p className="text-xs text-muted-foreground leading-relaxed mb-3">{order.shopAddress}</p>
+                             <Button variant="outline" size="sm" className="w-full h-9 gap-1 font-bold border-primary text-primary" asChild>
+                               <a href={`tel:${order.shopPhone}`}><Phone className="h-3.5 w-3.5" /> Call Shop Owner</a>
                              </Button>
                           </div>
-                          <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                             <p className="text-[10px] font-black text-orange-600 uppercase mb-1">Grahak (Deliver)</p>
-                             <p className="text-sm font-bold truncate mb-2">{order.customerName}</p>
-                             <Button variant="outline" size="sm" className="w-full h-9 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
-                               <a href={`tel:${order.customerPhone}`}><Phone className="h-3.5 w-3.5" /> Call Grahak</a>
-                             </Button>
-                          </div>
-                       </div>
-                       <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-2xl border">
-                          <MapPin className="h-6 w-6 text-primary shrink-0" />
-                          <div>
-                            <p className="text-[10px] font-black uppercase opacity-60">Delivery Address</p>
-                            <p className="text-sm font-medium leading-tight">{order.address}</p>
+
+                          <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 relative">
+                             <div className="flex items-center gap-2 mb-2">
+                                <User className="h-4 w-4 text-orange-600" />
+                                <p className="text-[10px] font-black text-orange-600 uppercase">Deliver To (Customer)</p>
+                             </div>
+                             <p className="text-sm font-black mb-1">{order.customerName}</p>
+                             <p className="text-xs text-muted-foreground leading-relaxed mb-3">{order.address}</p>
+                             <div className="grid grid-cols-2 gap-2">
+                               <Button variant="outline" size="sm" className="h-9 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
+                                 <a href={`tel:${order.customerPhone}`}><Phone className="h-3.5 w-3.5" /> Call Customer</a>
+                               </Button>
+                               <Button variant="outline" size="sm" className="h-9 font-bold border-green-500 text-green-600 hover:bg-green-500 hover:text-white" asChild>
+                                 <a href={`https://wa.me/${order.customerPhone?.replace(/\D/g, '')}`} target="_blank"><MessageCircle className="h-3.5 w-3.5" /> WhatsApp</a>
+                               </Button>
+                             </div>
                           </div>
                        </div>
                     </CardContent>
-                    <CardFooter className="border-t pt-4 grid grid-cols-2 gap-2">
-                       <Button variant="outline" className="w-full h-12 font-black uppercase text-[10px] border-green-500 text-green-600" asChild>
-                         <a href={`https://wa.me/${order.customerPhone?.replace(/\D/g, '')}`} target="_blank"><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp</a>
-                       </Button>
-                       {order.status === 'assigned' && <Button className="w-full bg-orange-500 h-12 font-bold" onClick={() => handleUpdateStatus(order.id, 'picked-up')}>Mark Picked Up</Button>}
-                       {order.status === 'picked-up' && <Button className="w-full bg-blue-500 h-12 font-bold" onClick={() => handleUpdateStatus(order.id, 'out-for-delivery')}>On The Way</Button>}
-                       {order.status === 'out-for-delivery' && <Button className="w-full bg-green-600 h-12 font-bold" onClick={() => handleUpdateStatus(order.id, 'delivered')}>Mark Delivered ✅</Button>}
+                    <CardFooter className="border-t pt-4 grid grid-cols-1 gap-2">
+                       {order.status === 'assigned' && (
+                         <Button className="w-full bg-primary h-14 font-black rounded-2xl gap-3 shadow-lg shadow-primary/20" onClick={() => openCamera(order, 'pickup')}>
+                           <Camera className="h-6 w-6" /> Take Pickup Photo & Confirm
+                         </Button>
+                       )}
+                       {order.status === 'picked-up' && (
+                         <Button className="w-full bg-blue-500 h-14 font-black rounded-2xl gap-3" onClick={() => handleUpdateStatus(order.id, 'out-for-delivery')}>
+                           <Truck className="h-6 w-6" /> Mark On The Way
+                         </Button>
+                       )}
+                       {order.status === 'out-for-delivery' && (
+                         <Button className="w-full bg-green-600 h-14 font-black rounded-2xl gap-3 shadow-lg shadow-green-600/20" onClick={() => openCamera(order, 'delivery')}>
+                           <Camera className="h-6 w-6" /> Take Delivery Photo & Finish ✅
+                         </Button>
+                       )}
                     </CardFooter>
                  </Card>
                ))}
@@ -524,6 +638,58 @@ export default function DeliveryDashboardPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Camera Proof Dialog */}
+      <Dialog open={isCameraOpen} onOpenChange={(open) => !open && closeCamera()}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-black border-none">
+          <DialogHeader className="p-4 bg-white/10 text-white flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-lg">Take Proof Photo</DialogTitle>
+              <DialogDescription className="text-xs text-white/60">
+                {cameraType === 'pickup' ? "Dukan par saman lete waqt photo lein." : "Customer ko saman dete waqt photo lein."}
+              </DialogDescription>
+            </div>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={closeCamera}>
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogHeader>
+
+          <div className="relative aspect-square w-full bg-black flex items-center justify-center">
+            {capturedPhoto ? (
+              <Image src={capturedPhoto} alt="Captured proof" fill className="object-cover" />
+            ) : (
+              <>
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                {!hasCameraPermission && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-8 text-center gap-4">
+                    <Camera className="h-12 w-12 opacity-50" />
+                    <p className="text-sm">Camera access is required for security proof.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="p-6 bg-white flex gap-3">
+            {capturedPhoto ? (
+              <>
+                <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setCapturedPhoto(null)}>
+                  Retake Photo
+                </Button>
+                <Button className="flex-1 h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700 gap-2" onClick={handleSaveProof} disabled={isUploadingPhoto}>
+                  {isUploadingPhoto ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}
+                  Save & Complete
+                </Button>
+              </>
+            ) : (
+              <Button className="w-full h-14 rounded-2xl font-black text-lg gap-3" onClick={capturePhoto} disabled={!hasCameraPermission}>
+                <div className="h-4 w-4 rounded-full bg-white animate-pulse" />
+                CAPTURE PHOTO
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

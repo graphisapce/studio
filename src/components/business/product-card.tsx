@@ -65,10 +65,10 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
     try {
       const addressString = `${userProfile.houseNo}, ${userProfile.street}, ${userProfile.landmark || ''}, ${userProfile.city}, ${userProfile.state} - ${userProfile.pincode}`;
       
-      // Generate readable Order ID based on area
-      const areaCode = userProfile.areaCode || "LV";
+      // FIXED ORDER ID: Using Customer Delivery ID as base
+      const custId = userProfile.deliveryId;
       const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const displayOrderId = `${areaCode}-ORD-${randomNum}`;
+      const displayOrderId = `ORD-${custId}-${randomNum}`;
 
       await addDocumentNonBlocking(collection(firestore, "orders"), {
         displayOrderId: displayOrderId,

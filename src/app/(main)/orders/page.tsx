@@ -7,12 +7,20 @@ import { useRouter } from "next/navigation";
 import { collection, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Package, Truck, CheckCircle2, Clock, MapPin, Store, Phone, Hash, MessageCircle } from "lucide-react";
+import { Loader2, Package, Truck, CheckCircle2, Clock, MapPin, Store, Phone, Hash, MessageCircle, ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const orderSteps = [
   { status: 'pending', label: 'Requested', icon: Clock },
@@ -28,7 +36,6 @@ export default function MyOrdersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Optimized query without orderBy to avoid index requirement crash
   const ordersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, "orders"), where("customerId", "==", user.uid)) : null, 
     [firestore, user]
@@ -36,7 +43,6 @@ export default function MyOrdersPage() {
   
   const { data: rawOrders, isLoading } = useCollection<Order>(ordersQuery);
 
-  // Sorting in memory to prevent "Permission Denied / Index missing" errors
   const orders = useMemo(() => {
     if (!rawOrders) return [];
     return [...rawOrders].sort((a, b) => 
@@ -90,9 +96,37 @@ export default function MyOrdersPage() {
                           <Store className="h-3 w-3" /> {order.shopName}
                         </CardDescription>
                      </div>
-                     <Badge variant={isCancelled ? 'destructive' : order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[10px]">
-                        {order.status}
-                     </Badge>
+                     <div className="flex flex-col items-end gap-2">
+                        <Badge variant={isCancelled ? 'destructive' : order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[10px]">
+                            {order.status}
+                        </Badge>
+                        {(order.pickupPhoto || order.deliveryPhoto) && (
+                          <div className="flex gap-1">
+                             {order.pickupPhoto && (
+                               <Dialog>
+                                 <DialogTrigger asChild>
+                                   <Button variant="ghost" size="sm" className="h-6 px-2 text-[8px] bg-primary/5 text-primary font-black uppercase"><ImageIcon className="h-2 w-2 mr-1" /> Pickup Proof</Button>
+                                 </DialogTrigger>
+                                 <DialogContent className="sm:max-w-xs">
+                                   <DialogHeader><DialogTitle>Pickup Proof Photo</DialogTitle></DialogHeader>
+                                   <div className="relative aspect-square rounded-xl overflow-hidden"><Image src={order.pickupPhoto} alt="Pickup proof" fill className="object-cover" /></div>
+                                 </DialogContent>
+                               </Dialog>
+                             )}
+                             {order.deliveryPhoto && (
+                               <Dialog>
+                                 <DialogTrigger asChild>
+                                   <Button variant="ghost" size="sm" className="h-6 px-2 text-[8px] bg-green-50 text-green-600 font-black uppercase"><ImageIcon className="h-2 w-2 mr-1" /> Delivery Proof</Button>
+                                 </DialogTrigger>
+                                 <DialogContent className="sm:max-w-xs">
+                                   <DialogHeader><DialogTitle>Delivery Proof Photo</DialogTitle></DialogHeader>
+                                   <div className="relative aspect-square rounded-xl overflow-hidden"><Image src={order.deliveryPhoto} alt="Delivery proof" fill className="object-cover" /></div>
+                                 </DialogContent>
+                               </Dialog>
+                             )}
+                          </div>
+                        )}
+                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6">

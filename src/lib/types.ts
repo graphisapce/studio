@@ -102,6 +102,8 @@ export interface Order {
   status: 'pending' | 'assigned' | 'picked-up' | 'out-for-delivery' | 'delivered' | 'cancelled';
   address: string;
   createdAt: string;
+  pickupPhoto?: string; // Base64 proof from shop
+  deliveryPhoto?: string; // Base64 proof from customer
 }
 
 export interface UserProfile {

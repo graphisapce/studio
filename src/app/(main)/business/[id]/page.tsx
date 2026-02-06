@@ -345,7 +345,6 @@ export default function BusinessDetailPage() {
                     <div className="relative pt-2"><Button variant="outline" className="w-full h-11 opacity-50" disabled><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp (Premium Only)</Button></div>
                   )}
 
-                  {/* Social Media Links Section - Visible to ALL users */}
                   {(business.instagramUrl || business.facebookUrl) && (
                     <div className="flex flex-col gap-2 pt-2 border-t mt-2">
                       <p className="text-[10px] font-black uppercase text-muted-foreground opacity-60 px-1">Social Profiles</p>
@@ -413,7 +412,14 @@ export default function BusinessDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {approvedProducts.length > 0 ? (
                 approvedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} shopWhatsApp={business.contactNumber} shopName={business.shopName} isPremium={hasPremium} />
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    shopWhatsApp={business.contactNumber} 
+                    shopName={business.shopName} 
+                    shopAddress={business.address} // PASSING SHOP ADDRESS FOR ORDERS
+                    isPremium={hasPremium} 
+                  />
                 ))
               ) : (
                 <div className="col-span-full py-20 text-center opacity-50 border-2 border-dashed rounded-xl">
