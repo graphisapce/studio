@@ -87,7 +87,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      toast({ title: "Welcome back!", description: "Aap safaltapoorvak login ho gaye hain." });
+      toast({ title: "Welcome back!", description: "Aap login ho gaye hain." });
       router.push("/");
     } catch (error: any) {
       console.error(error);
@@ -103,7 +103,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
-      // Create main user profile
+      // 1. Create User Profile
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -115,7 +115,7 @@ export default function LoginPage() {
         areaCode: "Global"
       });
 
-      // If business, initialize a business document automatically
+      // 2. If business, create initial business record IMMEDIATELY
       if (role === 'business') {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
@@ -131,7 +131,8 @@ export default function LoginPage() {
           whatsappCount: 0,
           isPaid: false,
           premiumStatus: "none",
-          areaCode: "Global"
+          areaCode: "Global",
+          createdAt: new Date().toISOString()
         });
       }
 
@@ -168,6 +169,7 @@ export default function LoginPage() {
         });
       }
 
+      // Ensure business doc exists for Google sign-in users choosing business role
       if (role === 'business' && !businessDoc.exists()) {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
@@ -183,7 +185,8 @@ export default function LoginPage() {
           whatsappCount: 0,
           isPaid: false,
           premiumStatus: "none",
-          areaCode: "Global"
+          areaCode: "Global",
+          createdAt: new Date().toISOString()
         });
       }
       
@@ -217,7 +220,7 @@ export default function LoginPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Welcome Back</CardTitle>
-                <CardDescription>Enter your credentials to access LocalVyapar.</CardDescription>
+                <CardDescription>Enter credentials to access LocalVyapar.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...loginForm}>
@@ -248,12 +251,12 @@ export default function LoginPage() {
           <TabsContent value="signup">
             <Card>
               <CardHeader>
-                <CardTitle>Create an Account</CardTitle>
-                <CardDescription>Select your role and join LocalVyapar.</CardDescription>
+                <CardTitle>Create Account</CardTitle>
+                <CardDescription>Select role and join LocalVyapar.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mb-6 space-y-3 p-4 bg-muted/50 rounded-xl">
-                    <Label className="text-xs font-black uppercase text-muted-foreground">Choose Your Main Purpose</Label>
+                    <Label className="text-xs font-black uppercase text-muted-foreground">Purpose</Label>
                     <RadioGroup value={role} onValueChange={(v: any) => setRole(v)} className="grid grid-cols-3 gap-2">
                         <div className="flex items-center space-x-2 bg-white p-2 rounded-lg border">
                             <RadioGroupItem value="customer" id="customer" />

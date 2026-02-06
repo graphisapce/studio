@@ -124,6 +124,7 @@ export default function DashboardPage() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [origin, setOrigin] = useState("");
   
+  // Real-time listener for business data
   const businessRef = useMemoFirebase(() => user ? doc(firestore, "businesses", user.uid) : null, [firestore, user]);
   const { data: businessData, isLoading: loadingBusiness } = useDoc<Business>(businessRef);
 
@@ -140,6 +141,8 @@ export default function DashboardPage() {
   const { data: incomingOrders, isLoading: loadingOrders } = useCollection<Order>(ordersQuery);
 
   const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "", badge: "" });
+  
+  // Local state for the form inputs
   const [shopProfile, setShopProfile] = useState({ 
     shopName: "", 
     shopCategory: "" as BusinessCategory | "", 
@@ -181,42 +184,45 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Sync DB data to local state only when DB data is loaded and local state is empty (initial load)
   useEffect(() => {
     if (businessData) {
-      setShopProfile({
-        shopName: businessData.shopName || "",
-        shopCategory: businessData.category || "",
-        shopDescription: businessData.description || "",
-        shopContact: businessData.contactNumber || "",
-        shopImageUrl: businessData.imageUrl || "",
-        shopLogoUrl: businessData.logoUrl || "",
-        openingTime: businessData.openingTime || "09:00",
-        closingTime: businessData.closingTime || "21:00",
-        upiId: businessData.upiId || "",
-        paymentQrUrl: businessData.paymentQrUrl || "",
-        flashDeal: businessData.flashDeal || "",
-        instagramUrl: businessData.instagramUrl || "",
-        facebookUrl: businessData.facebookUrl || "",
-        shopHouseNo: (businessData as any).shopHouseNo || "",
-        shopStreet: (businessData as any).shopStreet || "",
-        shopCity: (businessData as any).shopCity || "",
-        shopState: (businessData as any).shopState || "Delhi",
-        shopPincode: (businessData as any).shopPincode || ""
-      });
+      setShopProfile(prev => ({
+        ...prev,
+        shopName: businessData.shopName || prev.shopName,
+        shopCategory: businessData.category || prev.shopCategory,
+        shopDescription: businessData.description || prev.shopDescription,
+        shopContact: businessData.contactNumber || prev.shopContact,
+        shopImageUrl: businessData.imageUrl || prev.shopImageUrl,
+        shopLogoUrl: businessData.logoUrl || prev.shopLogoUrl,
+        openingTime: businessData.openingTime || prev.openingTime,
+        closingTime: businessData.closingTime || prev.closingTime,
+        upiId: businessData.upiId || prev.upiId,
+        paymentQrUrl: businessData.paymentQrUrl || prev.paymentQrUrl,
+        flashDeal: businessData.flashDeal || prev.flashDeal,
+        instagramUrl: businessData.instagramUrl || prev.instagramUrl,
+        facebookUrl: businessData.facebookUrl || prev.facebookUrl,
+        shopHouseNo: (businessData as any).shopHouseNo || prev.shopHouseNo,
+        shopStreet: (businessData as any).shopStreet || prev.shopStreet,
+        shopCity: (businessData as any).shopCity || prev.shopCity,
+        shopState: (businessData as any).shopState || prev.shopState,
+        shopPincode: (businessData as any).shopPincode || prev.shopPincode
+      }));
     }
 
     if (userProfile) {
-      setAccountInfo({
-        name: userProfile.name || "",
-        phone: userProfile.phone || "",
-        houseNo: userProfile.houseNo || "",
-        street: userProfile.street || "",
-        landmark: userProfile.landmark || "",
-        city: userProfile.city || "",
-        state: userProfile.state || "Delhi",
-        pincode: userProfile.pincode || "",
-        country: userProfile.country || "India"
-      });
+      setAccountInfo(prev => ({
+        ...prev,
+        name: userProfile.name || prev.name,
+        phone: userProfile.phone || prev.phone,
+        houseNo: userProfile.houseNo || prev.houseNo,
+        street: userProfile.street || prev.street,
+        landmark: userProfile.landmark || prev.landmark,
+        city: userProfile.city || prev.city,
+        state: userProfile.state || prev.state,
+        pincode: userProfile.pincode || prev.pincode,
+        country: userProfile.country || prev.country
+      }));
     }
   }, [businessData, userProfile]);
 
@@ -243,7 +249,7 @@ export default function DashboardPage() {
       pincode: accountInfo.pincode,
       country: accountInfo.country
     });
-    toast({ title: "Account Updated", description: "Personal details successfully save ho gayi hain." });
+    toast({ title: "Account Updated", description: "Personal details save ho gayi hain." });
     setIsUpdatingAccount(false);
   };
 
@@ -255,13 +261,13 @@ export default function DashboardPage() {
       if (order && order.payment_session_id) {
         toast({ title: "Redirecting...", description: "Humarah secure payment gateway khul raha hai." });
       } else {
-        throw new Error("Payment Gateway Keys missing.");
+        throw new Error("Payment Gateway config missing.");
       }
     } catch (err: any) {
       toast({ 
         variant: "destructive", 
         title: "Payment Error", 
-        description: err.message || "Payment initialize nahi ho pa rahi hai. Kripya Admin se sampark karein." 
+        description: err.message || "Payment fail ho gayi." 
       });
     } finally {
       setIsUpgrading(false);
@@ -270,7 +276,7 @@ export default function DashboardPage() {
 
   const handleAIDescription = async () => {
     if (!newProduct.title) {
-      toast({ variant: "destructive", title: "Wait!", description: "Please enter product name first." });
+      toast({ variant: "destructive", title: "Product name?" });
       return;
     }
     setIsGeneratingAI(true);
@@ -280,9 +286,9 @@ export default function DashboardPage() {
         category: businessData?.category || 'General' 
       });
       setNewProduct(prev => ({ ...prev, description: res.description }));
-      toast({ title: "AI Magic Done!", description: "Description generated successfully." });
+      toast({ title: "AI Magic Done!" });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "AI Error", description: err.message });
+      toast({ variant: "destructive", title: "AI Error" });
     } finally {
       setIsGeneratingAI(false);
     }
@@ -342,7 +348,7 @@ export default function DashboardPage() {
       badge: newProduct.badge || null,
       createdAt: new Date().toISOString()
     });
-    toast({ title: "Product Submitted", description: "Admin approval ke liye bheja gaya hai." });
+    toast({ title: "Product Submitted" });
     setNewProduct({ title: "", price: "", description: "", imageUrl: "", badge: "" });
     setIsProductDialogOpen(false);
     setIsSubmittingProduct(false);
@@ -351,16 +357,17 @@ export default function DashboardPage() {
   const handleUpdateShopProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || loadingBusiness) return;
-    setIsUpdatingProfile(true);
     
-    const combinedAddress = `${shopProfile.shopHouseNo || ''}, ${shopProfile.shopStreet || ''}, ${shopProfile.shopCity || ''}, ${shopProfile.shopState || 'Delhi'} - ${shopProfile.shopPincode || ''}`;
-
-    // Robust save: Ensure we don't overwrite with empty if we just loaded
+    // Critical protection: If shop name is empty but we know it was previously set, block save.
     if (!shopProfile.shopName && businessData?.shopName) {
-       setIsUpdatingProfile(false);
+       toast({ variant: "destructive", title: "Shop name cannot be empty." });
        return;
     }
 
+    setIsUpdatingProfile(true);
+    const combinedAddress = `${shopProfile.shopHouseNo || ''}, ${shopProfile.shopStreet || ''}, ${shopProfile.shopCity || ''}, ${shopProfile.shopState || 'Delhi'} - ${shopProfile.shopPincode || ''}`;
+
+    // Always use setDoc with merge: true to ensure id and ownerId are preserved
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
       ownerId: user.uid,
@@ -385,10 +392,11 @@ export default function DashboardPage() {
       shopCity: shopProfile.shopCity,
       shopState: shopProfile.shopState,
       shopPincode: shopProfile.shopPincode,
-      status: businessData?.status || 'pending'
+      status: businessData?.status || 'pending',
+      updatedAt: new Date().toISOString()
     }, { merge: true });
     
-    toast({ title: "Updated", description: "Shop details saved permanently." });
+    toast({ title: "Shop Profile Saved", description: "Aapka data permanent save ho gaya hai." });
     setIsUpdatingProfile(false);
   };
 
@@ -424,8 +432,7 @@ export default function DashboardPage() {
       window.URL.revokeObjectURL(url);
       toast({ title: "QR Code Downloaded" });
     } catch (err) {
-      console.error("QR Download Error:", err);
-      toast({ variant: "destructive", title: "Download failed", description: "QR code download nahi ho paya." });
+      toast({ variant: "destructive", title: "Download failed" });
     }
   };
 
@@ -448,11 +455,11 @@ export default function DashboardPage() {
     return result;
   }, [businessData]);
 
-  if (authLoading || loadingBusiness || loadingProducts || loadingOrders) {
+  if (authLoading || (user && !userProfile) || loadingBusiness) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Syncing Dashboard...</p>
+        <p className="text-muted-foreground">Synchronizing Data...</p>
       </div>
     );
   }
@@ -491,7 +498,7 @@ export default function DashboardPage() {
                   <DialogTitle>New Product</DialogTitle>
                   {!hasPremium && (
                     <DialogDescription className="text-xs text-orange-600 font-bold">
-                      Aap free plan par hain. Sirf 3 products add kar sakte hain. ({products?.length || 0}/3 used)
+                      Free plan: Max 3 products. ({products?.length || 0}/3 used)
                     </DialogDescription>
                   )}
                 </DialogHeader>
@@ -664,7 +671,7 @@ export default function DashboardPage() {
                     <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Zap className="h-4 w-4 text-yellow-500" /> Flash Deal (Premium)</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                       <Input disabled={!hasPremium} placeholder="e.g. 20% off for next 2 hours!" value={shopProfile.flashDeal} onChange={(e) => setShopProfile({...shopProfile, flashDeal: e.target.value})} />
-                      <Button disabled={!hasPremium} size="sm" className="w-full" onClick={handleUpdateShopProfile}>Activate</Button>
+                      <Button disabled={!hasPremium || isUpdatingProfile} size="sm" className="w-full" onClick={handleUpdateShopProfile}>Activate</Button>
                       {!hasPremium && <p className="text-[9px] text-orange-600 font-bold uppercase">Upgrade to activate Flash Deals</p>}
                     </CardContent>
                   </Card>
@@ -675,7 +682,7 @@ export default function DashboardPage() {
                       <Input disabled={!hasPremium} placeholder="UPI ID" value={shopProfile.upiId} onChange={(e) => setShopProfile({...shopProfile, upiId: e.target.value})} />
                       <Label htmlFor="qr-upload" className={`flex items-center justify-center gap-2 h-9 border rounded-md bg-white cursor-pointer text-xs font-bold ${!hasPremium && 'opacity-50 cursor-not-allowed'}`}><Upload className="h-3 w-3" /> QR Image</Label>
                       <input disabled={!hasPremium} type="file" accept="image/*" className="hidden" id="qr-upload" onChange={handleQrUpload} />
-                      <Button disabled={!hasPremium} size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleUpdateShopProfile}>Save Payment</Button>
+                      <Button disabled={!hasPremium || isUpdatingProfile} size="sm" className="w-full bg-blue-600 hover:bg-blue-700" onClick={handleUpdateShopProfile}>Save Payment</Button>
                       {!hasPremium && <p className="text-[9px] text-blue-600 font-bold uppercase">Upgrade to show Payment QR</p>}
                     </CardContent>
                   </Card>
@@ -692,7 +699,7 @@ export default function DashboardPage() {
                          <Input placeholder="https://facebook.com/yourshop" value={shopProfile.facebookUrl} onChange={(e) => setShopProfile({...shopProfile, facebookUrl: e.target.value})} />
                        </div>
                        <div className="sm:col-span-2">
-                         <Button size="sm" className="w-full" onClick={handleUpdateShopProfile}>Update Social Links</Button>
+                         <Button size="sm" className="w-full" disabled={isUpdatingProfile} onClick={handleUpdateShopProfile}>Update Social Links</Button>
                        </div>
                     </CardContent>
                   </Card>
@@ -727,7 +734,7 @@ export default function DashboardPage() {
                       </div>
                       
                       <div className="grid sm:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Shop Name</Label><Input placeholder="Dukaan ka Naam" value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
+                        <div className="space-y-2"><Label>Shop Name</Label><Input required placeholder="Dukaan ka Naam" value={shopProfile.shopName} onChange={(e) => setShopProfile({...shopProfile, shopName: e.target.value})} /></div>
                         <div className="space-y-2">
                           <Label>Category</Label>
                           <Select value={shopProfile.shopCategory} onValueChange={(v: BusinessCategory) => setShopProfile({...shopProfile, shopCategory: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categoryList.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
@@ -783,9 +790,9 @@ export default function DashboardPage() {
                         <Input value={shopProfile.shopContact} onChange={(e) => setShopProfile({...shopProfile, shopContact: e.target.value})} placeholder="99xxxxxx" />
                       </div>
 
-                      <Button type="submit" className="w-full h-12 gap-2" disabled={isUpdatingProfile}>
+                      <Button type="submit" className="w-full h-12 gap-2" disabled={isUpdatingProfile || loadingBusiness}>
                         {isUpdatingProfile ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save Shop Profile & Address
+                        Save Shop Profile Permanent
                       </Button>
                     </form>
                  </CardContent>
@@ -825,7 +832,7 @@ export default function DashboardPage() {
                <Card className="border-destructive/20 bg-destructive/5">
                  <CardHeader><CardTitle className="text-destructive text-sm flex items-center gap-2"><Lock className="h-4 w-4" /> Account Security</CardTitle></CardHeader>
                  <CardContent className="flex items-center justify-between">
-                   <p className="text-xs text-muted-foreground">Hum aapke email par password reset link bhejenge.</p>
+                   <p className="text-xs text-muted-foreground">Password reset link email par aayega.</p>
                    <Button variant="outline" size="sm" onClick={handlePasswordReset} disabled={isResettingPassword} className="font-black text-[10px] uppercase">{isResettingPassword ? "Sending..." : "Reset Password"}</Button>
                  </CardContent>
                </Card>
@@ -893,7 +900,7 @@ export default function DashboardPage() {
 
                 <div className="p-3 bg-white/50 rounded-lg border border-dashed border-primary/20">
                    <p className="text-[9px] text-muted-foreground text-center font-bold">
-                     Aapki shop performance real-time update ho rahi hai.
+                     Performance real-time update ho rahi hai.
                    </p>
                 </div>
              </CardContent>
