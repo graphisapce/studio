@@ -13,7 +13,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { useAuth as useFirebaseAuth, useFirestore } from "@/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +103,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
-      // 1. Create User Profile - Always using merge: true for robustness
+      // 1. Create User Profile - Critical: Save to 'users' collection
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -115,7 +115,7 @@ export default function LoginPage() {
         areaCode: "Global"
       }, { merge: true });
 
-      // 2. If business, create initial business record IMMEDIATELY
+      // 2. If business, create initial business record
       if (role === 'business') {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
@@ -130,7 +130,6 @@ export default function LoginPage() {
           callCount: 0,
           whatsappCount: 0,
           isPaid: false,
-          premiumStatus: "none",
           areaCode: "Global",
           imageUrl: "",
           logoUrl: "",
@@ -140,7 +139,7 @@ export default function LoginPage() {
         }, { merge: true });
       }
 
-      toast({ title: "Account Created!", description: "Ab aap LocalVyapar use kar sakte hain." });
+      toast({ title: "Account Created!", description: "Aapka data Firestore mein save ho gaya hai." });
       router.push("/");
     } catch (error: any) {
       console.error(error);
@@ -161,7 +160,7 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const newUser = result.user;
 
-      // Use setDoc with merge: true to ensure profile exists without overwriting existing data
+      // Ensure user document exists in 'users' collection with correct role
       await setDoc(doc(db, "users", newUser.uid), {
           id: newUser.uid,
           name: newUser.displayName || 'New User',
@@ -179,20 +178,15 @@ export default function LoginPage() {
           ownerId: newUser.uid,
           shopName: `${newUser.displayName || 'New'}'s Shop`,
           category: "Others",
-          contactNumber: "",
-          whatsappLink: "",
           address: "Address not set",
           status: "pending",
           views: 0,
           callCount: 0,
           whatsappCount: 0,
           isPaid: false,
-          premiumStatus: "none",
           areaCode: "Global",
           imageUrl: "",
           logoUrl: "",
-          openingTime: "09:00",
-          closingTime: "21:00",
           createdAt: new Date().toISOString()
         }, { merge: true });
       }
@@ -263,7 +257,7 @@ export default function LoginPage() {
               </CardHeader>
               <CardContent>
                 <div className="mb-6 space-y-3 p-4 bg-muted/50 rounded-xl">
-                    <Label className="text-xs font-black uppercase text-muted-foreground">Purpose</Label>
+                    <Label className="text-xs font-black uppercase text-muted-foreground">Account Purpose</Label>
                     <RadioGroup value={role} onValueChange={(v: any) => setRole(v)} className="grid grid-cols-3 gap-2">
                         <div className="flex items-center space-x-2 bg-white p-2 rounded-lg border">
                             <RadioGroupItem value="customer" id="customer" />

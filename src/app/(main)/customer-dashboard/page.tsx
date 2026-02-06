@@ -24,19 +24,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
   UserCircle, 
-  Phone, 
   MapPin, 
-  Mail, 
   Lock, 
   Save, 
   Loader2, 
-  CheckCircle2,
-  Heart,
   Camera,
   Upload,
   Truck,
-  Building2,
-  Navigation2
+  Building2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -68,7 +63,7 @@ export default function CustomerDashboardPage() {
     street: "",
     landmark: "",
     city: "",
-    state: "",
+    state: "Delhi",
     pincode: "",
     country: "India"
   });
@@ -77,12 +72,12 @@ export default function CustomerDashboardPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
+  // Initialize form with Firestore data only once when it's available
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
         router.push("/login");
       } else if (userProfile && !isFormInitialized) {
-        // Only initialize form once real data arrives from Firestore
         setFormData({
           name: userProfile.name || "",
           phone: userProfile.phone || "",
@@ -94,26 +89,10 @@ export default function CustomerDashboardPage() {
           pincode: userProfile.pincode || "",
           country: userProfile.country || "India"
         });
-
-        if (!userProfile.deliveryId) {
-          generateDeliveryId();
-        }
         setIsFormInitialized(true);
       }
     }
   }, [user, userProfile, authLoading, router, isFormInitialized]);
-
-  const generateDeliveryId = () => {
-    if (!user) return;
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const newDeliveryId = `LV-JHP-${randomNum}`;
-    const userRef = doc(firestore, "users", user.uid);
-    // Use setDocumentNonBlocking with merge: true for better resilience
-    setDocumentNonBlocking(userRef, { 
-      deliveryId: newDeliveryId,
-      areaCode: "JHP"
-    }, { merge: true });
-  };
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +101,7 @@ export default function CustomerDashboardPage() {
     setIsUpdating(true);
     const userRef = doc(firestore, "users", user.uid);
     
-    // setDocumentNonBlocking ensures the doc is created or updated correctly
+    // Explicitly update the 'users' collection with merge: true to avoid losing data
     setDocumentNonBlocking(userRef, {
       name: formData.name,
       phone: formData.phone,
@@ -138,7 +117,7 @@ export default function CustomerDashboardPage() {
 
     toast({
       title: "Profile Updated!",
-      description: "Aapki professional delivery details save ho gayi hain.",
+      description: "Aapki details Firestore mein permanent save ho gayi hain.",
     });
     setIsUpdating(false);
   };
@@ -192,7 +171,7 @@ export default function CustomerDashboardPage() {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading your profile...</p>
+        <p className="text-muted-foreground">Synchronizing with Firestore...</p>
       </div>
     );
   }
@@ -205,8 +184,8 @@ export default function CustomerDashboardPage() {
             <UserCircle className="h-10 w-10" />
           </div>
           <div>
-            <h1 className="text-3xl font-black font-headline">My Dashboard</h1>
-            <p className="text-muted-foreground">Manage your delivery settings.</p>
+            <h1 className="text-3xl font-black font-headline">Customer Dashboard</h1>
+            <p className="text-muted-foreground">Manage your personal and delivery details.</p>
           </div>
         </div>
         
@@ -240,22 +219,17 @@ export default function CustomerDashboardPage() {
                 <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
               </div>
               <div>
-                <h2 className="text-xl font-bold">{userProfile?.name}</h2>
+                <h2 className="text-xl font-bold">{userProfile?.name || "User"}</h2>
                 <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-60">
-                  {userProfile?.role} Account
+                  {userProfile?.role || 'customer'} Account
                 </p>
               </div>
               <div className="pt-4 border-t space-y-2">
-                <Button asChild variant="outline" className="w-full gap-2 rounded-xl">
-                  <Link href="/favorites">
-                    <Heart className="h-4 w-4 text-red-500" /> My Saved Shops
-                  </Link>
-                </Button>
                 <Label 
                   htmlFor="photo-upload" 
                   className="inline-flex items-center justify-center gap-2 text-[10px] font-black uppercase text-primary cursor-pointer hover:underline p-2"
                 >
-                  <Upload className="h-3 w-3" /> Update Photo
+                  <Upload className="h-3 w-3" /> Update Profile Photo
                 </Label>
               </div>
             </CardContent>
@@ -268,7 +242,7 @@ export default function CustomerDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2 flex items-center justify-between">
-              <p className="text-xs font-bold text-muted-foreground">Password Update</p>
+              <p className="text-xs font-bold text-muted-foreground">Password Reset</p>
               <Button size="sm" variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword} className="h-7 text-[10px] uppercase font-black">
                 {isResettingPassword ? "Sending..." : "Reset"}
               </Button>
@@ -279,48 +253,59 @@ export default function CustomerDashboardPage() {
         <div className="md:col-span-8">
           <Card className="shadow-md border-none">
             <CardHeader className="border-b">
-              <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Delivery Information</CardTitle>
-              <CardDescription>Ye details delivery partners ko aapka ghar dhoondhne mein madad karengi.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Delivery & Personal Details</CardTitle>
+              <CardDescription>Ye details aapka profile aur orders track karne mein kaam aayengi.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleUpdateProfile} className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase text-muted-foreground">Full Name</Label>
-                    <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="rounded-xl" />
+                    <Input 
+                      value={formData.name} 
+                      onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                      required 
+                      className="rounded-xl" 
+                      placeholder="Enter your name"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase text-muted-foreground">Phone Number</Label>
-                    <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="99xxxxxx" className="rounded-xl" />
+                    <Input 
+                      value={formData.phone} 
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                      placeholder="99xxxxxx" 
+                      className="rounded-xl" 
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b">
                     <Building2 className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-black uppercase tracking-tight">Structured Address</span>
+                    <span className="text-sm font-black uppercase tracking-tight">Saved Address</span>
                   </div>
                   
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat / Floor No.</Label>
-                      <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="e.g. A-123, 2nd Floor" className="rounded-xl" />
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat No.</Label>
+                      <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="e.g. A-123" className="rounded-xl" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Colony / Area</Label>
-                      <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="e.g. Main Market, Block G" className="rounded-xl" />
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Area</Label>
+                      <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="e.g. Main Market" className="rounded-xl" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark (Optional)</Label>
-                    <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="e.g. Near Shiv Mandir" className="rounded-xl" />
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark</Label>
+                    <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="e.g. Near Big Temple" className="rounded-xl" />
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
-                      <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="e.g. Delhi" className="rounded-xl" />
+                      <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="City" className="rounded-xl" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
@@ -342,7 +327,7 @@ export default function CustomerDashboardPage() {
 
                 <Button type="submit" className="w-full h-12 rounded-xl gap-2 font-bold shadow-lg" disabled={isUpdating || !isFormInitialized}>
                   {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save Delivery Address Permanent
+                  Save Profile Changes
                 </Button>
               </form>
             </CardContent>
