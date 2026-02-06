@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
           <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-xs text-blue-800 leading-relaxed">
             <span className="font-bold">Zaroori Sochna:</span> Yahan se user delete karne par sirf uska profile aur shop data Firestore se hat-ta hai. 
-            Agar aap chahte hain ki wo dobara register kar sake, toh aapko **Firebase Console > Authentication** tab mein jaakar uska email wahan se bhi permanent delete karna hoga.
+            Agar aap chahte hain ki wo dobara register kar sake, toh aapko **Firebase Console &gt; Authentication** tab mein jaakar uska email wahan se bhi permanent delete karna hoga.
           </p>
         </div>
       )}
