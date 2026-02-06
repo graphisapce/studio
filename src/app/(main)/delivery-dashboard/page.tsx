@@ -419,7 +419,7 @@ export default function DeliveryDashboardPage() {
                <p className="font-bold">Aapka koi active task nahi hai.</p>
              </div>
            ) : (
-             <div className="grid gap-6 md:grid-cols-2">
+             <div className="grid gap-6">
                {activeDeliveries.map((order) => (
                  <Card key={order.id} className="shadow-xl border-2 border-primary/20 overflow-hidden">
                     <CardHeader className="border-b bg-muted/30">
@@ -435,32 +435,44 @@ export default function DeliveryDashboardPage() {
                         <span className="text-primary text-sm font-black">ID: {order.displayOrderId}</span>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-6">
-                       <div className="space-y-4">
-                          <div className="p-5 bg-primary/5 rounded-2xl border-2 border-primary/10 relative">
-                             <div className="flex items-center gap-2 mb-3">
-                                <Store className="h-5 w-5 text-primary" />
-                                <p className="text-xs font-black text-primary uppercase tracking-widest">Pickup From (Shop Address)</p>
+                    <CardContent className="pt-6">
+                       <div className="grid md:grid-cols-2 gap-6">
+                          <div className="p-5 bg-primary/5 rounded-2xl border-2 border-primary/10 flex flex-col justify-between">
+                             <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                   <Store className="h-5 w-5 text-primary" />
+                                   <p className="text-xs font-black text-primary uppercase tracking-widest">Pickup From (Shop Address)</p>
+                                </div>
+                                <p className="text-lg font-black mb-1 text-navy">{order.shopName}</p>
+                                <div className="bg-white p-4 rounded-xl border border-dashed border-primary/20">
+                                   <p className="text-sm font-bold text-muted-foreground leading-relaxed">
+                                      {order.shopAddress || "Address check karein shop owner se."}
+                                   </p>
+                                </div>
                              </div>
-                             <p className="text-lg font-black mb-1 text-navy">{order.shopName}</p>
-                             <p className="text-sm font-bold text-muted-foreground leading-relaxed mb-4 bg-white p-3 rounded-lg border border-dashed border-primary/20">{order.shopAddress || "Address check karein shop owner se."}</p>
-                             <Button variant="outline" size="sm" className="w-full h-10 gap-2 font-bold border-primary text-primary hover:bg-primary/10" asChild>
-                               <a href={`tel:${order.shopPhone}`}><Phone className="h-4 w-4" /> Call Shop Owner</a>
+                             <Button variant="outline" size="sm" className="w-full h-11 gap-2 font-bold border-primary text-primary hover:bg-primary/10 mt-4" asChild>
+                               <a href={`tel:${order.shopPhone}`}><Phone className="h-4 w-4" /> Call Shop</a>
                              </Button>
                           </div>
 
-                          <div className="p-5 bg-orange-50 rounded-2xl border border-orange-100 relative">
-                             <div className="flex items-center gap-2 mb-2">
-                                <User className="h-4 w-4 text-orange-600" />
-                                <p className="text-[10px] font-black text-orange-600 uppercase">Deliver To (Customer)</p>
+                          <div className="p-5 bg-orange-50 rounded-2xl border border-orange-100 flex flex-col justify-between">
+                             <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                   <User className="h-4 w-4 text-orange-600" />
+                                   <p className="text-[10px] font-black text-orange-600 uppercase">Deliver To (Customer)</p>
+                                </div>
+                                <p className="text-base font-black mb-1">{order.customerName}</p>
+                                <div className="bg-white p-4 rounded-xl border border-dashed border-orange-200">
+                                   <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {order.address}
+                                   </p>
+                                </div>
                              </div>
-                             <p className="text-base font-black mb-1">{order.customerName}</p>
-                             <p className="text-xs text-muted-foreground leading-relaxed mb-3">{order.address}</p>
-                             <div className="grid grid-cols-2 gap-2">
-                               <Button variant="outline" size="sm" className="h-9 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
+                             <div className="grid grid-cols-2 gap-2 mt-4">
+                               <Button variant="outline" size="sm" className="h-11 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
                                  <a href={`tel:${order.customerPhone}`}><Phone className="h-3.5 w-3.5" /> Call Customer</a>
                                </Button>
-                               <Button variant="outline" size="sm" className="h-9 font-bold border-green-500 text-green-600 hover:bg-green-500 hover:text-white" asChild>
+                               <Button variant="outline" size="sm" className="h-11 font-bold border-green-500 text-green-600 hover:bg-green-500 hover:text-white" asChild>
                                  <a href={`https://wa.me/${order.customerPhone?.replace(/\D/g, '')}`} target="_blank"><MessageCircle className="h-3.5 w-3.5" /> WhatsApp</a>
                                </Button>
                              </div>

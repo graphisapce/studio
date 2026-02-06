@@ -65,12 +65,11 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
     try {
       const addressString = `${userProfile.houseNo}, ${userProfile.street}, ${userProfile.landmark || ''}, ${userProfile.city}, ${userProfile.state} - ${userProfile.pincode}`;
       
-      const custId = userProfile.deliveryId;
       const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const displayOrderId = `ORD-${custId}-${randomNum}`;
+      // Fixed Order ID: CustomerDeliveryID + Unique Suffix
+      const displayOrderId = `${userProfile.deliveryId}-${randomNum}`;
 
-      // Use the provided shopAddress or fallback to a placeholder if it's missing
-      const finalShopAddress = shopAddress || "Address not provided by shop owner";
+      const finalShopAddress = shopAddress || "Address check karein shop owner se.";
 
       await addDocumentNonBlocking(collection(firestore, "orders"), {
         displayOrderId: displayOrderId,
@@ -92,7 +91,7 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
 
       toast({ 
         title: "Delivery Requested! 🚚", 
-        description: `Order ID: ${displayOrderId}. Rider address: ${finalShopAddress}` 
+        description: `Order ID: ${displayOrderId}` 
       });
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: "Order request fail ho gayi." });
