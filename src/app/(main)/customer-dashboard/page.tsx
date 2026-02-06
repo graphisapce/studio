@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { doc } from "firebase/firestore";
@@ -31,7 +31,10 @@ import {
   Camera,
   Upload,
   Truck,
-  Building2
+  Building2,
+  Heart,
+  User as UserIcon,
+  Phone
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -42,6 +45,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { compressImage } from "@/lib/utils";
+import Link from "next/link";
 
 const states = [
   "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh", "Bihar", 
@@ -71,13 +75,13 @@ export default function CustomerDashboardPage() {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-  // Robust bridge: Wait for both auth and profile synchronization
+  // THE BRIDGE FIX: Robust initialization that waits for profile data
   useEffect(() => {
     if (!authLoading && !isSyncing) {
       if (!user) {
         router.push("/login");
       } else if (userProfile && !isFormInitialized) {
-        // Bridging Firestore data to the Local State
+        // Ensuring local state gets the data from Firestore context
         setFormData({
           name: userProfile.name || "",
           phone: userProfile.phone || "",
@@ -94,32 +98,37 @@ export default function CustomerDashboardPage() {
     }
   }, [user, userProfile, authLoading, isSyncing, router, isFormInitialized]);
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !isFormInitialized) return;
 
     setIsUpdating(true);
-    const userRef = doc(firestore, "users", user.uid);
-    
-    // Explicitly update only form fields, preserve other data like deliveryId
-    setDocumentNonBlocking(userRef, {
-      name: formData.name,
-      phone: formData.phone,
-      houseNo: formData.houseNo,
-      street: formData.street,
-      landmark: formData.landmark,
-      city: formData.city,
-      state: formData.state,
-      pincode: formData.pincode,
-      country: formData.country,
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
+    try {
+      const userRef = doc(firestore, "users", user.uid);
+      
+      // We use setDocument with merge: true to ensure the record is ALWAYS permanent
+      await setDocumentNonBlocking(userRef, {
+        name: formData.name,
+        phone: formData.phone,
+        houseNo: formData.houseNo,
+        street: formData.street,
+        landmark: formData.landmark,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        country: formData.country,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
 
-    toast({
-      title: "Profile Updated!",
-      description: "Aapki details permanent save ho gayi hain.",
-    });
-    setIsUpdating(false);
+      toast({
+        title: "Details Saved Permanent!",
+        description: "Aapka profile Firestore mein update ho gaya hai.",
+      });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "Save nahi ho paya." });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,47 +161,28 @@ export default function CustomerDashboardPage() {
     }
   };
 
-  // Loading state prevents the "Broken Bridge" by not showing empty fields
+  // Prevent UI flicker by waiting for sync
   if (authLoading || isSyncing || (user && !userProfile && !isFormInitialized)) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Syncing your details with LocalVyapar...</p>
+        <p className="text-muted-foreground animate-pulse font-bold">Connecting with Firestore Bridge...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 text-primary rounded-2xl">
-            <UserCircle className="h-10 w-10" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black font-headline">Customer Dashboard</h1>
-            <p className="text-muted-foreground">Manage your personal and delivery details.</p>
-          </div>
-        </div>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="grid lg:grid-cols-12 gap-8 items-start">
         
-        {userProfile?.deliveryId && (
-          <div className="bg-primary text-white p-4 rounded-2xl flex flex-col items-center md:items-end shadow-lg shadow-primary/20">
-            <div className="flex items-center gap-2 font-black text-xs uppercase opacity-80">
-              <Truck className="h-4 w-4" /> Delivery ID
-            </div>
-            <p className="text-2xl font-black tracking-tighter">{userProfile.deliveryId}</p>
-          </div>
-        )}
-      </div>
-
-      <div className="grid md:grid-cols-12 gap-8">
-        <div className="md:col-span-4 space-y-6">
-          <Card className="text-center pt-8 overflow-hidden">
+        {/* Left Column: Profile Card (Matches User Screenshot) */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="text-center pt-8 overflow-hidden border-none shadow-md bg-white">
             <CardContent className="space-y-4">
-              <div className="relative w-fit mx-auto group">
-                <Avatar className="h-28 w-28 border-4 border-primary/20">
+              <div className="relative w-fit mx-auto">
+                <Avatar className="h-32 w-32 border-4 border-primary/10 shadow-lg">
                   <AvatarImage src={userProfile?.photoURL} className="object-cover" />
-                  <AvatarFallback className="text-3xl font-black bg-primary/5 text-primary">
+                  <AvatarFallback className="text-4xl font-black bg-primary/5 text-primary">
                     {userProfile?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
@@ -204,16 +194,23 @@ export default function CustomerDashboardPage() {
                 </Label>
                 <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
               </div>
+              
               <div>
-                <h2 className="text-xl font-bold">{userProfile?.name || "User"}</h2>
-                <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-60">
+                <h2 className="text-2xl font-black font-headline tracking-tight">{userProfile?.name || "Noorul Isalam"}</h2>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black opacity-60">
                   {userProfile?.role || 'customer'} Account
                 </p>
               </div>
-              <div className="pt-4 border-t space-y-2">
+
+              <div className="pt-4 border-t space-y-3">
+                <Button asChild variant="outline" className="w-full rounded-xl h-11 border-primary/20 hover:bg-primary/5 text-primary font-bold">
+                  <Link href="/favorites">
+                    <Heart className="h-4 w-4 mr-2 text-red-500 fill-red-500" /> My Saved Shops
+                  </Link>
+                </Button>
                 <Label 
                   htmlFor="photo-upload" 
-                  className="inline-flex items-center justify-center gap-2 text-[10px] font-black uppercase text-primary cursor-pointer hover:underline p-2"
+                  className="inline-flex items-center justify-center gap-2 text-[10px] font-black uppercase text-primary/60 cursor-pointer hover:text-primary transition-colors"
                 >
                   <Upload className="h-3 w-3" /> Update Profile Photo
                 </Label>
@@ -221,86 +218,99 @@ export default function CustomerDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-destructive/20 bg-destructive/5">
+          {/* Security Card */}
+          <Card className="border-destructive/10 bg-destructive/5 shadow-sm rounded-xl overflow-hidden">
             <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-sm flex items-center gap-2 text-destructive">
-                <Lock className="h-4 w-4" /> Security
+              <CardTitle className="text-xs flex items-center gap-2 text-destructive uppercase font-black">
+                <Lock className="h-3.5 w-3.5" /> Security
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2 flex items-center justify-between">
-              <p className="text-xs font-bold text-muted-foreground">Password Update</p>
-              <Button size="sm" variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword} className="h-7 text-[10px] uppercase font-black">
+              <p className="text-[10px] font-bold text-muted-foreground">Password Update</p>
+              <Button size="sm" variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword} className="h-7 text-[10px] uppercase font-black bg-white hover:bg-destructive hover:text-white transition-colors">
                 {isResettingPassword ? "Sending..." : "Reset"}
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        <div className="md:col-span-8">
-          <Card className="shadow-md border-none">
-            <CardHeader className="border-b">
-              <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Delivery & Personal Details</CardTitle>
-              <CardDescription>Ye details aapka profile aur orders track karne mein kaam aayengi.</CardDescription>
+        {/* Right Column: Information Form (Matches User Screenshot) */}
+        <div className="lg:col-span-8">
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
+            <CardHeader className="border-b bg-muted/5 p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <MapPin className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-black font-headline">Delivery Information</CardTitle>
+                  <CardDescription className="text-muted-foreground font-medium mt-1">
+                    Ye details delivery partners ko aapka ghar dhoondhne mein madad karengi.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleUpdateProfile} className="space-y-6">
-                <div className="grid sm:grid-cols-2 gap-4">
+            <CardContent className="p-8">
+              <form onSubmit={handleUpdateProfile} className="space-y-8">
+                {/* Personal Section */}
+                <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase text-muted-foreground">Full Name</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Full Name</Label>
                     <Input 
                       value={formData.name} 
                       onChange={(e) => setFormData({...formData, name: e.target.value})} 
                       required 
-                      className="rounded-xl" 
-                      placeholder="Enter your name"
+                      className="rounded-xl h-12 border-primary/10 focus:border-primary transition-all" 
+                      placeholder="Noorul Isalam"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase text-muted-foreground">Phone Number</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Phone Number</Label>
                     <Input 
                       value={formData.phone} 
                       onChange={(e) => setFormData({...formData, phone: e.target.value})} 
                       placeholder="99xxxxxx" 
-                      className="rounded-xl" 
+                      className="rounded-xl h-12 border-primary/10 focus:border-primary transition-all" 
                     />
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b">
+                {/* Address Section */}
+                <div className="space-y-6 pt-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-dashed">
                     <Building2 className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-black uppercase tracking-tight">Saved Address</span>
+                    <span className="text-sm font-black uppercase tracking-tight text-primary">Structured Address</span>
                   </div>
                   
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat No.</Label>
-                      <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="e.g. A-123" className="rounded-xl" />
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">House / Flat / Floor No.</Label>
+                      <Input value={formData.houseNo} onChange={(e) => setFormData({...formData, houseNo: e.target.value})} placeholder="e.g. A-123, 2nd Floor" className="rounded-xl h-12" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Area</Label>
-                      <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="e.g. Main Market" className="rounded-xl" />
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Street / Colony / Area</Label>
+                      <Input value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} placeholder="e.g. Main Market, Block G" className="rounded-xl h-12" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark</Label>
-                    <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="e.g. Near Big Temple" className="rounded-xl" />
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Landmark (Optional)</Label>
+                    <Input value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} placeholder="e.g. Near Shiv Mandir" className="rounded-xl h-12" />
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">City</Label>
-                      <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="City" className="rounded-xl" />
+                      <Input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="e.g. Delhi" className="rounded-xl h-12" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Pincode</Label>
-                      <Input value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} placeholder="1100xx" className="rounded-xl" />
+                      <Input value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} placeholder="1100xx" className="rounded-xl h-12" />
                     </div>
                     <div className="space-y-2 col-span-2 sm:col-span-1">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground">State</Label>
                       <Select value={formData.state} onValueChange={(v) => setFormData({...formData, state: v})}>
-                        <SelectTrigger className="rounded-xl">
+                        <SelectTrigger className="rounded-xl h-12 border-primary/10">
                           <SelectValue placeholder="Select State" />
                         </SelectTrigger>
                         <SelectContent>
@@ -311,10 +321,13 @@ export default function CustomerDashboardPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full h-12 rounded-xl gap-2 font-bold shadow-lg" disabled={isUpdating || !isFormInitialized}>
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save Profile Permanent
-                </Button>
+                <div className="pt-6">
+                  <Button type="submit" className="w-full h-14 rounded-2xl gap-3 font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all" disabled={isUpdating || !isFormInitialized}>
+                    {isUpdating ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
+                    Save My Details Permanent
+                  </Button>
+                  <p className="text-[10px] text-center mt-4 text-muted-foreground font-bold uppercase opacity-60">Data is securely stored in Google Firebase Cloud Firestore.</p>
+                </div>
               </form>
             </CardContent>
           </Card>
