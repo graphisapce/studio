@@ -111,7 +111,8 @@ export default function LoginPage() {
         phone: values.phone,
         role: role,
         createdAt: new Date().toISOString(),
-        favorites: []
+        favorites: [],
+        areaCode: "Global"
       });
 
       // If business, initialize a business document automatically
@@ -129,7 +130,8 @@ export default function LoginPage() {
           callCount: 0,
           whatsappCount: 0,
           isPaid: false,
-          premiumStatus: "none"
+          premiumStatus: "none",
+          areaCode: "Global"
         });
       }
 
@@ -151,6 +153,8 @@ export default function LoginPage() {
       const newUser = result.user;
 
       const profileDoc = await getDoc(doc(db, "users", newUser.uid));
+      const businessDoc = await getDoc(doc(db, "businesses", newUser.uid));
+
       if (!profileDoc.exists()) {
         await setDoc(doc(db, "users", newUser.uid), {
             id: newUser.uid,
@@ -159,27 +163,30 @@ export default function LoginPage() {
             photoURL: newUser.photoURL || '',
             role: role,
             createdAt: new Date().toISOString(),
-            favorites: []
+            favorites: [],
+            areaCode: "Global"
         });
-
-        if (role === 'business') {
-          await setDoc(doc(db, "businesses", newUser.uid), {
-            id: newUser.uid,
-            ownerId: newUser.uid,
-            shopName: `${newUser.displayName || 'New'}'s Shop`,
-            category: "Others",
-            contactNumber: "",
-            whatsappLink: "",
-            address: "Address not set",
-            status: "pending",
-            views: 0,
-            callCount: 0,
-            whatsappCount: 0,
-            isPaid: false,
-            premiumStatus: "none"
-          });
-        }
       }
+
+      if (role === 'business' && !businessDoc.exists()) {
+        await setDoc(doc(db, "businesses", newUser.uid), {
+          id: newUser.uid,
+          ownerId: newUser.uid,
+          shopName: `${newUser.displayName || 'New'}'s Shop`,
+          category: "Others",
+          contactNumber: "",
+          whatsappLink: "",
+          address: "Address not set",
+          status: "pending",
+          views: 0,
+          callCount: 0,
+          whatsappCount: 0,
+          isPaid: false,
+          premiumStatus: "none",
+          areaCode: "Global"
+        });
+      }
+      
       toast({ title: "Google Sign-In Success" });
       router.push("/");
     } catch (error: any) {

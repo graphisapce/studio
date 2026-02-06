@@ -38,7 +38,6 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
   const productsRef = useMemoFirebase(() => collection(firestore, "products"), [firestore]);
   const { data: allProducts } = useCollection<Product>(productsRef);
 
-  // Auto-request location on start
   useEffect(() => {
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -49,7 +48,7 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
           });
         },
         (error) => {
-          console.warn("Location access denied or unavailable.");
+          console.warn("Location access denied.");
         }
       );
     }
@@ -61,7 +60,9 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
   }, [externalCategory, externalSearch]);
 
   const sortedAndFilteredBusinesses = useMemo(() => {
-    let list: (Business & { distance?: number })[] = (realBusinesses || []).map(b => {
+    if (!realBusinesses) return [];
+
+    let list: (Business & { distance?: number })[] = realBusinesses.map(b => {
       let distance: number | undefined = undefined;
       if (userCoords && b.latitude && b.longitude) {
         distance = getDistanceFromLatLonInKm(userCoords.lat, userCoords.lon, b.latitude, b.longitude);
@@ -70,32 +71,38 @@ export function BusinessGrid({ externalCategory, externalSearch }: { externalCat
     });
 
     const matchesSearch = (b: Business) => {
+      if (!searchTerm.trim()) return true;
       const s = searchTerm.toLowerCase();
-      const matchName = b.shopName.toLowerCase().includes(s);
-      const matchCat = b.category.toLowerCase().includes(s);
+      const matchName = (b.shopName || "").toLowerCase().includes(s);
+      const matchCat = (b.category || "").toLowerCase().includes(s);
       const matchProd = allProducts?.some(p => 
         p.businessId === b.id && 
         p.status === 'approved' && 
-        (p.title.toLowerCase().includes(s) || p.description.toLowerCase().includes(s))
+        ((p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s))
       );
       return matchName || matchCat || matchProd;
     };
 
     return list.filter(b => {
+      // Robust filter: Don't show shops with no name (incomplete)
+      if (!b.shopName) return false;
+
       const matchesCat = !selectedCategory || b.category === selectedCategory;
       const matchesArea = !isMyAreaOnly || !userProfile?.areaCode || b.areaCode === userProfile.areaCode;
       return matchesCat && matchesArea && matchesSearch(b);
     }).sort((a, b) => {
-      // 1. Premium First
+      // 1. Premium Priority
       const aPrem = isBusinessPremium(a);
       const bPrem = isBusinessPremium(b);
       if (aPrem && !bPrem) return -1;
       if (!aPrem && bPrem) return 1;
 
-      // 2. Nearest First (if location available)
+      // 2. Proximity Priority
       if (a.distance !== undefined && b.distance !== undefined) {
         return a.distance - b.distance;
       }
+      if (a.distance !== undefined) return -1;
+      if (b.distance !== undefined) return 1;
 
       return 0;
     });

@@ -350,10 +350,16 @@ export default function DashboardPage() {
 
   const handleUpdateShopProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || loadingBusiness) return;
     setIsUpdatingProfile(true);
     
     const combinedAddress = `${shopProfile.shopHouseNo || ''}, ${shopProfile.shopStreet || ''}, ${shopProfile.shopCity || ''}, ${shopProfile.shopState || 'Delhi'} - ${shopProfile.shopPincode || ''}`;
+
+    // Robust save: Ensure we don't overwrite with empty if we just loaded
+    if (!shopProfile.shopName && businessData?.shopName) {
+       setIsUpdatingProfile(false);
+       return;
+    }
 
     setDocumentNonBlocking(doc(firestore, "businesses", user.uid), {
       id: user.uid,
@@ -378,10 +384,11 @@ export default function DashboardPage() {
       shopStreet: shopProfile.shopStreet,
       shopCity: shopProfile.shopCity,
       shopState: shopProfile.shopState,
-      shopPincode: shopProfile.shopPincode
+      shopPincode: shopProfile.shopPincode,
+      status: businessData?.status || 'pending'
     }, { merge: true });
     
-    toast({ title: "Updated", description: "Shop details saved successfully." });
+    toast({ title: "Updated", description: "Shop details saved permanently." });
     setIsUpdatingProfile(false);
   };
 
