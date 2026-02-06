@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { doc } from "firebase/firestore";
 import { 
   useFirestore, 
-  updateDocumentNonBlocking, 
+  setDocumentNonBlocking, 
   useAuth as useFirebaseAuth 
 } from "@/firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -82,6 +82,7 @@ export default function CustomerDashboardPage() {
       if (!user) {
         router.push("/login");
       } else if (userProfile && !isFormInitialized) {
+        // Only initialize form once real data arrives from Firestore
         setFormData({
           name: userProfile.name || "",
           phone: userProfile.phone || "",
@@ -107,10 +108,11 @@ export default function CustomerDashboardPage() {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const newDeliveryId = `LV-JHP-${randomNum}`;
     const userRef = doc(firestore, "users", user.uid);
-    updateDocumentNonBlocking(userRef, { 
+    // Use setDocumentNonBlocking with merge: true for better resilience
+    setDocumentNonBlocking(userRef, { 
       deliveryId: newDeliveryId,
       areaCode: "JHP"
-    });
+    }, { merge: true });
   };
 
   const handleUpdateProfile = (e: React.FormEvent) => {
@@ -120,7 +122,8 @@ export default function CustomerDashboardPage() {
     setIsUpdating(true);
     const userRef = doc(firestore, "users", user.uid);
     
-    updateDocumentNonBlocking(userRef, {
+    // setDocumentNonBlocking ensures the doc is created or updated correctly
+    setDocumentNonBlocking(userRef, {
       name: formData.name,
       phone: formData.phone,
       houseNo: formData.houseNo,
@@ -131,7 +134,7 @@ export default function CustomerDashboardPage() {
       pincode: formData.pincode,
       country: formData.country,
       updatedAt: new Date().toISOString()
-    });
+    }, { merge: true });
 
     toast({
       title: "Profile Updated!",
@@ -146,11 +149,10 @@ export default function CustomerDashboardPage() {
 
     try {
       toast({ title: "Optimizing Photo...", description: "Kripya intezar karein." });
-      // Automatically compress to under 500KB
       const compressedBase64 = await compressImage(file, 500);
       
       const userRef = doc(firestore, "users", user.uid);
-      updateDocumentNonBlocking(userRef, { photoURL: compressedBase64 });
+      setDocumentNonBlocking(userRef, { photoURL: compressedBase64 }, { merge: true });
       
       toast({
         title: "Photo Updated",
@@ -186,7 +188,7 @@ export default function CustomerDashboardPage() {
     }
   };
 
-  if (authLoading || (user && !userProfile)) {
+  if (authLoading || (user && !userProfile && !isFormInitialized)) {
     return (
       <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

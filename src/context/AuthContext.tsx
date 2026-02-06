@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
@@ -49,14 +50,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       unsubscribeProfile = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as UserProfile;
-          setUserProfile(data);
+          setUserProfile({ ...data, id: snapshot.id });
         } else {
+          // If user exists in Auth but not in Firestore, we still stop loading
+          // so components can handle registration/initialization.
           setUserProfile(null);
         }
         setLoading(false);
         setIsSyncing(false);
       }, (error) => {
-        // This handles cases where profile doc is missing or permissions are not yet ready
         console.warn("Profile synchronization warning:", error.message);
         setUserProfile(null);
         setLoading(false);

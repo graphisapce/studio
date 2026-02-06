@@ -103,7 +103,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const newUser = userCredential.user;
 
-      // 1. Create User Profile
+      // 1. Create User Profile - Always using merge: true for robustness
       await setDoc(doc(db, "users", newUser.uid), {
         id: newUser.uid,
         name: values.name,
@@ -113,7 +113,7 @@ export default function LoginPage() {
         createdAt: new Date().toISOString(),
         favorites: [],
         areaCode: "Global"
-      });
+      }, { merge: true });
 
       // 2. If business, create initial business record IMMEDIATELY
       if (role === 'business') {
@@ -134,8 +134,10 @@ export default function LoginPage() {
           areaCode: "Global",
           imageUrl: "",
           logoUrl: "",
+          openingTime: "09:00",
+          closingTime: "21:00",
           createdAt: new Date().toISOString()
-        });
+        }, { merge: true });
       }
 
       toast({ title: "Account Created!", description: "Ab aap LocalVyapar use kar sakte hain." });
@@ -159,23 +161,19 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const newUser = result.user;
 
-      const profileDoc = await getDoc(doc(db, "users", newUser.uid));
-      const businessDoc = await getDoc(doc(db, "businesses", newUser.uid));
+      // Use setDoc with merge: true to ensure profile exists without overwriting existing data
+      await setDoc(doc(db, "users", newUser.uid), {
+          id: newUser.uid,
+          name: newUser.displayName || 'New User',
+          email: newUser.email || '',
+          photoURL: newUser.photoURL || '',
+          role: role,
+          createdAt: new Date().toISOString(),
+          favorites: [],
+          areaCode: "Global"
+      }, { merge: true });
 
-      if (!profileDoc.exists()) {
-        await setDoc(doc(db, "users", newUser.uid), {
-            id: newUser.uid,
-            name: newUser.displayName || 'New User',
-            email: newUser.email || '',
-            photoURL: newUser.photoURL || '',
-            role: role,
-            createdAt: new Date().toISOString(),
-            favorites: [],
-            areaCode: "Global"
-        });
-      }
-
-      if (role === 'business' && !businessDoc.exists()) {
+      if (role === 'business') {
         await setDoc(doc(db, "businesses", newUser.uid), {
           id: newUser.uid,
           ownerId: newUser.uid,
@@ -193,8 +191,10 @@ export default function LoginPage() {
           areaCode: "Global",
           imageUrl: "",
           logoUrl: "",
+          openingTime: "09:00",
+          closingTime: "21:00",
           createdAt: new Date().toISOString()
-        });
+        }, { merge: true });
       }
       
       toast({ title: "Google Sign-In Success" });

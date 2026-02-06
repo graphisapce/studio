@@ -9,6 +9,7 @@ import {
   useFirestore, 
   useCollection, 
   useMemoFirebase,
+  setDocumentNonBlocking,
   updateDocumentNonBlocking,
   useAuth as useFirebaseAuth
 } from "@/firebase";
@@ -92,9 +93,10 @@ export default function DeliveryDashboardPage() {
   const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && !isFormInitialized) {
       setFormData({
         name: userProfile.name || "",
         phone: userProfile.phone || "",
@@ -106,8 +108,9 @@ export default function DeliveryDashboardPage() {
         pincode: userProfile.pincode || "",
         country: userProfile.country || "India"
       });
+      setIsFormInitialized(true);
     }
-  }, [userProfile]);
+  }, [userProfile, isFormInitialized]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -178,9 +181,11 @@ export default function DeliveryDashboardPage() {
 
   const handleUpdateAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !isFormInitialized) return;
     setIsUpdatingAccount(true);
-    updateDocumentNonBlocking(doc(firestore, "users", user.uid), {
+    
+    const userRef = doc(firestore, "users", user.uid);
+    setDocumentNonBlocking(userRef, {
       name: formData.name,
       phone: formData.phone,
       houseNo: formData.houseNo,
@@ -189,8 +194,10 @@ export default function DeliveryDashboardPage() {
       city: formData.city,
       state: formData.state,
       pincode: formData.pincode,
-      country: formData.country
-    });
+      country: formData.country,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    
     toast({ title: "Profile Updated", description: "Aapki details successfully save ho gayi hain." });
     setIsUpdatingAccount(false);
   };
@@ -201,10 +208,10 @@ export default function DeliveryDashboardPage() {
     
     try {
       toast({ title: "Optimizing Photo...", description: "Image optimize ho rahi hai." });
-      // Automatically compress to under 500KB
       const compressedBase64 = await compressImage(file, 500);
       
-      updateDocumentNonBlocking(doc(firestore, "users", user.uid), { photoURL: compressedBase64 });
+      const userRef = doc(firestore, "users", user.uid);
+      setDocumentNonBlocking(userRef, { photoURL: compressedBase64 }, { merge: true });
       toast({ title: "Photo Updated" });
     } catch (err) {
       console.error("Photo optimization failed:", err);
@@ -225,7 +232,7 @@ export default function DeliveryDashboardPage() {
     }
   };
 
-  if (authLoading || (user && !userProfile)) {
+  if (authLoading || (user && !userProfile && !isFormInitialized)) {
     return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="animate-spin text-primary h-12 w-12" /></div>;
   }
 
@@ -506,7 +513,7 @@ export default function DeliveryDashboardPage() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-full h-12 rounded-2xl gap-2 font-bold shadow-lg shadow-primary/20" disabled={isUpdatingAccount}>
+                    <Button type="submit" className="w-full h-12 rounded-2xl gap-2 font-bold shadow-lg shadow-primary/20" disabled={isUpdatingAccount || !isFormInitialized}>
                       {isUpdatingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                       Update Profile Details
                     </Button>
