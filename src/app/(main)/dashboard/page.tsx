@@ -292,11 +292,11 @@ export default function DashboardPage() {
   };
 
   const validateAndUploadImage = (file: File, callback: (base64: string) => void) => {
-    if (file.size > 200 * 1024) { // 200KB Limit for Firestore documents
+    if (file.size > 500 * 1024) { // Increased to 500KB Limit for Firestore documents
       toast({ 
         variant: "destructive", 
         title: "File too large", 
-        description: "Image 200KB se kam honi chahiye taaki database save kar sake." 
+        description: "Image 500KB se kam honi chahiye taaki database save kar sake." 
       });
       return;
     }
@@ -715,7 +715,7 @@ export default function DashboardPage() {
                             <Label htmlFor="logo-upload" className="cursor-pointer text-xs font-bold text-primary bg-primary/5 p-2 rounded-lg"><Upload className="h-3 w-3 inline mr-1" /> Change Logo</Label>
                             <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                           </div>
-                          <p className="text-[9px] text-muted-foreground">Max 200KB. Squared size recommended.</p>
+                          <p className="text-[9px] text-muted-foreground">Max 500KB. Squared size recommended.</p>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs font-black uppercase text-muted-foreground">Banner</Label>
@@ -724,7 +724,7 @@ export default function DashboardPage() {
                             <Label htmlFor="banner-upload" className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-[10px] font-bold shadow-lg cursor-pointer"><ImageIcon className="h-3 w-3 inline mr-1" /> Update Banner</Label>
                             <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
                           </div>
-                          <p className="text-[9px] text-muted-foreground">Max 200KB. 1200x400 recommended.</p>
+                          <p className="text-[9px] text-muted-foreground">Max 500KB. 1200x400 recommended.</p>
                         </div>
                       </div>
                       

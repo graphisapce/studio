@@ -198,8 +198,8 @@ export default function DeliveryDashboardPage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     
-    if (file.size > 300 * 1024) {
-      toast({ variant: "destructive", title: "File too large", description: "Image 300KB se kam honi chahiye." });
+    if (file.size > 500 * 1024) { // Increased to 500KB
+      toast({ variant: "destructive", title: "File too large", description: "Image 500KB se kam honi chahiye." });
       return;
     }
 
@@ -339,7 +339,7 @@ export default function DeliveryDashboardPage() {
                           <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
                              <p className="text-[10px] font-black text-orange-600 uppercase mb-1">Grahak (Deliver)</p>
                              <p className="text-sm font-bold truncate mb-2">{order.customerName}</p>
-                             <Button variant="outline" size="sm" className="w-full h-9 gap-1 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
+                             <Button variant="outline" size="sm" className="w-full h-9 font-bold border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white" asChild>
                                <a href={`tel:${order.customerPhone}`}><Phone className="h-3.5 w-3.5" /> Call Grahak</a>
                              </Button>
                           </div>

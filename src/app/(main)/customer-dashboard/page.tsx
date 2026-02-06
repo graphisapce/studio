@@ -140,11 +140,11 @@ export default function CustomerDashboardPage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (file.size > 200 * 1024) {
+    if (file.size > 500 * 1024) { // Increased to 500KB
       toast({
         variant: "destructive",
         title: "Photo too large",
-        description: "Profile photo 200KB se kam honi chahiye.",
+        description: "Profile photo 500KB se kam honi chahiye.",
       });
       return;
     }
