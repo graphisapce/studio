@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { collection, query, where, doc } from "firebase/firestore";
@@ -139,6 +139,26 @@ export default function DashboardPage() {
     [firestore, user]
   );
   const { data: incomingOrders, isLoading: loadingOrders } = useCollection<Order>(ordersQuery);
+
+  // Sound Alert Logic
+  const prevOrdersCount = useRef<number>(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  useEffect(() => {
+    if (!loadingOrders && incomingOrders) {
+      if (!isInitialLoad && incomingOrders.length > prevOrdersCount.current) {
+        // Play notification sound
+        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        audio.play().catch(() => {});
+        toast({ 
+          title: "Naya Order Aaya Hai! 🔔", 
+          description: "Aapke dukan ke liye ek naya order receive hua hai." 
+        });
+      }
+      prevOrdersCount.current = incomingOrders.length;
+      setIsInitialLoad(false);
+    }
+  }, [incomingOrders, loadingOrders, isInitialLoad, toast]);
 
   const [newProduct, setNewProduct] = useState({ title: "", price: "", description: "", imageUrl: "", badge: "" });
   
@@ -294,7 +314,6 @@ export default function DashboardPage() {
   const processAndUploadImage = async (file: File, callback: (base64: string) => void) => {
     try {
       toast({ title: "Optimizing Image...", description: "Kripya intezar karein, image size adjust ho rahi hai." });
-      // Automatically compress to under 500KB
       const compressedBase64 = await compressImage(file, 500);
       callback(compressedBase64);
       toast({ title: "Image Optimized!", description: "Ab aap ise save kar sakte hain." });

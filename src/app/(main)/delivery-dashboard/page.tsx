@@ -138,6 +138,26 @@ export default function DeliveryDashboardPage() {
   );
   const { data: availableOrders, isLoading: loadingAvailable } = useCollection<Order>(availableOrdersQuery);
 
+  // Sound Alert Logic for Delivery Boys
+  const prevAvailableCount = useRef<number>(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  useEffect(() => {
+    if (!loadingAvailable && availableOrders) {
+      if (!isInitialLoad && availableOrders.length > prevAvailableCount.current) {
+        // Play digital bell sound
+        const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        audio.play().catch(() => {});
+        toast({ 
+          title: "Naya Delivery Task! 🔔", 
+          description: "Ek naya order market mein aaya hai. Jald accept karein!" 
+        });
+      }
+      prevAvailableCount.current = availableOrders.length;
+      setIsInitialLoad(false);
+    }
+  }, [availableOrders, loadingAvailable, isInitialLoad, toast]);
+
   const myOrdersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, "orders"), where("deliveryBoyId", "==", user.uid)) : null, 
     [firestore, user]
