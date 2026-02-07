@@ -55,6 +55,7 @@ export default function MyOrdersPage() {
       toast({ variant: "destructive", title: "Error", description: "Rider contact number not found." });
       return;
     }
+    // Deep Link to WhatsApp with location share intent
     const text = encodeURIComponent(`Hi, main apna live location share kar raha hoon order ID ${orderId} ke liye. Kripya check karein.`);
     window.open(`https://wa.me/${riderPhone.replace(/\D/g, '')}?text=${text}`, '_blank');
     toast({ title: "WhatsApp Opened", description: "Ab aap rider ko apni location bhej sakte hain." });
@@ -103,6 +104,8 @@ export default function MyOrdersPage() {
                         <Badge variant={isCancelled ? 'destructive' : order.status === 'delivered' ? 'default' : 'secondary'} className="uppercase text-[10px]">
                             {order.status}
                         </Badge>
+                        
+                        {/* THE UNIQUE ADDITION: Customer can see the proof photos */}
                         {(order.pickupPhoto || order.deliveryPhoto) && (
                           <div className="flex gap-1">
                              {order.pickupPhoto && (
@@ -112,7 +115,9 @@ export default function MyOrdersPage() {
                                  </DialogTrigger>
                                  <DialogContent className="sm:max-w-xs">
                                    <DialogHeader><DialogTitle>Pickup Proof Photo</DialogTitle></DialogHeader>
-                                   <div className="relative aspect-square rounded-xl overflow-hidden"><Image src={order.pickupPhoto} alt="Pickup proof" fill className="object-cover" /></div>
+                                   <div className="relative aspect-square rounded-xl overflow-hidden">
+                                      <Image src={order.pickupPhoto} alt="Pickup proof" fill className="object-cover" />
+                                   </div>
                                  </DialogContent>
                                </Dialog>
                              )}
@@ -123,7 +128,9 @@ export default function MyOrdersPage() {
                                  </DialogTrigger>
                                  <DialogContent className="sm:max-w-xs">
                                    <DialogHeader><DialogTitle>Delivery Proof Photo</DialogTitle></DialogHeader>
-                                   <div className="relative aspect-square rounded-xl overflow-hidden"><Image src={order.deliveryPhoto} alt="Delivery proof" fill className="object-cover" /></div>
+                                   <div className="relative aspect-square rounded-xl overflow-hidden">
+                                      <Image src={order.deliveryPhoto} alt="Delivery proof" fill className="object-cover" />
+                                   </div>
                                  </DialogContent>
                                </Dialog>
                              )}
@@ -176,6 +183,7 @@ export default function MyOrdersPage() {
                                 </div>
                              </div>
                              <div className="flex gap-2">
+                               {/* THE UNIQUE ADDITION: Location Share button */}
                                <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-green-500 text-green-600" onClick={() => handleShareLocation(order.deliveryBoyPhone, order.displayOrderId)}>
                                  <MessageCircle className="h-4 w-4" />
                                </Button>
