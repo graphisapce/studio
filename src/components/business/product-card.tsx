@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, PhoneCall, Sparkles, Tag, TrendingUp, Zap, Truck, Loader2 } from "lucide-react";
+import { MessageCircle, PhoneCall, Sparkles, Tag, TrendingUp, Zap, Truck, Loader2, Plus, Minus } from "lucide-react";
 import { Watermark } from "@/components/watermark";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
@@ -34,6 +34,7 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOrdering, setIsOrdering] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const displayImage = (typeof product?.imageUrl === 'string' && product.imageUrl.trim() !== "") 
     ? product.imageUrl 
@@ -41,7 +42,7 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
 
   const handleAction = () => {
     if (!shopWhatsApp) return;
-    const message = encodeURIComponent(`Hi ${shopName}, I'm interested in "${product.title}" on LocalVyapar.`);
+    const message = encodeURIComponent(`Hi ${shopName}, I'm interested in ${quantity} piece(s) of "${product.title}" on LocalVyapar.`);
     window.open(`https://wa.me/${shopWhatsApp.replace(/\D/g, '')}?text=${message}`, '_blank');
   };
 
@@ -70,6 +71,7 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
       const displayOrderId = `${userProfile.deliveryId}-${randomNum}`;
 
       const finalShopAddress = shopAddress || "Address check karein shop owner se.";
+      const totalPrice = product.price * quantity;
 
       await addDocumentNonBlocking(collection(firestore, "orders"), {
         displayOrderId: displayOrderId,
@@ -83,7 +85,8 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
         shopAddress: finalShopAddress,
         productId: product.id,
         productTitle: product.title,
-        price: product.price,
+        quantity: quantity,
+        price: totalPrice,
         status: "pending",
         address: addressString,
         createdAt: new Date().toISOString()
@@ -91,8 +94,9 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
 
       toast({ 
         title: "Delivery Requested! 🚚", 
-        description: `Order ID: ${displayOrderId}` 
+        description: `Order ID: ${displayOrderId} | Qty: ${quantity}` 
       });
+      setQuantity(1); // Reset quantity after order
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: "Order request fail ho gayi." });
     } finally {
@@ -131,11 +135,37 @@ export function ProductCard({ product, shopWhatsApp, shopName, shopAddress, isPr
         <CardDescription className="text-xs line-clamp-2 h-8">{product?.description}</CardDescription>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex flex-col gap-2">
-        <Button onClick={handleRequestDelivery} disabled={isOrdering} className="w-full bg-orange-500 hover:bg-orange-600 font-bold gap-2 h-11">
-          {isOrdering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
-          Request Delivery
+        {/* Quantity Selector UI */}
+        <div className="flex items-center justify-between mb-2 w-full bg-muted/30 p-2 rounded-xl border border-dashed border-primary/10">
+          <span className="text-[10px] font-black uppercase text-muted-foreground ml-1">Set Quantity</span>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8 rounded-full border-primary/20 text-primary hover:bg-primary hover:text-white"
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              disabled={quantity <= 1 || isOrdering}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <span className="font-black text-sm w-4 text-center">{quantity}</span>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8 rounded-full border-primary/20 text-primary hover:bg-primary hover:text-white"
+              onClick={() => setQuantity(quantity + 1)}
+              disabled={isOrdering}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+
+        <Button onClick={handleRequestDelivery} disabled={isOrdering} className="w-full bg-orange-500 hover:bg-orange-600 font-black gap-2 h-12 shadow-lg shadow-orange-500/20">
+          {isOrdering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-5 w-5" />}
+          Request {quantity > 1 ? `${quantity} Items` : 'Delivery'}
         </Button>
-        <Button onClick={handleAction} variant="outline" className="w-full border-primary text-primary font-bold h-11">
+        <Button onClick={handleAction} variant="outline" className="w-full border-primary/20 text-primary font-bold h-11 hover:bg-primary/5">
           <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Buy
         </Button>
       </CardFooter>

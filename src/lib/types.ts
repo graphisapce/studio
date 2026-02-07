@@ -95,6 +95,7 @@ export interface Order {
   shopAddress: string;
   productId: string;
   productTitle: string;
+  quantity: number;
   price: number;
   deliveryBoyId?: string;
   deliveryBoyName?: string;

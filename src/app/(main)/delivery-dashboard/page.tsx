@@ -380,7 +380,10 @@ export default function DeliveryDashboardPage() {
                       </Badge>
                       <Badge variant="secondary" className="text-[9px] uppercase font-black">{order.customerDeliveryId}</Badge>
                     </div>
-                    <CardTitle className="text-lg">{order.productTitle}</CardTitle>
+                    <CardTitle className="text-lg">
+                      {order.productTitle}
+                      {order.quantity > 1 && <span className="text-xs text-primary ml-2 bg-primary/10 px-2 py-0.5 rounded-full">x{order.quantity}</span>}
+                    </CardTitle>
                     <CardDescription className="font-bold text-primary flex items-center gap-1">
                       <Store className="h-3 w-3" /> Shop: {order.shopName}
                     </CardDescription>
@@ -431,7 +434,10 @@ export default function DeliveryDashboardPage() {
                         </Button>
                       </div>
                       <CardTitle className="text-xl mt-2 flex items-center justify-between">
-                        {order.productTitle}
+                        <div className="flex items-center gap-2">
+                          {order.productTitle}
+                          {order.quantity > 1 && <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full">x{order.quantity}</span>}
+                        </div>
                         <span className="text-primary text-sm font-black">ID: {order.displayOrderId}</span>
                       </CardTitle>
                     </CardHeader>
@@ -520,7 +526,7 @@ export default function DeliveryDashboardPage() {
                           <CheckCircle2 className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-bold text-base">{o.productTitle}</p>
+                          <p className="font-bold text-base">{o.productTitle} {o.quantity > 1 && `(x${o.quantity})`}</p>
                           <p className="text-[10px] text-muted-foreground uppercase font-black">
                             {o.customerName} • {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                           </p>

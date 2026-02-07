@@ -592,7 +592,10 @@ export default function DashboardPage() {
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                           <div>
-                            <CardTitle className="text-lg">{order.productTitle}</CardTitle>
+                            <CardTitle className="text-lg">
+                              {order.productTitle} 
+                              <span className="text-xs text-primary bg-primary/5 px-2 py-0.5 rounded-full ml-2">x{order.quantity || 1}</span>
+                            </CardTitle>
                             <CardDescription className="font-bold text-primary">Customer: {order.customerName}</CardDescription>
                           </div>
                           <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>{order.status.toUpperCase()}</Badge>

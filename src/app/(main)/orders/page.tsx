@@ -91,7 +91,10 @@ export default function MyOrdersPage() {
                         <Badge variant="outline" className="text-[10px] font-black border-primary text-primary">
                           <Hash className="h-2 w-2 mr-1" /> {order.displayOrderId || 'LV-ORD'}
                         </Badge>
-                        <CardTitle className="text-lg">{order.productTitle}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {order.productTitle} 
+                          {order.quantity > 1 && <span className="text-xs text-primary bg-primary/5 px-2 py-0.5 rounded-full ml-2">x{order.quantity}</span>}
+                        </CardTitle>
                         <CardDescription className="font-bold text-primary flex items-center gap-1">
                           <Store className="h-3 w-3" /> {order.shopName}
                         </CardDescription>
@@ -155,7 +158,12 @@ export default function MyOrdersPage() {
                       </div>
                     </div>
                     <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                       <div className="flex justify-between font-black text-primary"><span>Total</span><span>₹{order.price}</span></div>
+                       <div className="flex justify-between font-black text-primary">
+                         <span>Total Payable</span>
+                         <span>₹{order.price}</span>
+                       </div>
+                       <p className="text-[8px] text-muted-foreground uppercase text-right mt-1">Includes all items ({order.quantity || 1})</p>
+                       
                        {order.deliveryBoyName && (
                           <div className="pt-3 mt-3 border-t flex items-center justify-between">
                              <div className="flex items-center gap-2">
