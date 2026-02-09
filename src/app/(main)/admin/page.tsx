@@ -43,7 +43,9 @@ import {
   Plus,
   Globe,
   MapPin,
-  Hash
+  Hash,
+  Youtube,
+  Link as LinkIcon
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -90,7 +92,8 @@ export default function AdminDashboardPage() {
   const [newAnnouncement, setNewAnnouncement] = useState({
     message: "",
     targetType: "global" as "global" | "area" | "pincode",
-    targetValue: ""
+    targetValue: "",
+    videoUrl: ""
   });
   const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
 
@@ -178,10 +181,11 @@ export default function AdminDashboardPage() {
         message: newAnnouncement.message,
         targetType: newAnnouncement.targetType,
         targetValue: newAnnouncement.targetType === 'global' ? "all" : newAnnouncement.targetValue,
+        videoUrl: newAnnouncement.videoUrl || null,
         isActive: true,
         createdAt: new Date().toISOString()
       });
-      setNewAnnouncement({ message: "", targetType: "global", targetValue: "" });
+      setNewAnnouncement({ message: "", targetType: "global", targetValue: "", videoUrl: "" });
       toast({ title: "Announcement Published!" });
     } catch (err) {
       toast({ variant: "destructive", title: "Error" });
@@ -328,6 +332,20 @@ export default function AdminDashboardPage() {
                   )}
 
                   <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Video Announcement (YouTube URL)</Label>
+                    <div className="relative">
+                      <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                      <Input 
+                        placeholder="https://youtube.com/watch?v=..." 
+                        value={newAnnouncement.videoUrl}
+                        onChange={(e) => setNewAnnouncement({...newAnnouncement, videoUrl: e.target.value})}
+                        className="rounded-xl h-11 pl-10"
+                      />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground">Optional: Link paste karein agar video dikhana hai.</p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground">Announcement Message</Label>
                     <Textarea 
                       placeholder="Type your alert message here..." 
@@ -360,7 +378,7 @@ export default function AdminDashboardPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Target</TableHead>
-                        <TableHead>Message</TableHead>
+                        <TableHead>Message & Video</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
@@ -377,7 +395,16 @@ export default function AdminDashboardPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="max-w-xs"><p className="text-xs line-clamp-2 italic">"{a.message}"</p></TableCell>
+                          <TableCell className="max-w-xs">
+                            <div className="flex flex-col gap-1">
+                              <p className="text-xs line-clamp-2 italic">"{a.message}"</p>
+                              {a.videoUrl && (
+                                <Badge variant="outline" className="w-fit text-[8px] bg-red-50 text-red-600 border-red-200">
+                                  <Youtube className="h-2 w-2 mr-1" /> Video Linked
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell><Badge variant="outline" className="text-[8px] bg-green-50 text-green-600 border-green-200 uppercase">Live</Badge></TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteDocumentNonBlocking(doc(firestore, "announcements", a.id))}>

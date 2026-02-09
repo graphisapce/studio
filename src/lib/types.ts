@@ -143,6 +143,7 @@ export interface Announcement {
   message: string;
   targetType: 'global' | 'area' | 'pincode';
   targetValue: string;
+  videoUrl?: string; // YouTube video link
   isActive: boolean;
   createdAt: string;
 }

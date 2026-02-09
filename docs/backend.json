@@ -90,6 +90,7 @@
         "message": { "type": "string" },
         "targetType": { "type": "string", "enum": ["global", "area", "pincode"] },
         "targetValue": { "type": "string" },
+        "videoUrl": { "type": "string" },
         "isActive": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
