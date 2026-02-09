@@ -54,6 +54,11 @@ service cloud.firestore {
       allow delete: if isModerator();
     }
 
+    match /announcements/{announcementId} {
+      allow get, list: if true;
+      allow write: if isAdmin() || isModerator();
+    }
+
     match /config/{configId} {
       allow get: if true;
       allow write: if isAdmin() || isModerator();
