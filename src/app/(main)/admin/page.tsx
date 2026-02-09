@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { collection, doc, setDoc } from "firebase/firestore";
+import { collection, doc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import Link from "next/link";
 import { 
   useFirestore, 
@@ -12,7 +12,8 @@ import {
   useMemoFirebase,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
-  useDoc
+  useDoc,
+  addDocumentNonBlocking
 } from "@/firebase";
 import {
   Card,
@@ -37,7 +38,12 @@ import {
   ClipboardList,
   User as UserIcon,
   AlertCircle,
-  Info
+  Info,
+  Megaphone,
+  Plus,
+  Globe,
+  MapPin,
+  Hash
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +56,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Business, Product, UserProfile, PlatformConfig, Order } from "@/lib/types";
+import { Business, Product, UserProfile, PlatformConfig, Order, Announcement } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,11 +81,18 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [announcementText, setAnnouncementText] = useState("");
   
   const [activeTab, setActiveTab] = useState("approvals");
   const [userRoleFilter, setUserRoleFilter] = useState<"all" | "customer" | "staff" | "delivery">("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Targeted Announcement States
+  const [newAnnouncement, setNewAnnouncement] = useState({
+    message: "",
+    targetType: "global" as "global" | "area" | "pincode",
+    targetValue: ""
+  });
+  const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
 
   const isAdminOrModerator = useMemo(() => {
     return user && userProfile && ['admin', 'moderator'].includes(userProfile.role);
@@ -94,16 +107,6 @@ export default function AdminDashboardPage() {
       }
     }
   }, [user, userProfile, authLoading, router]);
-
-  const configRef = useMemoFirebase(() => 
-    isAdminOrModerator ? doc(firestore, "config", "platform") : null, 
-    [firestore, isAdminOrModerator]
-  );
-  const { data: config } = useDoc<PlatformConfig>(configRef);
-
-  useEffect(() => {
-    if (config?.announcement) setAnnouncementText(config.announcement);
-  }, [config]);
 
   const businessesRef = useMemoFirebase(() => 
     isAdminOrModerator ? collection(firestore, "businesses") : null, 
@@ -128,6 +131,12 @@ export default function AdminDashboardPage() {
     [firestore, isAdminOrModerator]
   );
   const { data: orders, isLoading: loadingOrders } = useCollection<Order>(ordersRef);
+
+  const announcementsRef = useMemoFirebase(() => 
+    isAdminOrModerator ? collection(firestore, "announcements") : null, 
+    [firestore, isAdminOrModerator]
+  );
+  const { data: announcements, isLoading: loadingAnnouncements } = useCollection<Announcement>(announcementsRef);
 
   const isFullAdmin = userProfile?.role === 'admin';
 
@@ -156,16 +165,28 @@ export default function AdminDashboardPage() {
     return list;
   }, [allUsers, userRoleFilter, searchQuery]);
 
-  const handleUpdateConfig = async () => {
-    if (!isFullAdmin) return;
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnouncement.message || (newAnnouncement.targetType !== 'global' && !newAnnouncement.targetValue)) {
+      toast({ variant: "destructive", title: "Missing Info", description: "Kripya saari details bharein." });
+      return;
+    }
+
+    setIsSubmittingAnnouncement(true);
     try {
-      await setDoc(doc(firestore, "config", "platform"), {
-        announcement: announcementText,
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
-      toast({ title: "Platform Config Updated" });
+      await addDoc(collection(firestore, "announcements"), {
+        message: newAnnouncement.message,
+        targetType: newAnnouncement.targetType,
+        targetValue: newAnnouncement.targetType === 'global' ? "all" : newAnnouncement.targetValue,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      });
+      setNewAnnouncement({ message: "", targetType: "global", targetValue: "" });
+      toast({ title: "Announcement Published!" });
     } catch (err) {
-      toast({ variant: "destructive", title: "Error updating config" });
+      toast({ variant: "destructive", title: "Error" });
+    } finally {
+      setIsSubmittingAnnouncement(false);
     }
   };
 
@@ -182,9 +203,8 @@ export default function AdminDashboardPage() {
   const handleDeleteUser = (userId: string) => {
     if (!isFullAdmin) return;
     deleteDocumentNonBlocking(doc(firestore, "users", userId));
-    // Important: Delete shop too if it exists
     deleteDocumentNonBlocking(doc(firestore, "businesses", userId));
-    toast({ title: "Firestore Records Deleted", description: "Remember to delete the login account from Firebase Auth Console." });
+    toast({ title: "Firestore Records Deleted" });
   };
 
   if (authLoading || (user && !userProfile)) {
@@ -221,17 +241,6 @@ export default function AdminDashboardPage() {
           />
         </div>
       </div>
-
-      {/* Critical Info Banner */}
-      {isFullAdmin && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
-          <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-800 leading-relaxed">
-            <span className="font-bold">Zaroori Sochna:</span> Yahan se user delete karne par sirf uska profile aur shop data Firestore se hat-ta hai. 
-            Agar aap chahte hain ki wo dobara register kar sake, toh aapko **Firebase Console &gt; Authentication** tab mein jaakar uska email wahan se bhi permanent delete karna hoga.
-          </p>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <Card className={cn("cursor-pointer transition-all", activeTab === 'businesses' && "ring-2 ring-primary")} onClick={() => setActiveTab("businesses")}>
@@ -275,11 +284,115 @@ export default function AdminDashboardPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-8 h-12 bg-muted/50 p-1 flex overflow-x-auto no-scrollbar justify-start">
           <TabsTrigger value="approvals" className="px-6 shrink-0">Approvals</TabsTrigger>
+          <TabsTrigger value="announcements" className="px-6 shrink-0">Targeted Announcements</TabsTrigger>
           <TabsTrigger value="orders" className="px-6 shrink-0">Platform Orders</TabsTrigger>
           <TabsTrigger value="users" className="px-6 shrink-0">Users & Roles</TabsTrigger>
           <TabsTrigger value="businesses" className="px-6 shrink-0">Active Shops</TabsTrigger>
-          {isFullAdmin && <TabsTrigger value="config" className="px-6 shrink-0">Settings</TabsTrigger>}
         </TabsList>
+
+        <TabsContent value="announcements">
+          <div className="grid lg:grid-cols-3 gap-8">
+            <Card className="lg:col-span-1 shadow-md border-primary/10">
+              <CardHeader className="bg-primary/5">
+                <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5 text-primary" /> Create Targeted Alert</CardTitle>
+                <CardDescription>Target messages to specific areas or everyone.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form onSubmit={handleCreateAnnouncement} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Target Type</Label>
+                    <Select value={newAnnouncement.targetType} onValueChange={(v: any) => setNewAnnouncement({...newAnnouncement, targetType: v})}>
+                      <SelectTrigger className="rounded-xl h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">Global (Pure App)</SelectItem>
+                        <SelectItem value="area">Area Code (Jagah ke Naam se)</SelectItem>
+                        <SelectItem value="pincode">Pincode (Pin code se)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {newAnnouncement.targetType !== 'global' && (
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">
+                        {newAnnouncement.targetType === 'area' ? 'Area Name/Code (e.g. Jahangirpuri or JHP)' : 'Pincode (e.g. 110033)'}
+                      </Label>
+                      <Input 
+                        placeholder="Yahan value likhein..." 
+                        value={newAnnouncement.targetValue}
+                        onChange={(e) => setNewAnnouncement({...newAnnouncement, targetValue: e.target.value})}
+                        className="rounded-xl h-11"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Announcement Message</Label>
+                    <Textarea 
+                      placeholder="Type your alert message here..." 
+                      className="rounded-xl min-h-[100px]"
+                      value={newAnnouncement.message}
+                      onChange={(e) => setNewAnnouncement({...newAnnouncement, message: e.target.value})}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full h-12 rounded-xl gap-2 font-bold" disabled={isSubmittingAnnouncement}>
+                    {isSubmittingAnnouncement ? <Loader2 className="animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Publish Announcement
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2 shadow-md">
+              <CardHeader>
+                <CardTitle>Active Announcements</CardTitle>
+                <CardDescription>Monitor and delete live alerts.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingAnnouncements ? (
+                  <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                ) : announcements?.length === 0 ? (
+                  <div className="text-center py-20 opacity-30">No active announcements found.</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Target</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {announcements?.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {a.targetType === 'global' ? <Globe className="h-3 w-3 text-blue-500" /> : a.targetType === 'area' ? <MapPin className="h-3 w-3 text-green-500" /> : <Hash className="h-3 w-3 text-orange-500" />}
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase text-muted-foreground">{a.targetType}</span>
+                                <span className="text-xs font-bold">{a.targetValue}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-xs"><p className="text-xs line-clamp-2 italic">"{a.message}"</p></TableCell>
+                          <TableCell><Badge variant="outline" className="text-[8px] bg-green-50 text-green-600 border-green-200 uppercase">Live</Badge></TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteDocumentNonBlocking(doc(firestore, "announcements", a.id))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="orders">
           <Card className="border-none shadow-md">
@@ -546,31 +659,6 @@ export default function AdminDashboardPage() {
               </CardContent>
            </Card>
         </TabsContent>
-
-        {isFullAdmin && (
-          <TabsContent value="config">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Configuration</CardTitle>
-                <CardDescription>Global settings for the platform.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Platform-wide Announcement</Label>
-                  <Textarea 
-                    placeholder="e.g. Server Maintenance tonight at 12 AM" 
-                    value={announcementText}
-                    onChange={(e) => setAnnouncementText(e.target.value)}
-                  />
-                  <p className="text-[10px] text-muted-foreground uppercase font-black">Yeh text sabhi users ko home screen par dikhega.</p>
-                </div>
-                <Button onClick={handleUpdateConfig} className="gap-2">
-                  <Save className="h-4 w-4" /> Save Configuration
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

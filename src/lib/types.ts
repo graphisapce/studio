@@ -138,6 +138,15 @@ export interface Review {
   createdAt: string;
 }
 
+export interface Announcement {
+  id: string;
+  message: string;
+  targetType: 'global' | 'area' | 'pincode';
+  targetValue: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface PlatformConfig {
   announcement?: string;
   isMaintenance?: boolean;

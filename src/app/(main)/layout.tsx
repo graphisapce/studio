@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { AnnouncementBanner } from "@/components/layout/announcement-banner";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
@@ -14,6 +15,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {isMobile === false && <DesktopSidebar />}
       <div className="flex-1 flex flex-col">
         {isMobile === true && <MobileHeader />}
+        <AnnouncementBanner />
         <main className={`flex-1 ${isMobile === true ? 'pb-20' : ''}`}>
           {children}
         </main>

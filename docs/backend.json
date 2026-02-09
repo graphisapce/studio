@@ -80,6 +80,19 @@
         "rating": { "type": "number" },
         "comment": { "type": "string" }
       }
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "type": "object",
+      "description": "Targeted announcements for specific areas or everyone.",
+      "properties": {
+        "id": { "type": "string" },
+        "message": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["global", "area", "pincode"] },
+        "targetValue": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -101,6 +114,10 @@
     "/reviews/{reviewId}": {
       "schema": { "$ref": "#/backend/entities/Review" },
       "description": "Store reviews."
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/backend/entities/Announcement" },
+      "description": "Targeted announcements."
     }
   }
 }
